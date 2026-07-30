@@ -175,15 +175,22 @@ func runDeployment(job *Job, req deployRequest) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Step 4: Install tollgate package from GitHub releases
+	// OpenWrt 25+ uses apk; OpenWrt 24.x uses opkg. Detect at runtime.
 	job.setStep(4, "running", "")
 	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge ipk...")
+	pkgMgr := strings.TrimSpace(sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg"))
 	dlOut := sshRun(client, "wget -q -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
 	if strings.Contains(dlOut, "downloaded") {
-		job.addLog("Package downloaded, installing via opkg...")
+		job.addLog("Package downloaded, installing via " + pkgMgr + "...")
 		rmLock := sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
 		_ = rmLock
-		installOut := sshRun(client, "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
-		job.addLog("Package installed: " + truncate(installOut, 80))
+		var installOut string
+		if pkgMgr == "apk" {
+			installOut = sshRun(client, "apk add --allow-untrusted /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+		} else {
+			installOut = sshRun(client, "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+		}
+		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 80))
 		// Verify the binary actually exists
 		verifyOut := sshRun(client, "ls /usr/bin/tollgate-wrt 2>/dev/null || ls /usr/sbin/tollgate-wrt 2>/dev/null || which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if strings.Contains(verifyOut, "NOT FOUND") {
@@ -194,17 +201,22 @@ func runDeployment(job *Job, req deployRequest) {
 		// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
 		// inside the ipk under /etc/nftables.d/{20-nds-enforce,30-backend-firewall}.nft —
 		// no separate overlay download is performed (the old overlay URL 404'd).
-		job.setStep(4, "done", "tollgate-wrt installed")
+		job.setStep(4, "done", "tollgate-wrt installed via "+pkgMgr)
 	} else {
-		job.addLog("Download failed, trying opkg feed...")
-		installOut := sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null; opkg update >/dev/null 2>&1; opkg install "+net4satsPackage+" 2>&1 | tail -5")
+		job.addLog("Download failed, trying "+pkgMgr+" feed...")
+		var installOut string
+		if pkgMgr == "apk" {
+			installOut = sshRun(client, "apk update >/dev/null 2>&1; apk add "+net4satsPackage+" 2>&1 | tail -5")
+		} else {
+			installOut = sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null; opkg update >/dev/null 2>&1; opkg install "+net4satsPackage+" 2>&1 | tail -5")
+		}
 		job.addLog("Package installed: " + truncate(installOut, 80))
 		verifyOut := sshRun(client, "which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if strings.Contains(verifyOut, "NOT FOUND") {
 			job.setStep(4, "error", "tollgate-wrt install failed")
 			return
 		}
-		job.setStep(4, "done", net4satsPackage+" installed (feed)")
+		job.setStep(4, "done", net4satsPackage+" installed (feed, "+pkgMgr+")")
 	}
 	time.Sleep(500 * time.Millisecond)
 
