@@ -10,11 +10,23 @@ import (
 const (
 	// net4satsPackage is the apk package name.
 	net4satsPackage = "net4sats"
-	// TEMPORARY: point to fork release for E2E testing of PR #283 (fw4 nftables enforcement).
-	// Revert to upstream URL once PR #283 is merged upstream.
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.5.0-e2e-test/tollgate-wrt_v0.5.0_aarch64_cortex-a53.ipk"
-	// nftables enforcement include (from PR #283, installed as overlay after .ipk install)
-	tollgateNftEnforceURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.5.0-e2e-test/20-nds-enforce.nft"
+	// tollgate-wrt .ipk download URL.
+	//
+	// Fallback strategy (Endo handover):
+	//   Primary  — OpenTollGate/tollgate-module-basic-go upstream releases
+	//              (https://github.com/OpenTollGate/tollgate-module-basic-go/releases)
+	//   Fallback — felixfelix-bot fork releases for the v0.6.0-endo-handover tag
+	//              until an equivalent upstream release is cut.
+	//
+	// The constant below currently points at the fork's v0.6.0-endo-handover
+	// release because that tag does not yet exist upstream. Once an upstream
+	// OpenTollGate release with a matching asset is published, switch the host
+	// from felixfelix-bot to OpenTollGate (keeping the same path/asset name).
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.0-endo-handover/tollgate-wrt_main.53.946a069_aarch64_cortex-a53.ipk"
+	// nftables enforcement include (from PR #283, installed as overlay after .ipk install).
+	// Same fallback strategy as tollgatePkgURL: upstream OpenTollGate is the target,
+	// fork v0.6.0-endo-handover is the current source.
+	tollgateNftEnforceURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.0-endo-handover/20-nds-enforce.nft"
 	// Pre-built OpenWrt firmware image with tollgate pre-installed (for future firmware flash step)
 	tollgateOSURL = "https://releases.tollgate.me/os/57e0f2468a17b8c7a84d9a2af62d1e02111a3b9bc898ec1d9183b1f7dd1db52e?channel=stable"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
@@ -162,7 +174,7 @@ func runDeployment(job *Job, req deployRequest) {
 
 	// Step 4: Install tollgate package from GitHub releases
 	job.setStep(4, "running", "")
-	job.addLog("Downloading tollgate-wrt v0.5.0 ipk...")
+	job.addLog("Downloading tollgate-wrt v0.6.0-endo-handover ipk...")
 	dlOut := sshRun(client, "wget -q -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
 	if strings.Contains(dlOut, "downloaded") {
 		job.addLog("Package downloaded, installing via opkg...")
