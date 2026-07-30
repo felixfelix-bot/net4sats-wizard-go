@@ -12,7 +12,7 @@ import (
 // This guards against accidentally reverting to a stale or wrong repo, and
 // documents the Endo-handover fallback strategy: upstream OpenTollGate is the
 // primary source; the felixfelix-bot fork is the fallback for the
-// v0.6.0-endo-handover tag until an equivalent upstream release exists.
+// v0.6.1-post-merge tag until an equivalent upstream release exists.
 func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
 	cases := map[string]string{
 		"tollgatePkgURL":        tollgatePkgURL,
@@ -53,7 +53,7 @@ func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
 
 // TestTollgatePkgURLAssetName verifies the .ipk asset exists in the URL and
 // targets the aarch64_cortex-a53 architecture the routers use. This catches
-// typos introduced when bumping release tags/asset names (the v0.6.0-endo-handover
+// typos introduced when bumping release tags/asset names (the v0.6.1-post-merge
 // asset is named differently from the v0.5.0-e2e-test one).
 func TestTollgatePkgURLAssetName(t *testing.T) {
 	// Must end with the .ipk extension.
