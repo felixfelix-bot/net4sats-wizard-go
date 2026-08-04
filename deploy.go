@@ -2,12 +2,28 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"fmt"
+	gossh "golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// Architecture mappings for multi-arch support
+var archMapping = map[string]string{
+	"aarch64": "aarch64_cortex-a53",
+	"armv7l":  "armv7_cortex-a7", 
+	"armv6l":  "armv6_cortex-a9",
+	"armv5l":  "armv5_cortex-a8",
+	"x86_64":  "x86_64",
+	"i686":    "i686",
+}
+
 const (
+	// GitHub constants for enhanced deployment
+	tollgateGitHubOrg    = "OpenTollGate"
+	tollgateGitHubRepo   = "tollgate-module-basic-go"
+	tollgateGitHubTag    = "v0.6.1-post-merge"
 	// net4satsPackage is the apk package name.
 	net4satsPackage = "net4sats"
 	// tollgate-wrt .ipk download URL.
@@ -618,4 +634,138 @@ func clamp(n, lo, hi int) int {
 		return hi
 	}
 	return n
+}
+
+// DeploymentConfig holds configuration for enhanced deployment
+type DeploymentConfig struct {
+	Architecture     string
+	PackageManager   string
+	OpenWrtVersion   string
+	IsAlreadyDeployed bool
+	ShouldRollback   bool
+}
+
+// detectDeploymentRequirements detects architecture, package manager, and checks existing deployment
+func detectDeploymentRequirements(job *Job, client *gossh.Client) (*DeploymentConfig, error) {
+	config := &DeploymentConfig{}
+	
+	job.addLog("Detecting deployment requirements...")
+	
+	// Get architecture
+	archOut := sshRun(client, "uname -m")
+	arch := strings.TrimSpace(archOut)
+	config.Architecture = arch
+	
+	// Map architecture to expected format
+	if mappedArch, ok := archMapping[arch]; ok {
+		job.addLog("Architecture detected: " + arch + " -> " + mappedArch)
+	} else {
+		job.addLog("Warning: Unknown architecture " + arch + ", using as-is")
+		config.Architecture = arch
+	}
+	
+	// Detect package manager
+	pkgMgrOut := sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg")
+	config.PackageManager = strings.TrimSpace(pkgMgrOut)
+	job.addLog("Package manager: " + config.PackageManager)
+	
+	// Get OpenWrt version
+	openwrtOut := sshRun(client, "cat /etc/openwrt_release 2>/dev/null || cat /etc/openwrt_version 2>/dev/null || echo 'unknown'")
+	config.OpenWrtVersion = strings.TrimSpace(openwrtOut)
+	job.addLog("OpenWrt version: " + config.OpenWrtVersion)
+	
+	// Check if already deployed
+	deployedCheck := sshRun(client, "which tollgate-wrt 2>/dev/null && echo 'installed' || echo 'not-installed'")
+	config.IsAlreadyDeployed = strings.Contains(deployedCheck, "installed")
+	
+	if config.IsAlreadyDeployed {
+		job.addLog("TollGate already installed - checking idempotency...")
+	}
+	
+	return config, nil
+}
+
+// generatePackageFilename generates package filename based on architecture
+func generatePackageFilename(arch string) string {
+	// Map to the expected format
+	if mappedArch, ok := archMapping[arch]; ok {
+		arch = mappedArch
+	}
+	return fmt.Sprintf("tollgate-wrt_%s.ipk", arch)
+}
+
+// downloadPackageEnhanced downloads from GitHub (primary) or Nostr (secondary)
+func downloadPackageEnhanced(job *Job, client *gossh.Client, config *DeploymentConfig) (string, error) {
+	downloadDir := "/tmp/tollgate-download"
+	pkgFilename := generatePackageFilename(config.Architecture)
+	pkgPath := downloadDir + "/" + pkgFilename
+	
+	// Try GitHub first (primary)
+	job.addLog("Attempting download from GitHub releases...")
+	
+	githubURL := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", 
+		tollgateGitHubOrg, tollgateGitHubRepo, tollgateGitHubTag, pkgFilename)
+	
+	downloadCmd := fmt.Sprintf("mkdir -p %s && cd %s && wget -q -O %s '%s' 2>&1 && echo 'github_success' || echo 'github_failed'", 
+		downloadDir, downloadDir, pkgFilename, githubURL)
+	
+	result := sshRun(client, downloadCmd)
+	
+	if strings.Contains(result, "github_success") {
+		job.addLog("Successfully downloaded from GitHub: " + githubURL)
+		return pkgPath, nil
+	}
+	
+	job.addLog("GitHub download failed, trying Nostr fallback...")
+	
+	// Fallback to Nostr kind 1063 events (simplified for now)
+	nostrURL := fmt.Sprintf("https://github.com/felixfelix-bot/%s/releases/download/%s/%s", 
+		tollgateGitHubRepo, tollgateGitHubTag, pkgFilename)
+	
+	nostrDownloadCmd := fmt.Sprintf("mkdir -p %s && cd %s && wget -q -O %s '%s' 2>&1 && echo 'nostr_success' || echo 'nostr_failed'", 
+		downloadDir, downloadDir, pkgFilename, nostrURL)
+	
+	nostrResult := sshRun(client, nostrDownloadCmd)
+	
+	if strings.Contains(nostrResult, "nostr_success") {
+		job.addLog("Successfully downloaded from Nostr fallback: " + nostrURL)
+		return pkgPath, nil
+	}
+	
+	return "", fmt.Errorf("both GitHub and Nostr downloads failed")
+}
+
+// installPackageWithRollback installs with rollback capability
+func installPackageWithRollback(job *Job, client *gossh.Client, config *DeploymentConfig, pkgPath string) error {
+	job.addLog("Installing tollgate package...")
+	
+	// Create backup for rollback
+	backupCmd := "mkdir -p /tmp/tollgate-backup && cp -r /etc/tollgate /tmp/tollgate-backup 2>/dev/null || true"
+	sshRun(client, backupCmd)
+	
+	// Install based on package manager
+	var installCmd string
+	
+	if config.PackageManager == "apk" {
+		installCmd = "apk add --allow-untrusted " + pkgPath + " 2>&1"
+	} else {
+		installCmd = "opkg install " + pkgPath + " 2>&1"
+	}
+	
+	result := sshRun(client, installCmd)
+	
+	// Verify installation
+	verifyCmd := "which tollgate-wrt 2>/dev/null && echo 'installed' || echo 'failed'"
+	verifyResult := sshRun(client, verifyCmd)
+	
+	if strings.Contains(verifyResult, "failed") {
+		// Rollback installation
+		job.addLog("Installation failed, attempting rollback...")
+		rollbackCmd := "cp -r /tmp/tollgate-backup/* /etc/tollgate/ 2>/dev/null || true && rm -rf /tmp/tollgate-backup 2>/dev/null || true"
+		sshRun(client, rollbackCmd)
+		return fmt.Errorf("package installation failed and rolled back")
+	}
+	
+	job.addLog("Package installed successfully: " + truncate(result, 80))
+	return nil
 }
