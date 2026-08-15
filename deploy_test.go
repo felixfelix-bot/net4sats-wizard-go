@@ -5,18 +5,21 @@ import (
 	"testing"
 )
 
-// TestDownloadURLsPointToTollgateRepo verifies that the deployment download
-// URLs used by the wizard target the tollgate-module-basic-go project
+// TestDownloadURLsPointToTollgateRepo verifies that the tollgate package
+// download URL used by the wizard targets the tollgate-module-basic-go project
 // (either the upstream OpenTollGate org or its felixfelix-bot fork).
 //
 // This guards against accidentally reverting to a stale or wrong repo, and
 // documents the Endo-handover fallback strategy: upstream OpenTollGate is the
 // primary source; the felixfelix-bot fork is the fallback for the
 // v0.6.1-post-merge tag until an equivalent upstream release exists.
+//
+// (SW4a) The nft-enforce overlay URL is gone — those rules ship inside the
+// ipk — and the full set of pinned URL constants, plus a live HTTP 200 check
+// for each, is enforced in pins_test.go.
 func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
 	cases := map[string]string{
-		"tollgatePkgURL":        tollgatePkgURL,
-		"tollgateNftEnforceURL": tollgateNftEnforceURL,
+		"tollgatePkgURL": tollgatePkgURL,
 	}
 
 	for name, url := range cases {

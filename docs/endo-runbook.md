@@ -155,10 +155,27 @@ Default credentials: the password you set in Step 5.
 
 - Router: GL-MT6000 ( MediaTek MT7986A, 1GB RAM, aarch64)
 - Firmware: OpenWrt 25.12.0
-- Backend: TollGate v0.5.0-alpha3
+- Backend: TollGate v0.6.1-post-merge (fork build main.56.b528e1d)
 - Portal: configurationwizzard (Preact PWA)
 - Captive portal: nodogsplash 5.0.2
 - Pricing: NIP-61 kind 10021 (1 sat per 21MB, 3 mints)
+
+### Deployment sources (what the wizard downloads)
+
+The wizard pins its downloads in `deploy.go` (`pins_test.go` enforces that
+every pin returns HTTP 200):
+
+| Artifact | Source |
+|---|---|
+| `tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk` | [felixfelix-bot/tollgate-module-basic-go v0.6.1-post-merge](https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/tag/v0.6.1-post-merge) (only asset on that release; switch to OpenTollGate upstream once an equivalent release is cut) |
+| `net4sats-configwiz-1.0.1.tar.gz` | [felixfelix-bot/configurationwizzard v1.0.1](https://github.com/felixfelix-bot/configurationwizzard/releases/tag/v1.0.1) (temporary fork pin including the PR #22 balance redirect fix) |
+
+The fw4/nftables enforcement rules (upstream PR #283) ship **inside** the
+tollgate ipk under `/etc/nftables.d/` (`20-nds-enforce.nft`,
+`30-backend-firewall.nft`) — the wizard does not download them separately.
+Before SW4a (Aug 2026) the wizard pinned a `main.53` ipk asset and a
+`20-nds-enforce.nft` release asset, neither of which existed on the release
+(both HTTP 404), which broke every fresh deploy at the package download step.
 
 ---
 

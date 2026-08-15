@@ -23,13 +23,14 @@ const (
 	// OpenTollGate release with a matching asset is published, switch the host
 	// from felixfelix-bot to OpenTollGate (keeping the same path/asset name).
 	// v0.6.1-post-merge includes the NDS gate-open fix.
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.53.b528e1d_aarch64_cortex-a53.ipk"
-	// nftables enforcement include (from PR #283, installed as overlay after .ipk install).
-	// Same fallback strategy as tollgatePkgURL: upstream OpenTollGate is the target,
-	// fork v0.6.1-post-merge is the current source.
-	tollgateNftEnforceURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/20-nds-enforce.nft"
-	// Pre-built OpenWrt firmware image with tollgate pre-installed (for future firmware flash step)
-	tollgateOSURL = "https://releases.tollgate.me/os/57e0f2468a17b8c7a84d9a2af62d1e02111a3b9bc898ec1d9183b1f7dd1db52e?channel=stable"
+	//
+	// SW4a (Aug 2026): repinned from main.53 (asset never existed on this
+	// release — HTTP 404, broke every fresh deploy) to the only asset the
+	// release actually publishes: main.56.b528e1d. The nftables enforcement
+	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
+	// separate overlay download is needed (that step was removed — its URL
+	// 404'd because the .nft file was never a release asset).
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// TEMPORARY: point to fork release v1.0.1 which includes PR #22 (balance redirect fix).
 	// Revert to upstream v1.0.0 once a new upstream release is published.
@@ -190,17 +191,9 @@ func runDeployment(job *Job, req deployRequest) {
 			job.setStep(4, "error", "tollgate-wrt install failed")
 			return
 		}
-		// TEMPORARY: Install nftables enforcement overlay from PR #283
-		job.addLog("Installing fw4 nftables enforcement overlay (PR #283)...")
-		nftDl := sshRun(client, "wget -q -O /tmp/20-nds-enforce.nft '"+tollgateNftEnforceURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
-		if strings.Contains(nftDl, "downloaded") {
-			sshRun(client, "mkdir -p /etc/nftables.d")
-			sshRun(client, "cp /tmp/20-nds-enforce.nft /etc/nftables.d/20-nds-enforce.nft")
-			sshRun(client, "rm -f /tmp/20-nds-enforce.nft")
-			job.addLog("fw4 nftables enforcement overlay installed")
-		} else {
-			job.addLog("WARNING: nftables enforcement overlay download failed — authenticated users may have no internet")
-		}
+		// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
+		// inside the ipk under /etc/nftables.d/{20-nds-enforce,30-backend-firewall}.nft —
+		// no separate overlay download is performed (the old overlay URL 404'd).
 		job.setStep(4, "done", "tollgate-wrt installed")
 	} else {
 		job.addLog("Download failed, trying opkg feed...")
