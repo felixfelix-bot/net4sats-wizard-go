@@ -58,12 +58,40 @@ func TestTollgatePkgURLPinsExistingAsset(t *testing.T) {
 	}
 }
 
+// liveCheckPins is the map of every pinned URL that TestPinnedURLsAreLive
+// exercises with a real HTTP request. TestDeployGoPinRegistry asserts its key
+// set equals expectedPinnedURLConsts, so a pin cannot be registered without
+// also being live-checked (and vice versa).
+var liveCheckPins = map[string]string{
+	"tollgatePkgURL": tollgatePkgURL,
+	"configwizURL":   configwizURL,
+}
+
+// stripLineComments removes "// ..." suffixes so identifier tripwires only
+// fire on code/string occurrences — a deploy.go comment that merely mentions
+// a removed pin (documentation) must not fail the registry test.
+func stripLineComments(src string) string {
+	lines := strings.Split(src, "\n")
+	for i, line := range lines {
+		if idx := strings.Index(line, "//"); idx >= 0 {
+			lines[i] = line[:idx]
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 // TestDeployGoPinRegistry guards the set of pinned download URLs in deploy.go:
 //
 //  1. every "<name>URL = \"https://..." constant declared in deploy.go must be
 //     listed in expectedPinnedURLConsts (so it gets a live HTTP 200 check), and
+//     the live-check map must cover exactly that registry, and
 //  2. none of the removed 404 pins/steps (forbiddenDeployIdentifiers) may be
 //     reintroduced.
+//
+// Heuristic note: the declaration scan matches constants whose name ends in
+// "URL" and whose value starts with "https://" — the naming convention for
+// pinned download URLs in this file. A pin named differently or served over
+// plain http:// would escape the registry; keep the convention.
 func TestDeployGoPinRegistry(t *testing.T) {
 	src, err := os.ReadFile("deploy.go")
 	if err != nil {
@@ -71,8 +99,8 @@ func TestDeployGoPinRegistry(t *testing.T) {
 	}
 	srcStr := string(src)
 
-	// 1. Declared URL constants must exactly match the registry.
-	declRe := regexp.MustCompile(`(?m)^\t(\w+URL)\s*=\s+"https://`)
+	// 1a. Declared URL constants must exactly match the registry.
+	declRe := regexp.MustCompile(`(?m)^	(\w+URL)\s*=\s+"https://`)
 	declared := map[string]bool{}
 	for _, m := range declRe.FindAllStringSubmatch(srcStr, -1) {
 		declared[m[1]] = true
@@ -83,13 +111,25 @@ func TestDeployGoPinRegistry(t *testing.T) {
 	}
 	if !reflect.DeepEqual(declared, want) {
 		t.Errorf("deploy.go declares URL constants %v, but registry expects %v\n"+
-			"→ add/remove pins in BOTH expectedPinnedURLConsts and TestPinnedURLsAreLive",
+			"→ add/remove pins in BOTH expectedPinnedURLConsts and liveCheckPins",
 			setNames(declared), setNames(want))
 	}
 
-	// 2. Removed 404 pins/steps must stay removed.
+	// 1b. The live-check map must cover exactly the registry (no drift).
+	live := map[string]bool{}
+	for name := range liveCheckPins {
+		live[name] = true
+	}
+	if !reflect.DeepEqual(live, want) {
+		t.Errorf("liveCheckPins covers %v, but registry expects %v\n"+
+			"→ every registered pin must have a live HTTP check",
+			setNames(live), setNames(want))
+	}
+
+	// 2. Removed 404 pins/steps must stay removed (comments excluded).
+	code := stripLineComments(srcStr)
 	for _, f := range forbiddenDeployIdentifiers {
-		if strings.Contains(srcStr, f) {
+		if strings.Contains(code, f) {
 			t.Errorf("deploy.go still references %q — this pin/step was removed because it 404s (see SW4a)", f)
 		}
 	}
@@ -107,15 +147,8 @@ func TestPinnedURLsAreLive(t *testing.T) {
 		t.Skip("live URL check skipped: -short mode (CI-parity runs without -short)")
 	}
 
-	// Keep in sync with expectedPinnedURLConsts (enforced by
-	// TestDeployGoPinRegistry).
-	pins := map[string]string{
-		"tollgatePkgURL": tollgatePkgURL,
-		"configwizURL":   configwizURL,
-	}
-
 	client := &http.Client{Timeout: 30 * time.Second}
-	for name, url := range pins {
+	for name, url := range liveCheckPins {
 		t.Run(name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			if err != nil {
