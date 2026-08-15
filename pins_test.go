@@ -1,21 +1,30 @@
 package main
 
 import (
+	_ "embed"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
-	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
+// deployGoSrc embeds deploy.go so the registry test reads the exact source
+// that compiles into this package, independent of the test working directory.
+//
+//go:embed deploy.go
+var deployGoSrc string
+
 // expectedPinnedURLConsts is the authoritative registry of pinned download
 // URL constants declared in deploy.go. TestDeployGoPinRegistry enforces that
 // deploy.go declares exactly this set — a new pin cannot be added without
 // registering it here, and every registered pin is exercised live by
-// TestPinnedURLsAreLive (add new pins to that test's map too).
+// TestPinnedURLsAreLive (add new pins to liveCheckPins too).
 var expectedPinnedURLConsts = []string{
 	"tollgatePkgURL",
 	"configwizURL",
@@ -67,55 +76,93 @@ var liveCheckPins = map[string]string{
 	"configwizURL":   configwizURL,
 }
 
-// stripLineComments removes "// ..." suffixes so identifier tripwires only
-// fire on code/string occurrences — a deploy.go comment that merely mentions
-// a removed pin (documentation) must not fail the registry test.
-func stripLineComments(src string) string {
-	lines := strings.Split(src, "\n")
-	for i, line := range lines {
-		if idx := strings.Index(line, "//"); idx >= 0 {
-			lines[i] = line[:idx]
-		}
+// parsePinnedURLConsts parses deploy.go (real Go syntax via go/ast, not text
+// matching) and returns:
+//
+//   - pins: name → value for every string-literal constant whose name ends in
+//     "URL" and whose value starts with "https://" — the pinned-download-URL
+//     naming convention of this file. A pin named differently or served over
+//     plain http:// would escape the registry; keep the convention.
+//   - codeTokens: every identifier and string-literal value in the file.
+//     Comments are NOT part of the AST (the file is parsed without
+//     ParseComments), so documentation mentioning a removed pin cannot fail
+//     the tripwire, while identifiers and URL string literals cannot hide.
+func parsePinnedURLConsts(t *testing.T) (pins map[string]string, codeTokens []string) {
+	t.Helper()
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "deploy.go", deployGoSrc, 0)
+	if err != nil {
+		t.Fatalf("parsing deploy.go: %v", err)
 	}
-	return strings.Join(lines, "\n")
+
+	pins = map[string]string{}
+	ast.Inspect(f, func(n ast.Node) bool {
+		decl, ok := n.(*ast.GenDecl)
+		if !ok || decl.Tok != token.CONST {
+			return true
+		}
+		for _, spec := range decl.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok || len(vs.Names) != 1 || len(vs.Values) != 1 {
+				continue
+			}
+			lit, ok := vs.Values[0].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				continue
+			}
+			value, err := strconv.Unquote(lit.Value)
+			if err != nil {
+				continue
+			}
+			name := vs.Names[0].Name
+			if strings.HasSuffix(name, "URL") && strings.HasPrefix(value, "https://") {
+				pins[name] = value
+			}
+		}
+		return true
+	})
+
+	ast.Inspect(f, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.Ident:
+			codeTokens = append(codeTokens, x.Name)
+		case *ast.BasicLit:
+			if x.Kind == token.STRING {
+				if s, err := strconv.Unquote(x.Value); err == nil {
+					codeTokens = append(codeTokens, s)
+				}
+			}
+		}
+		return true
+	})
+
+	return pins, codeTokens
 }
 
 // TestDeployGoPinRegistry guards the set of pinned download URLs in deploy.go:
 //
-//  1. every "<name>URL = \"https://..." constant declared in deploy.go must be
-//     listed in expectedPinnedURLConsts (so it gets a live HTTP 200 check), and
-//     the live-check map must cover exactly that registry, and
-//  2. none of the removed 404 pins/steps (forbiddenDeployIdentifiers) may be
-//     reintroduced.
-//
-// Heuristic note: the declaration scan matches constants whose name ends in
-// "URL" and whose value starts with "https://" — the naming convention for
-// pinned download URLs in this file. A pin named differently or served over
-// plain http:// would escape the registry; keep the convention.
+//  1. every pinned URL constant declared in deploy.go must be listed in
+//     expectedPinnedURLConsts (so it gets a live HTTP 200 check),
+//  2. the live-check map must cover exactly that registry (no drift), and
+//  3. none of the removed 404 pins/steps (forbiddenDeployIdentifiers) may be
+//     reintroduced — as identifiers OR inside string literals (e.g. URLs).
 func TestDeployGoPinRegistry(t *testing.T) {
-	src, err := os.ReadFile("deploy.go")
-	if err != nil {
-		t.Fatalf("reading deploy.go: %v", err)
-	}
-	srcStr := string(src)
+	declared, codeTokens := parsePinnedURLConsts(t)
 
-	// 1a. Declared URL constants must exactly match the registry.
-	declRe := regexp.MustCompile(`(?m)^	(\w+URL)\s*=\s+"https://`)
-	declared := map[string]bool{}
-	for _, m := range declRe.FindAllStringSubmatch(srcStr, -1) {
-		declared[m[1]] = true
-	}
+	// 1. Declared URL constants must exactly match the registry.
 	want := map[string]bool{}
 	for _, name := range expectedPinnedURLConsts {
 		want[name] = true
 	}
-	if !reflect.DeepEqual(declared, want) {
+	declaredSet := keySet(declared)
+	if !reflect.DeepEqual(declaredSet, want) {
 		t.Errorf("deploy.go declares URL constants %v, but registry expects %v\n"+
 			"→ add/remove pins in BOTH expectedPinnedURLConsts and liveCheckPins",
-			setNames(declared), setNames(want))
+			setNames(declaredSet), setNames(want))
 	}
 
-	// 1b. The live-check map must cover exactly the registry (no drift).
+	// 2. The live-check map must cover exactly the registry (no drift).
 	live := map[string]bool{}
 	for name := range liveCheckPins {
 		live[name] = true
@@ -126,11 +173,14 @@ func TestDeployGoPinRegistry(t *testing.T) {
 			setNames(live), setNames(want))
 	}
 
-	// 2. Removed 404 pins/steps must stay removed (comments excluded).
-	code := stripLineComments(srcStr)
-	for _, f := range forbiddenDeployIdentifiers {
-		if strings.Contains(code, f) {
-			t.Errorf("deploy.go still references %q — this pin/step was removed because it 404s (see SW4a)", f)
+	// 3. Removed 404 pins/steps must stay removed — scanning identifiers and
+	//    string literals (comments excluded by construction).
+	for _, tok := range codeTokens {
+		for _, f := range forbiddenDeployIdentifiers {
+			if strings.Contains(tok, f) {
+				t.Errorf("deploy.go still references %q (in code: %q) — this pin/step was removed because it 404s (see SW4a)",
+					f, truncate(tok, 100))
+			}
 		}
 	}
 }
@@ -168,6 +218,15 @@ func TestPinnedURLsAreLive(t *testing.T) {
 			}
 		})
 	}
+}
+
+// keySet converts a name→value map to a name set for set comparison.
+func keySet(m map[string]string) map[string]bool {
+	set := map[string]bool{}
+	for name := range m {
+		set[name] = true
+	}
+	return set
 }
 
 // setNames returns a deterministic sorted name list for a set map (stable
