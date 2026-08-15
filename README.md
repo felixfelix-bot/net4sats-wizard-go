@@ -76,6 +76,16 @@ The deployment runs 9 steps over SSH:
 | 8 | Restart services | Restarts `tollgate-wrt` + `nodogsplash` |
 | 9 | Health check | Verifies TollGate API responding on `:2121` |
 
+### Download sources
+
+Artifacts the wizard downloads during deployment, and where they come from:
+
+| Artifact | Source | Notes |
+|----------|--------|-------|
+| `tollgate-wrt` .ipk | felixfelix-bot fork release `v0.6.1-post-merge` | Upstream OpenTollGate has no release after v0.5.0 yet; the fork tag points at upstream `main` (`b528e1d`) exactly. Will switch to the upstream `v0.6.0` release once cut. Falls back to the `net4sats` opkg/apk feed if the download fails. |
+| nftables enforcement include | ships **inside** the .ipk since PR #283 | The separate overlay download is a non-fatal fallback against pre-#283 builds. |
+| Admin panel + rpcd plugin | [net4sats/configurationwizzard](https://github.com/net4sats/configurationwizzard) release `v1.0.1` | Org release (was the felixfelix-bot fork while the org release lagged). Requires org release `v1.0.1` to exist. |
+
 ## Verify binaries
 
 ```sh

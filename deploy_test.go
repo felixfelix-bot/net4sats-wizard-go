@@ -69,3 +69,18 @@ func TestTollgatePkgURLAssetName(t *testing.T) {
 		t.Errorf("tollgatePkgURL = %q: must reference the tollgate-wrt binary", tollgatePkgURL)
 	}
 }
+
+// TestConfigwizURLPointsToOrgRelease verifies the admin-panel tarball is
+// pulled from the net4sats org's configurationwizzard releases, not from a
+// personal fork. The org v1.0.1 release carries the fork v1.0.1 content plus
+// the PR #22 balance-redirect fix and the admin-port (8090) fix.
+func TestConfigwizURLPointsToOrgRelease(t *testing.T) {
+	// 1. Must be a GitHub release download URL on the net4sats org repo.
+	if !strings.HasPrefix(configwizURL, "https://github.com/net4sats/configurationwizzard/releases/download/") {
+		t.Errorf("configwizURL = %q: must point at net4sats/configurationwizzard releases", configwizURL)
+	}
+	// 2. Must pull the v1.0.1 tarball asset.
+	if !strings.HasSuffix(configwizURL, "/v1.0.1/net4sats-configwiz-1.0.1.tar.gz") {
+		t.Errorf("configwizURL = %q: must reference the v1.0.1 net4sats-configwiz tarball", configwizURL)
+	}
+}

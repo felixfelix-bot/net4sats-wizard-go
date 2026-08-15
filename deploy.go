@@ -30,10 +30,13 @@ const (
 	tollgateNftEnforceURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/20-nds-enforce.nft"
 	// Pre-built OpenWrt firmware image with tollgate pre-installed (for future firmware flash step)
 	tollgateOSURL = "https://releases.tollgate.me/os/57e0f2468a17b8c7a84d9a2af62d1e02111a3b9bc898ec1d9183b1f7dd1db52e?channel=stable"
-	// Admin panel + rpcd plugin from net4sats GitHub releases
-	// TEMPORARY: point to fork release v1.0.1 which includes PR #22 (balance redirect fix).
-	// Revert to upstream v1.0.0 once a new upstream release is published.
-	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.1/net4sats-configwiz-1.0.1.tar.gz"
+	// Admin panel + rpcd plugin from the net4sats org's GitHub releases.
+	// Repointed from the felixfelix-bot fork (SW4b fork→upstream consolidation):
+	// org v1.0.1 = fork v1.0.1 content + PR #22 balance-redirect fix + admin-port
+	// (8090) fix. NOTE: the org v1.0.1 release must exist before this branch
+	// ships — until then the fork URL still resolves and this branch stays
+	// unmerged.
+	configwizURL = "https://github.com/net4sats/configurationwizzard/releases/download/v1.0.1/net4sats-configwiz-1.0.1.tar.gz"
 )
 
 // deploySteps returns the ordered deployment step definitions.
