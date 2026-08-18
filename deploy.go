@@ -39,7 +39,7 @@ const (
 	// OpenTollGate release with a matching asset is published, switch the host
 	// from felixfelix-bot to OpenTollGate (keeping the same path/asset name).
 	// v0.6.1-post-merge includes the NDS gate-open fix.
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.53.b528e1d_aarch64_cortex-a53.ipk"
+	tollgatePkgURL = "https://blossom2.orangesync.tech/c6b1484e99d7e5a7dbc0fe680d02b4d759e3413188b53372d5d4c45577c2bba8.apk"
 	// nftables enforcement include (from PR #283, installed as overlay after .ipk install).
 	// Same fallback strategy as tollgatePkgURL: upstream OpenTollGate is the target,
 	// fork v0.6.1-post-merge is the current source.
@@ -192,18 +192,18 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 4: Install tollgate package from GitHub releases
 	// OpenWrt 25+ uses apk; OpenWrt 24.x uses opkg. Detect at runtime.
 	job.setStep(4, "running", "")
-	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge ipk...")
+	job.addLog("Downloading tollgate-wrt portal-fix e705430 apk...")
 	pkgMgr := strings.TrimSpace(sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg"))
-	dlOut := sshRun(client, "wget -q -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
+	dlOut := sshRun(client, "wget -q -O /tmp/tollgate-wrt.apk '"+tollgatePkgURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
 	if strings.Contains(dlOut, "downloaded") {
 		job.addLog("Package downloaded, installing via " + pkgMgr + "...")
 		rmLock := sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
 		_ = rmLock
 		var installOut string
 		if pkgMgr == "apk" {
-			installOut = sshRun(client, "apk add --allow-untrusted /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+			installOut = sshRun(client, "apk add --allow-untrusted /tmp/tollgate-wrt.apk 2>&1 | tail -5")
 		} else {
-			installOut = sshRun(client, "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+			installOut = sshRun(client, "opkg install /tmp/tollgate-wrt.apk 2>&1 | tail -5")
 		}
 		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 80))
 		// Verify the binary actually exists
