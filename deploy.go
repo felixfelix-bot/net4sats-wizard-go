@@ -38,9 +38,8 @@ const (
 	// 404'd because the .nft file was never a release asset).
 	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
-	// TEMPORARY: point to fork release v1.0.1 which includes PR #22 (balance redirect fix).
-	// Revert to upstream v1.0.0 once a new upstream release is published.
-	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.1/net4sats-configwiz-1.0.1.tar.gz"
+	// Point to fork release v1.0.2 which includes PR #22 (balance redirect fix).
+	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.2/net4sats-configwiz-1.0.2.tar.gz"
 )
 
 // deploySteps returns the ordered deployment step definitions.
