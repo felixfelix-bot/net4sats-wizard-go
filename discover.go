@@ -115,6 +115,17 @@ func probeRouter(ip string) RouterInfo {
 }
 
 func tcpProbe(ip string, port int, timeout time.Duration) bool {
+	// Handle IPv6 addresses by wrapping them in brackets
+	if strings.Contains(ip, ":") {
+		addr := fmt.Sprintf("[%s]:%d", ip, port)
+		conn, err := net.DialTimeout("tcp", addr, timeout)
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}
+	// IPv4 addresses
 	addr := fmt.Sprintf("%s:%d", ip, port)
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {

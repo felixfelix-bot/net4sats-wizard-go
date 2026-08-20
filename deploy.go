@@ -16,7 +16,7 @@ import (
 const (
 	// net4satsPackage is the apk package name.
 	net4satsPackage = "net4sats"
-	// tollgate-wrt .ipk download URL.
+	// tollgate-wrt .ipk download URL (OpenWrt <= 24.10 back-compat).
 	//
 	// Fallback strategy (Endo handover):
 	//   Primary  — OpenTollGate/tollgate-module-basic-go upstream releases
@@ -37,6 +37,10 @@ const (
 	// separate overlay download is needed (that step was removed — its URL
 	// 404'd because the .nft file was never a release asset).
 	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk"
+	// tollgate-wrt .apk download URL (OpenWrt 25+ with APK support).
+	// This is the primary format for OpenWrt 25.12+ which uses APK instead of OPKG.
+	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
+	tollgatePkgURLApk = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.apk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// Point to fork release v1.0.2 which includes PR #22 (balance redirect fix).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.2/net4sats-configwiz-1.0.2.tar.gz"
@@ -143,18 +147,32 @@ func runDeployment(job *Job, req deployRequest) {
 	job.setStep(4, "running", "")
 	pkgMgr := strings.TrimSpace(sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg"))
 
+	// Select appropriate package URL based on package manager
+	// OpenWrt 25.12+ uses APK and cannot install legacy .ipk packages
+	var selectedPkgURL string
+	var pkgExtension string
+	if pkgMgr == "apk" {
+		selectedPkgURL = tollgatePkgURLApk
+		pkgExtension = ".apk"
+		job.addLog("OpenWrt 25+ detected with APK package manager")
+	} else {
+		selectedPkgURL = tollgatePkgURL
+		pkgExtension = ".ipk"
+		job.addLog("OpenWrt <=24.x detected with OPKG package manager")
+	}
+
 	// MT3000-class routers have no RTC — after a cold boot the clock is far
 	// in the past and router-side TLS to github.com fails cert validation.
 	// Sync from the laptop clock before any router-side download attempt.
 	sshRun(client, "date -s @"+strconv.FormatInt(time.Now().Unix(), 10)+" >/dev/null 2>&1; true")
 
-	// PRIMARY: download the .ipk on the LAPTOP and push it over SSH stdin.
+	// PRIMARY: download the package on the LAPTOP and push it over SSH stdin.
 	// This eliminates the router's DNS/TLS stack from the critical path —
 	// a freshly STA-connected router often has no working DNS yet.
-	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge ipk (laptop-side)...")
+	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge " + pkgExtension + " (laptop-side)...")
 	pkgOnRouter := false
-	if data, err := httpGetFile(tollgatePkgURL); err == nil && len(data) > 0 {
-		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt.ipk && echo PUSH_OK")
+	if data, err := httpGetFile(selectedPkgURL); err == nil && len(data) > 0 {
+		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt"+pkgExtension+" && echo PUSH_OK")
 		if strings.Contains(push, "PUSH_OK") {
 			pkgOnRouter = true
 			job.addLog(fmt.Sprintf("Package downloaded on laptop (%d KB), pushed to router via SSH", len(data)/1024))
@@ -171,7 +189,7 @@ func runDeployment(job *Job, req deployRequest) {
 	if !pkgOnRouter {
 		probe := sshRun(client, "nslookup github.com 2>&1 | tail -n2")
 		job.addLog("Router DNS probe: " + truncate(probe, 60))
-		wgetOut := sshRun(client, "wget -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1; [ -s /tmp/tollgate-wrt.ipk ] && echo WGET_OK || echo WGET_FAIL")
+		wgetOut := sshRun(client, "wget -O /tmp/tollgate-wrt"+pkgExtension+" '"+selectedPkgURL+"' 2>&1; [ -s /tmp/tollgate-wrt"+pkgExtension+"] ] && echo WGET_OK || echo WGET_FAIL")
 		job.addLog("wget: " + truncate(wgetOut, 120))
 		if strings.Contains(wgetOut, "WGET_OK") {
 			pkgOnRouter = true
@@ -182,9 +200,9 @@ func runDeployment(job *Job, req deployRequest) {
 	if pkgOnRouter {
 		job.addLog("Installing package via " + pkgMgr + "...")
 		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
-		installCmd := "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5"
+		installCmd := "opkg install /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		if pkgMgr == "apk" {
-			installCmd = "apk add --allow-untrusted /tmp/tollgate-wrt.ipk 2>&1 | tail -5"
+			installCmd = "apk add --allow-untrusted /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		}
 		installOut := sshRun(client, installCmd)
 		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 100))
@@ -192,7 +210,7 @@ func runDeployment(job *Job, req deployRequest) {
 		verifyOut := sshRun(client, "ls /usr/bin/tollgate-wrt 2>/dev/null || ls /usr/sbin/tollgate-wrt 2>/dev/null || which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if !strings.Contains(verifyOut, "NOT FOUND") {
 			// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
-			// inside the ipk under /etc/nftables.d/{20-nds-enforce,30-backend-firewall}.nft —
+			// inside the package under /etc/nftables.d/{20-nds-enforce,30-backend-firewall}.nft —
 			// no separate overlay download is performed (the old overlay URL 404'd).
 			job.setStep(4, "done", "tollgate-wrt installed via "+pkgMgr)
 			installedOK = true
