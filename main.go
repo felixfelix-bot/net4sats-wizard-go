@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -241,8 +243,10 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 
@@ -255,6 +259,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer client.Close()
+
+	// A fresh-reset OpenWrt router ships with radios DISABLED in UCI —
+	// `iwinfo scan` would return nothing and the UI would show an empty
+	// SSID list. Enable all radios, bring wifi up, and wait until every
+	// radio reports up before scanning (see enableWifiAndWait).
+	enableWifiAndWait(client)
 
 	// Auto-detect wireless interfaces from `iwinfo` (no args) output.
 	// OpenWrt interfaces can be named phy0-ap0, wlan0, wl0-sha0, etc —
@@ -326,8 +336,10 @@ func handleDeploy(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 	if !validLightningAddress(req.LNURL) {
@@ -382,6 +394,44 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// enableWifiAndWait enables all UCI wifi-devices, starts wifi, and polls
+// `ubus call network.wireless status` until every radio reports up
+// (~15s budget; fixed sleeps race slow driver init, polling removes that).
+// Best-effort: the scan proceeds regardless after the timeout — errors
+// surface in the scan step itself where they are actionable.
+func enableWifiAndWait(client *ssh.Client) {
+	sshRun(client, strings.Join([]string{
+		`for r in $(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)=wifi-device$/\1/p"); do uci -q set wireless.$r.disabled='0'; done`,
+		`uci commit wireless`,
+		`wifi up 2>/dev/null || wifi 2>/dev/null || true`,
+	}, " && "))
+	for i := 0; i < 10; i++ {
+		if allRadiosUp(sshRun(client, "ubus call network.wireless status 2>/dev/null")) {
+			return
+		}
+		time.Sleep(1500 * time.Millisecond)
+	}
+}
+
+// allRadiosUp parses `ubus call network.wireless status` output
+// ({"radio0":{"up":true,...},"radio1":{...}}) and reports whether EVERY
+// radio reports up. Empty/garbage output parses to false (keep polling).
+func allRadiosUp(statusJSON string) bool {
+	var status map[string]map[string]any
+	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
+		return false
+	}
+	if len(status) == 0 {
+		return false
+	}
+	for _, radio := range status {
+		if up, _ := radio["up"].(bool); !up {
+			return false
+		}
+	}
+	return true
 }
 
 func main() {

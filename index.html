@@ -153,7 +153,7 @@
     </div>
     <div class="field">
       <label>Router password</label>
-      <input type="password" id="password" placeholder="Enter router admin password" autocomplete="off" oninput="onPasswordChange()">
+      <input type="password" id="password" placeholder="Router password (leave blank on fresh reset)" autocomplete="off" oninput="onPasswordChange()">
     </div>
     <div class="field">
       <label>Upstream connection</label>
@@ -257,17 +257,16 @@ function selectMode(mode) {
 }
 
 function onPasswordChange() {
-  // If STA mode is active, reset scan so it re-triggers with new password
+  // If STA mode is active, reset scan so it re-triggers with new password.
+  // Empty password is valid (fresh-reset router) — always rescan.
   if (upstreamMode === 'sta') {
     wifiScanned = false;
     const ssidSelect = document.getElementById('ssid');
-    ssidSelect.innerHTML = '<option value="">Enter router password to scan...</option>';
+    ssidSelect.innerHTML = '<option value="">Scanning...</option>';
     ssidSelect.disabled = true;
-    if (document.getElementById('password').value.length >= 1) {
-      // Debounce: only auto-scan after user stops typing briefly
-      clearTimeout(window._wifiScanTimer);
-      window._wifiScanTimer = setTimeout(wifiScan, 600);
-    }
+    // Debounce: only auto-scan after user stops typing briefly
+    clearTimeout(window._wifiScanTimer);
+    window._wifiScanTimer = setTimeout(wifiScan, 600);
   }
   checkReady();
 }
@@ -277,7 +276,7 @@ function onRouterChange() {
   if (upstreamMode === 'sta') {
     wifiScanned = false;
     const ssidSelect = document.getElementById('ssid');
-    ssidSelect.innerHTML = '<option value="">Enter router password to scan...</option>';
+    ssidSelect.innerHTML = '<option value="">Select router, then Rescan...</option>';
     ssidSelect.disabled = true;
   }
   checkReady();
@@ -290,10 +289,11 @@ async function wifiScan() {
   const ssidHint = document.getElementById('ssid-hint');
   const rescanBtn = document.getElementById('rescan-btn');
 
-  if (!ip || !password) {
-    ssidSelect.innerHTML = '<option value="">Enter router password first...</option>';
+  // Password may be empty — fresh-reset OpenWrt routers have no root password.
+  if (!ip) {
+    ssidSelect.innerHTML = '<option value="">Select a router first...</option>';
     ssidSelect.disabled = true;
-    ssidHint.textContent = 'Enter router password to enable WiFi scan.';
+    ssidHint.textContent = 'Select a router to enable WiFi scan.';
     return;
   }
 
@@ -423,7 +423,7 @@ function checkReady() {
   const ip = document.getElementById('router-select').value;
   const password = document.getElementById('password').value;
   const ln = document.getElementById('lnurl').value;
-  let ready = !!(ip && password && validLightning(ln));
+  let ready = !!(ip && validLightning(ln));
   // For STA mode, also require an SSID to be selected
   if (ready && upstreamMode === 'sta') {
     const ssidVal = document.getElementById('ssid').value;
@@ -437,7 +437,7 @@ async function startDeploy() {
   const password = document.getElementById('password').value;
   const lnurl = document.getElementById('lnurl').value.trim();
 
-  if (!ip || !password || !validLightning(lnurl)) return;
+  if (!ip || !validLightning(lnurl)) return;
 
   document.getElementById('select-view').classList.add('hidden');
   document.getElementById('deploy-view').classList.remove('hidden');

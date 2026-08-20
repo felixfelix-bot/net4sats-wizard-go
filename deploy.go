@@ -2,9 +2,15 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -23,13 +29,14 @@ const (
 	// OpenTollGate release with a matching asset is published, switch the host
 	// from felixfelix-bot to OpenTollGate (keeping the same path/asset name).
 	// v0.6.1-post-merge includes the NDS gate-open fix.
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.53.b528e1d_aarch64_cortex-a53.ipk"
-	// nftables enforcement include (from PR #283, installed as overlay after .ipk install).
-	// Same fallback strategy as tollgatePkgURL: upstream OpenTollGate is the target,
-	// fork v0.6.1-post-merge is the current source.
-	tollgateNftEnforceURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/20-nds-enforce.nft"
-	// Pre-built OpenWrt firmware image with tollgate pre-installed (for future firmware flash step)
-	tollgateOSURL = "https://releases.tollgate.me/os/57e0f2468a17b8c7a84d9a2af62d1e02111a3b9bc898ec1d9183b1f7dd1db52e?channel=stable"
+	//
+	// SW4a (Aug 2026): repinned from main.53 (asset never existed on this
+	// release — HTTP 404, broke every fresh deploy) to the only asset the
+	// release actually publishes: main.56.b528e1d. The nftables enforcement
+	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
+	// separate overlay download is needed (that step was removed — its URL
+	// 404'd because the .nft file was never a release asset).
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// TEMPORARY: point to fork release v1.0.1 which includes PR #22 (balance redirect fix).
 	// Revert to upstream v1.0.0 once a new upstream release is published.
@@ -67,7 +74,10 @@ func runDeployment(job *Job, req deployRequest) {
 		job.mu.Unlock()
 		return
 	}
-	defer client.Close()
+	// Closure (not `defer client.Close()`): client can be re-assigned when
+	// the STA step re-establishes the session after a wifi reload — the
+	// deferred call must close whichever client is live at the end.
+	defer func() { client.Close() }()
 
 	// Step 0: Verify SSH
 	job.setStep(0, "running", "")
@@ -120,51 +130,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 3: Configure upstream (WiFi STA if requested)
 	job.setStep(3, "running", "")
 	if req.Mode == "sta" && req.SSID != "" {
-		staCmd := "uci -q set wireless.net4sats_uplink=wifi-iface && " +
-			"uci -q set wireless.net4sats_uplink.network='wwan' && " +
-			"uci -q set wireless.net4sats_uplink.device='radio0' && " +
-			"uci -q set wireless.net4sats_uplink.mode='sta' && " +
-			"uci -q set wireless.net4sats_uplink.ssid='" + req.SSID + "' && " +
-			"uci -q set wireless.net4sats_uplink.encryption='psk2' && " +
-			"uci -q set wireless.net4sats_uplink.key='" + req.WifiPass + "' && " +
-			"uci -q set network.wwan=interface && " +
-			"uci -q set network.wwan.proto='dhcp' && " +
-			"uci commit wireless && uci commit network && echo 'sta configured'"
-		staOut := sshRun(client, staCmd)
-		if strings.Contains(staOut, "sta configured") {
-			// Run wifi reload so the STA interface actually comes up
-			job.addLog("Running wifi reload to bring up STA interface...")
-			sshRun(client, "wifi reload 2>/dev/null || wifi 2>/dev/null || true")
-			// Wait for the interface to come up (STA association takes a few seconds)
-			time.Sleep(5 * time.Second)
-
-			// Verify the STA interface is up and associated
-			job.addLog("Verifying WiFi STA connection...")
-			verifyOut := sshRun(client,
-				"iwinfo 2>/dev/null | grep -A5 'net4sats_uplink' | grep -q 'ESSID: \""+req.SSID+"\"' && echo 'STA_CONNECTED' || "+
-					"ubus call network.wireless status 2>/dev/null | grep -q '\"up\": true' && echo 'STA_CONNECTED' || echo 'STA_NOT_CONNECTED'")
-
-			if strings.Contains(verifyOut, "STA_CONNECTED") {
-				job.addLog("WiFi STA connected: " + req.SSID)
-				job.setStep(3, "done", "STA mode: "+req.SSID)
-			} else {
-				job.addLog("WiFi STA verification failed — interface not associated")
-				job.addLog("Check output: " + truncate(verifyOut, 80))
-				job.setStep(3, "failed", "WiFi connection failed — check SSID and password")
-				job.mu.Lock()
-				job.Status = "failed"
-				job.Error = "WiFi STA connection failed — check SSID and password for \"" + req.SSID + "\""
-				job.mu.Unlock()
-				return
-			}
-		} else {
-			job.addLog("WiFi STA configuration failed")
-			job.addLog("Output: " + truncate(staOut, 80))
-			job.setStep(3, "failed", "STA configuration error")
-			job.mu.Lock()
-			job.Status = "failed"
-			job.Error = "Failed to configure WiFi STA mode"
-			job.mu.Unlock()
+		if !configureSTA(job, &client, req.IP, req.Password, req.SSID, req.WifiPass) {
 			return
 		}
 	} else {
@@ -176,51 +142,82 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 4: Install tollgate package from GitHub releases
 	// OpenWrt 25+ uses apk; OpenWrt 24.x uses opkg. Detect at runtime.
 	job.setStep(4, "running", "")
-	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge ipk...")
 	pkgMgr := strings.TrimSpace(sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg"))
-	dlOut := sshRun(client, "wget -q -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
-	if strings.Contains(dlOut, "downloaded") {
-		job.addLog("Package downloaded, installing via " + pkgMgr + "...")
-		rmLock := sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
-		_ = rmLock
-		var installOut string
-		if pkgMgr == "apk" {
-			installOut = sshRun(client, "apk add --allow-untrusted /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+
+	// MT3000-class routers have no RTC — after a cold boot the clock is far
+	// in the past and router-side TLS to github.com fails cert validation.
+	// Sync from the laptop clock before any router-side download attempt.
+	sshRun(client, "date -s @"+strconv.FormatInt(time.Now().Unix(), 10)+" >/dev/null 2>&1; true")
+
+	// PRIMARY: download the .ipk on the LAPTOP and push it over SSH stdin.
+	// This eliminates the router's DNS/TLS stack from the critical path —
+	// a freshly STA-connected router often has no working DNS yet.
+	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge ipk (laptop-side)...")
+	pkgOnRouter := false
+	if data, err := httpGetFile(tollgatePkgURL); err == nil && len(data) > 0 {
+		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt.ipk && echo PUSH_OK")
+		if strings.Contains(push, "PUSH_OK") {
+			pkgOnRouter = true
+			job.addLog(fmt.Sprintf("Package downloaded on laptop (%d KB), pushed to router via SSH", len(data)/1024))
 		} else {
-			installOut = sshRun(client, "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5")
+			job.addLog("SSH push failed: " + truncate(push, 80))
 		}
-		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 80))
+	} else if err != nil {
+		job.addLog("Laptop download failed: " + truncate(err.Error(), 80) + " — falling back to router-side wget")
+	}
+
+	// FALLBACK: router-side wget, with a real DNS probe and wget's stderr
+	// logged so the job log shows WHY it fails (DNS vs TLS/clock vs routing)
+	// instead of a silent empty file.
+	if !pkgOnRouter {
+		probe := sshRun(client, "nslookup github.com 2>&1 | tail -n2")
+		job.addLog("Router DNS probe: " + truncate(probe, 60))
+		wgetOut := sshRun(client, "wget -O /tmp/tollgate-wrt.ipk '"+tollgatePkgURL+"' 2>&1; [ -s /tmp/tollgate-wrt.ipk ] && echo WGET_OK || echo WGET_FAIL")
+		job.addLog("wget: " + truncate(wgetOut, 120))
+		if strings.Contains(wgetOut, "WGET_OK") {
+			pkgOnRouter = true
+		}
+	}
+
+	installedOK := false
+	if pkgOnRouter {
+		job.addLog("Installing package via " + pkgMgr + "...")
+		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
+		installCmd := "opkg install /tmp/tollgate-wrt.ipk 2>&1 | tail -5"
+		if pkgMgr == "apk" {
+			installCmd = "apk add --allow-untrusted /tmp/tollgate-wrt.ipk 2>&1 | tail -5"
+		}
+		installOut := sshRun(client, installCmd)
+		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 100))
 		// Verify the binary actually exists
 		verifyOut := sshRun(client, "ls /usr/bin/tollgate-wrt 2>/dev/null || ls /usr/sbin/tollgate-wrt 2>/dev/null || which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
-		if strings.Contains(verifyOut, "NOT FOUND") {
-			job.addLog("WARNING: tollgate-wrt binary not found after install")
-			job.setStep(4, "error", "tollgate-wrt install failed")
-			return
+		if !strings.Contains(verifyOut, "NOT FOUND") {
+			// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
+			// inside the ipk under /etc/nftables.d/{20-nds-enforce,30-backend-firewall}.nft —
+			// no separate overlay download is performed (the old overlay URL 404'd).
+			job.setStep(4, "done", "tollgate-wrt installed via "+pkgMgr)
+			installedOK = true
 		}
-		// TEMPORARY: Install nftables enforcement overlay from PR #283
-		job.addLog("Installing fw4 nftables enforcement overlay (PR #283)...")
-		nftDl := sshRun(client, "wget -q -O /tmp/20-nds-enforce.nft '"+tollgateNftEnforceURL+"' 2>&1 && echo 'downloaded' || echo 'download failed'")
-		if strings.Contains(nftDl, "downloaded") {
-			sshRun(client, "mkdir -p /etc/nftables.d")
-			sshRun(client, "cp /tmp/20-nds-enforce.nft /etc/nftables.d/20-nds-enforce.nft")
-			sshRun(client, "rm -f /tmp/20-nds-enforce.nft")
-			job.addLog("fw4 nftables enforcement overlay installed")
-		} else {
-			job.addLog("WARNING: nftables enforcement overlay download failed — authenticated users may have no internet")
-		}
-		job.setStep(4, "done", "tollgate-wrt installed via "+pkgMgr)
-	} else {
-		job.addLog("Download failed, trying "+pkgMgr+" feed...")
+	}
+	if !installedOK {
+		// Last resort: feed install (requires the router to already have
+		// working internet — usually not the case on a fresh STA uplink).
+		job.addLog("Package not on router — trying " + pkgMgr + " feed...")
 		var installOut string
 		if pkgMgr == "apk" {
 			installOut = sshRun(client, "apk update >/dev/null 2>&1; apk add "+net4satsPackage+" 2>&1 | tail -5")
 		} else {
 			installOut = sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null; opkg update >/dev/null 2>&1; opkg install "+net4satsPackage+" 2>&1 | tail -5")
 		}
-		job.addLog("Package installed: " + truncate(installOut, 80))
+		job.addLog("Feed install: " + truncate(installOut, 100))
 		verifyOut := sshRun(client, "which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if strings.Contains(verifyOut, "NOT FOUND") {
-			job.setStep(4, "error", "tollgate-wrt install failed")
+			// STA config + radio changes are live at this point but the
+			// deploy is dead — restore the wireless snapshot so the router
+			// is left in its pre-deploy state.
+			job.addLog("Rolling back wireless config (pre-deploy snapshot)...")
+			rollbackWireless(client)
+			jobFail(job, 4, "tollgate-wrt install failed", "Package installation failed — wireless config rolled back")
 			return
 		}
 		job.setStep(4, "done", net4satsPackage+" installed (feed, "+pkgMgr+")")
@@ -551,7 +548,7 @@ func runDeployment(job *Job, req deployRequest) {
 	initCheck := sshRun(client, "ls /etc/init.d/tollgate-wrt 2>/dev/null && echo 'exists' || echo 'missing'")
 	if strings.Contains(initCheck, "missing") {
 		job.addLog("ERROR: tollgate-wrt init script not found — package install failed")
-		job.setStep(9, "error", "tollgate-wrt not installed")
+		jobFail(job, 9, "tollgate-wrt not installed", "tollgate-wrt init script missing — package install failed")
 		return
 	}
 	svcOut := sshRun(client, strings.Join([]string{
@@ -589,7 +586,7 @@ func runDeployment(job *Job, req deployRequest) {
 		job.setStep(10, "done", "API healthy on :2121")
 	} else {
 		job.addLog("Health check FAILED: " + truncate(healthOut, 80))
-		job.setStep(10, "error", "tollgate API not responding on :2121")
+		jobFail(job, 10, "tollgate API not responding on :2121", "Health check failed — tollgate API not responding")
 		return
 	}
 
@@ -597,6 +594,183 @@ func runDeployment(job *Job, req deployRequest) {
 	job.Status = "done"
 	job.mu.Unlock()
 	job.addLog("net4sats deployment complete!")
+}
+
+// jobFail marks step as failed and the whole job as failed. (Steps that
+// previously only did setStep(i,"error") + return left job.Status "running"
+// forever — the wizard UI would spin with no error shown.)
+func jobFail(job *Job, step int, stepDetail, jobErr string) {
+	job.setStep(step, "failed", stepDetail)
+	job.mu.Lock()
+	job.Status = "failed"
+	job.Error = jobErr
+	job.mu.Unlock()
+}
+
+// staSetupScript returns the shell script that configures the
+// net4sats_uplink STA iface on the target radio (radio0 if present, else
+// the first wifi-device found).
+//
+// CRITICAL (dual-STA guard): a radio can host only ONE STA interface — a
+// second one kills the router's wireless entirely. Any existing STA iface
+// on the target radio (including a previous net4sats_uplink on re-run) is
+// DISABLED — not deleted — before the new uplink is added. Disabling keeps
+// the old section recoverable by the operator.
+//
+// The script snapshots /etc/config/wireless to /tmp for rollback (see
+// rollbackWireless) and performs a single commit pair; the caller applies
+// the whole change set with ONE `wifi reload`.
+func staSetupScript(ssid, wifiKey string) string {
+	return `
+target=radio0
+uci -q get wireless.radio0 >/dev/null 2>&1 || target=$(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)=wifi-device$/\1/p" | head -n1)
+if [ -z "$target" ]; then echo 'NO_RADIO'; exit 0; fi
+cp /etc/config/wireless /tmp/wireless.pre-net4sats &&
+for s in $(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)\.device='$target'$/\1/p"); do
+	if [ "$(uci -q get wireless.$s.mode 2>/dev/null)" = 'sta' ]; then uci -q set wireless.$s.disabled='1'; fi
+done &&
+uci set wireless.net4sats_uplink=wifi-iface &&
+uci set wireless.net4sats_uplink.network='wwan' &&
+uci set wireless.net4sats_uplink.device="$target" &&
+uci set wireless.net4sats_uplink.mode='sta' &&
+uci set wireless.net4sats_uplink.ssid='` + ssid + `' &&
+uci set wireless.net4sats_uplink.encryption='psk2' &&
+uci set wireless.net4sats_uplink.key='` + wifiKey + `' &&
+uci set wireless.net4sats_uplink.disabled='0' &&
+uci set network.wwan=interface &&
+uci set network.wwan.proto='dhcp' &&
+uci commit wireless &&
+uci commit network &&
+echo "STA_CFG_OK target=$target"`
+}
+
+// rollbackWireless restores the /etc/config/wireless snapshot taken before
+// STA changes and reloads wifi, returning the router to its pre-deploy
+// wireless state. Safe to call when no snapshot exists (no-op).
+func rollbackWireless(client *ssh.Client) {
+	sshRun(client, "[ -f /tmp/wireless.pre-net4sats ] && cp /tmp/wireless.pre-net4sats /etc/config/wireless && uci commit wireless && (wifi reload 2>/dev/null || wifi 2>/dev/null); true")
+}
+
+// reconnectSSH retries sshConnect (radios may be restarting after a wifi
+// reload, so the first attempts can time out). Falls back to empty-password
+// auth like the initial connect.
+func reconnectSSH(ip, password string, attempts int, delay time.Duration) *ssh.Client {
+	for i := 0; i < attempts; i++ {
+		time.Sleep(delay)
+		c := sshConnect(ip, password)
+		if c == nil && password != "" {
+			c = sshConnect(ip, "")
+		}
+		if c != nil {
+			return c
+		}
+	}
+	return nil
+}
+
+// ifaceUp parses `ubus call network.interface.<name> status` output and
+// reports whether the interface is up. This is the only reliable STA
+// verification: grepping iwinfo never matches (kernel interface names are
+// not UCI section names), and `network.wireless status | grep up` matches
+// ANY radio being up — not the STA association.
+func ifaceUp(statusJSON string) bool {
+	var st map[string]any
+	if err := json.Unmarshal([]byte(statusJSON), &st); err != nil {
+		return false
+	}
+	up, _ := st["up"].(bool)
+	return up
+}
+
+// configureSTA wires up the net4sats_uplink WiFi STA (deploy step 3).
+// Returns false after marking the job failed; any failure AFTER the
+// wireless snapshot restores the snapshot and reloads wifi (rollback).
+//
+// The SSH client is re-established after the single `wifi reload` — the old
+// session can go stale while radios restart — and written back through
+// pclient so subsequent steps use the live session.
+func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass string) bool {
+	client := *pclient
+	job.addLog("Configuring WiFi STA uplink: " + ssid)
+	out := sshRun(client, staSetupScript(ssid, wifiPass))
+	if strings.Contains(out, "NO_RADIO") {
+		jobFail(job, 3, "no wireless radio found", "No wifi-device found in UCI — cannot configure STA uplink")
+		return false
+	}
+	if !strings.Contains(out, "STA_CFG_OK") {
+		job.addLog("STA configuration failed: " + truncate(out, 120))
+		rollbackWireless(client)
+		jobFail(job, 3, "STA configuration error", "Failed to configure WiFi STA mode")
+		return false
+	}
+	radio := "radio0"
+	if i := strings.Index(out, "target="); i >= 0 {
+		radio = strings.TrimPrefix(out[i:], "target=")
+		if j := strings.IndexAny(radio, " \n\r"); j >= 0 {
+			radio = radio[:j]
+		}
+	}
+	job.addLog("STA configured on " + radio + " (any existing STA on that radio disabled). Applying wifi reload...")
+
+	// ONE reload applies the whole change set.
+	sshRun(client, "wifi reload 2>/dev/null || wifi 2>/dev/null || true")
+
+	// The SSH session can drop while radios restart — close it and
+	// re-establish (LAN stays up; only the old session may be wedged).
+	client.Close()
+	newClient := reconnectSSH(ip, password, 3, 5*time.Second)
+	if newClient == nil {
+		job.addLog("Could not re-establish SSH after wifi reload — attempting rollback")
+		// client is dead; rollback needs a live session — try once more
+		// with a longer budget.
+		if retry := reconnectSSH(ip, password, 2, 10*time.Second); retry != nil {
+			rollbackWireless(retry)
+			retry.Close()
+		}
+		jobFail(job, 3, "SSH lost after wifi reload",
+			"SSH connection lost after wifi reload and could not be re-established — wireless config rolled back if the router was reachable")
+		return false
+	}
+	*pclient = newClient
+	client = newClient
+
+	// Verify the STA actually associated: the wwan network interface must
+	// report up via ubus (see ifaceUp for why grep-based checks lie).
+	job.addLog("Verifying WiFi STA connection (ubus network.interface.wwan)...")
+	var up bool
+	for i := 0; i < 15 && !up; i++ { // ~22s budget: association + DHCP
+		up = ifaceUp(sshRun(client, "ubus call network.interface.wwan status 2>/dev/null"))
+		if !up {
+			time.Sleep(1500 * time.Millisecond)
+		}
+	}
+	if !up {
+		job.addLog("WiFi STA verification failed — wwan interface not up")
+		rollbackWireless(client)
+		jobFail(job, 3, "WiFi connection failed — check SSID and password",
+			"WiFi STA connection failed for \""+ssid+"\" — check SSID and password (wireless config rolled back)")
+		return false
+	}
+	job.addLog("WiFi STA connected: " + ssid)
+	job.setStep(3, "done", "STA mode: "+ssid)
+	return true
+}
+
+// httpGetFile downloads a release asset on the laptop, following redirects
+// (GitHub release URLs redirect to a CDN), with a 60s timeout and a 64 MB
+// size guard. This is the PRIMARY package path — pushing the bytes over SSH
+// avoids depending on the router's DNS/TLS stack entirely.
+func httpGetFile(url string) ([]byte, error) {
+	netClient := &http.Client{Timeout: 60 * time.Second}
+	resp, err := netClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %s", resp.Status)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, 64<<20))
 }
 
 func truncate(s string, maxLen int) string {

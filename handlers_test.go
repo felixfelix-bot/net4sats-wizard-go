@@ -81,10 +81,18 @@ func TestHandleDeploy(t *testing.T) {
 			expectedError:  "invalid JSON",
 		},
 		{
-			name:           "missing IP and password",
-			body:           `{"ip": "", "password": "", "lnurl": "test@wallet.app"}`,
+			name:           "missing IP",
+			body:           `{"ip": "", "password": "secretpw", "lnurl": "test@wallet.app"}`,
 			expectedStatus: 400,
-			expectedError:  "IP and password required",
+			expectedError:  "IP required",
+		},
+		{
+			// Fresh-reset OpenWrt routers ship with an empty root password —
+			// the deploy API must accept an empty password (see sshConnect).
+			name:           "empty password allowed (fresh reset)",
+			body:           `{"ip": "192.168.1.1", "password": "", "lnurl": "test@wallet.app", "mode": "wan"}`,
+			expectedStatus: 200,
+			expectedError:  "",
 		},
 		{
 			name:           "invalid lightning address",
