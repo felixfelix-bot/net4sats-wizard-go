@@ -241,8 +241,10 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 
@@ -326,8 +328,10 @@ func handleDeploy(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 	if !validLightningAddress(req.LNURL) {

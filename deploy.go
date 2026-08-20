@@ -203,7 +203,7 @@ func runDeployment(job *Job, req deployRequest) {
 		// no separate overlay download is performed (the old overlay URL 404'd).
 		job.setStep(4, "done", "tollgate-wrt installed via "+pkgMgr)
 	} else {
-		job.addLog("Download failed, trying "+pkgMgr+" feed...")
+		job.addLog("Download failed, trying " + pkgMgr + " feed...")
 		var installOut string
 		if pkgMgr == "apk" {
 			installOut = sshRun(client, "apk update >/dev/null 2>&1; apk add "+net4satsPackage+" 2>&1 | tail -5")

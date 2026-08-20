@@ -14,7 +14,15 @@ import (
 )
 
 // sshConnect establishes an SSH session to the router.
-// If password is empty, tries key-based auth (default SSH keys).
+//
+// Auth chain, tried in order (a fresh-reset OpenWrt router ships root with
+// an EMPTY password, while an already-configured one has the operator's
+// password — the wizard must handle both):
+//  1. Password(user-supplied)  — configured routers (v0.5.0 back-compat)
+//  2. Password("")             — fresh routers, password auth
+//  3. KeyboardInteractive      — fresh routers whose dropbear only accepts
+//     (answers = password)       keyboard-interactive for the empty password
+//  4. Default SSH keys          — key-provisioned routers, if present
 func sshConnect(ip, password string) *ssh.Client {
 	config := &ssh.ClientConfig{
 		User:            "root",
@@ -22,19 +30,37 @@ func sshConnect(ip, password string) *ssh.Client {
 		Timeout:         10 * time.Second,
 	}
 
+	auth := []ssh.AuthMethod{}
 	if password != "" {
-		config.Auth = []ssh.AuthMethod{ssh.Password(password)}
-	} else if signer := tryDefaultKeys(); signer != nil {
-		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
-	} else {
-		return nil
+		auth = append(auth, ssh.Password(password))
 	}
+	auth = append(auth,
+		ssh.Password(""),
+		keyboardInteractiveAuth(password),
+	)
+	if signer := tryDefaultKeys(); signer != nil {
+		auth = append(auth, ssh.PublicKeys(signer))
+	}
+	config.Auth = auth
 
 	client, err := ssh.Dial("tcp", net.JoinHostPort(ip, "22"), config)
 	if err != nil {
 		return nil
 	}
 	return client
+}
+
+// keyboardInteractiveAuth answers every keyboard-interactive challenge with
+// the given password ("" for a fresh router). The callback MUST return
+// exactly one answer per question or x/crypto/ssh fails the auth attempt.
+func keyboardInteractiveAuth(password string) ssh.AuthMethod {
+	return ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+		answers := make([]string, len(questions))
+		for i := range answers {
+			answers[i] = password
+		}
+		return answers, nil
+	})
 }
 
 // sshRun executes a command and returns combined output.
