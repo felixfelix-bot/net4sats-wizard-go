@@ -28,6 +28,19 @@ routers on your LAN and deploys net4sats over SSH.
    GL.iNet routers, use the web UI at `http://192.168.8.1` → Advanced →
    Upload Firmware → untick "Keep settings".
 
+   Alternatively, SSH in and sysupgrade:
+   ```sh
+   # Download the sysupgrade image for GL-MT3000 (OpenWrt 25.12.5)
+   curl -O https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/openwrt-25.12.5-mediatek-filogic-glinet_gl-mt3000-squashfs-sysupgrade.bin
+
+   # Upload to router and flash (clean, no config kept)
+   cat openwrt-25.12.5-mediatek-filogic-glinet_gl-mt3000-squashfs-sysupgrade.bin | \
+     ssh root@192.168.1.1 'cat > /tmp/sysupgrade.bin && sysupgrade -n /tmp/sysupgrade.bin'
+   ```
+   See [OpenWrt firmware downloads](https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/)
+   for other devices. Use `-n` for clean install (no config kept), omit for
+   in-place upgrade preserving settings.
+
 2. **Set a root password:**
    ```sh
    ssh root@192.168.1.1
