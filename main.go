@@ -131,7 +131,7 @@ type wifiSSID struct {
 // Some versions prefix with "Cell 01 - Address: ..." instead of the interface name.
 func parseIwinfoScan(output string) []wifiSSID {
 	seen := map[string]bool{}
-	var ssids []wifiSSID
+	ssids := []wifiSSID{}
 	var currentName, currentEnc string
 	var currentSignal int
 
@@ -206,7 +206,7 @@ func parseIwinfoScan(output string) []wifiSSID {
 //	    * primary channel: 1
 func parseIwScan(output string) []wifiSSID {
 	seen := map[string]bool{}
-	var ssids []wifiSSID
+	ssids := []wifiSSID{}
 	var currentName string
 
 	for _, line := range strings.Split(output, "\n") {
@@ -295,13 +295,28 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fallback: try common interface names if auto-detect found nothing
+	// Fallback: try common interface names if auto-detect found nothing.
+	// GL.iNet MT3000 and other modern OpenWrt devices use phy0-ap0 / phy1-ap0
+	// naming — wlan0/wlan1 often don't exist. But the error text from these
+	// non-existent interfaces must be detected so iw dev scan is tried next.
 	if strings.TrimSpace(scanOut) == "" {
 		scanOut = sshRun(client, "iwinfo wlan0 scan 2>/dev/null || iwinfo wlan1 scan 2>/dev/null")
 	}
 
-	// Fallback: try iw dev scan
-	if strings.TrimSpace(scanOut) == "" || strings.Contains(scanOut, "command not found") || strings.Contains(scanOut, "No such device") {
+	// Detect scan failures by error signatures in the output.
+	// "No such wireless device" is iwinfo's response for non-existent
+	// interfaces (NOT matched by "No such device" — different string!).
+	// Without this check, the wlan0/wlan1 fallback error text gets passed
+	// to parseIwinfoScan which returns 0 SSIDs → {"ssids":null}.
+	scanFailed := strings.TrimSpace(scanOut) == "" ||
+		strings.Contains(scanOut, "command not found") ||
+		strings.Contains(scanOut, "No such device") ||
+		strings.Contains(scanOut, "No such wireless device") ||
+		strings.Contains(scanOut, "Operation not supported") ||
+		strings.Contains(scanOut, "Operation not permitted") ||
+		strings.Contains(scanOut, "Device or resource busy")
+
+	if scanFailed {
 		scanOut = sshRun(client, "iw dev scan 2>/dev/null")
 		if strings.TrimSpace(scanOut) != "" && !strings.Contains(scanOut, "command not found") {
 			ssids := parseIwScan(scanOut)
@@ -309,12 +324,23 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 			return
 		}
-		writeError(w, 500, "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available")
+		writeError(w, 500, "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.")
 		return
 	}
 
 	ssids := parseIwinfoScan(scanOut)
 	w.Header().Set("Content-Type", "application/json")
+	// If 0 SSIDs found despite non-empty scan output, include diagnostic
+	// info so the operator can see what the router actually returned.
+	// This catches format mismatches (new iwinfo output) and error text
+	// that slipped past the checks above.
+	if len(ssids) == 0 && strings.TrimSpace(scanOut) != "" {
+		json.NewEncoder(w).Encode(map[string]any{
+			"ssids": ssids,
+			"debug": truncate(scanOut, 200),
+		})
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 }
 

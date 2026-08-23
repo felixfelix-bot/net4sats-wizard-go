@@ -322,7 +322,9 @@ async function wifiScan() {
     scannedSSIDs = data.ssids || [];
     if (scannedSSIDs.length === 0) {
       ssidSelect.innerHTML = '<option value="">No networks found</option>';
-      ssidHint.textContent = 'No WiFi networks detected. Try Rescan.';
+      ssidHint.textContent = data.debug
+        ? 'No WiFi networks detected. Router returned: ' + data.debug
+        : 'No WiFi networks detected. Try Rescan.';
       ssidSelect.disabled = true;
       wifiScanned = true;
       return;
