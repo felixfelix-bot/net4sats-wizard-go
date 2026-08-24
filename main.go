@@ -244,7 +244,8 @@ func scanFailedHeuristic(out string) bool {
 		strings.Contains(out, "No such wireless device") ||
 		strings.Contains(out, "Operation not supported") ||
 		strings.Contains(out, "Operation not permitted") ||
-		strings.Contains(out, "Device or resource busy")
+		strings.Contains(out, "Device or resource busy") ||
+		strings.Contains(out, "Usage:")
 }
 
 func handleWifiScan(w http.ResponseWriter, r *http.Request) {
@@ -338,12 +339,11 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
-			debugLog.WriteString("[2] iface " + iface + " mode=" + mode + " — ")
-			if strings.HasPrefix(mode, "Master") {
-				debugLog.WriteString("skipped (AP)\n")
-				continue
-			}
-			debugLog.WriteString("will scan\n")
+			debugLog.WriteString("[2] iface " + iface + " mode=" + mode + " — will scan\n")
+			// Don't skip Master (AP) interfaces — iwinfo <dev> scan works
+			// on AP interfaces on many OpenWrt versions (e.g. GL-MT3000
+			// with OpenWrt 25.12). The scan triggers a passive/active
+			// scan on the underlying phy regardless of interface mode.
 			clientDevs = append(clientDevs, iface)
 		}
 	}
