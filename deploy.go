@@ -200,13 +200,26 @@ func runDeployment(job *Job, req deployRequest) {
 	if pkgOnRouter {
 		job.addLog("Installing package via " + pkgMgr + "...")
 		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
-		installCmd := "opkg install /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
+		// opkg does lexical version compare — 'v0.5.0' > 'main.56...' so it refuses
+		// to downgrade unless forced. --force-reinstall ensures the files land even
+		// if opkg thinks the package is already present. Detect "Not downgrading"
+		// in the output as a hard failure regardless of binary existence.
+		installCmd := "opkg install --force-downgrade --force-reinstall /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		if pkgMgr == "apk" {
-			installCmd = "apk add --allow-untrusted /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
+			// apk has no downgrade refusal, but --force-overwrite guards against
+			// existing-file conflicts on reinstall.
+			installCmd = "apk add --allow-untrusted --force-overwrite /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		}
 		installOut := sshRun(client, installCmd)
 		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 100))
-		// Verify the binary actually exists
+		// If opkg refuses to downgrade, the OLD binary stays and the new config
+		// will crash against it — treat as a hard failure even if the binary exists.
+		if strings.Contains(installOut, "Not downgrading") {
+			job.addLog("ERROR: opkg refused to downgrade the package (old version kept)")
+			job.setStep(4, "error", "opkg refused to downgrade tollgate-wrt")
+			return
+		}
+		// Verify the binary actually exists (secondary check)
 		verifyOut := sshRun(client, "ls /usr/bin/tollgate-wrt 2>/dev/null || ls /usr/sbin/tollgate-wrt 2>/dev/null || which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if !strings.Contains(verifyOut, "NOT FOUND") {
 			// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
@@ -583,8 +596,22 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 10: Health check
 	job.setStep(10, "running", "")
 	job.addLog("Running health check...")
-	healthOut := sshRun(client, "wget -qO- http://127.0.0.1:2121/ 2>/dev/null | head -c 100 || echo 'health check failed'")
-	if strings.Contains(healthOut, "kind") || strings.Contains(healthOut, "metric") || strings.Contains(healthOut, "pubkey") {
+	// Retry health check up to 5 times — a single wget 3.5s after service
+	// restart is too fast: the freshly-installed binary may still be starting,
+	// or an old crashing binary may need time before it fails to bind :2121.
+	healthOK := false
+	var healthOut string
+	for attempt := 1; attempt <= 5; attempt++ {
+		time.Sleep(2 * time.Second)
+		healthOut = sshRun(client, "wget -qO- http://127.0.0.1:2121/ 2>/dev/null | head -c 100 || echo 'health check failed'")
+		if strings.Contains(healthOut, "kind") || strings.Contains(healthOut, "metric") || strings.Contains(healthOut, "pubkey") {
+			healthOK = true
+			job.addLog(fmt.Sprintf("Health check passed on attempt %d", attempt))
+			break
+		}
+		job.addLog(fmt.Sprintf("Health check attempt %d failed, retrying...", attempt))
+	}
+	if healthOK {
 		job.addLog("Health check passed — TollGate API responding")
 		// Also verify rpcd tollgate plugin responds
 		rpcdOut := sshRun(client, "ubus list tollgate 2>/dev/null && echo 'rpcd ok' || echo 'rpcd missing'")
