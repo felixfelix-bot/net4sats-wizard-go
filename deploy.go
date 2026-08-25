@@ -36,7 +36,7 @@ const (
 	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
 	// separate overlay download is needed (that step was removed — its URL
 	// 404'd because the .nft file was never a release asset).
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk"
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha6/tollgate-wrt_0.7.0-alpha6_aarch64_cortex-a53.ipk"
 	// tollgate-wrt .apk download URL (OpenWrt 25+ with APK support).
 	// This is the primary format for OpenWrt 25.12+ which uses APK instead of OPKG.
 	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
