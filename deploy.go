@@ -44,6 +44,14 @@ const (
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.3-alpha/net4sats-configwiz-1.0.3.tar.gz"
+	// Fixed tollgate-wrt backend binary (keyset + multimint fixes).
+	// The .ipk/.apk package ships gonuts-tollgate v0.10.0 which has the keyset
+	// bug (GET /v1/keys/{id} two-call → 400 "Unknown Keyset"). This binary was
+	// cross-compiled from tollgate-module-basic-go/src with a local replace
+	// directive pointing to the fixed gonuts-tollgate repo.
+	// After .ipk install we download this binary on the laptop and push it
+	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
+	fixedBinaryURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha8/tollgate-wrt_v0.7.0-alpha8_aarch64_cortex-a53.ipk"
 )
 
 // deploySteps returns the ordered deployment step definitions.
