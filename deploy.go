@@ -208,6 +208,15 @@ func runDeployment(job *Job, req deployRequest) {
 	if pkgOnRouter {
 		job.addLog("Installing package via " + pkgMgr + "...")
 		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
+		// Install nodogsplash prerequisite from opkg feed BEFORE the tollgate-wrt
+		// .ipk so opkg's dependency resolver doesn't fail on a fresh OpenWrt
+		// that doesn't have it pre-installed.
+		if pkgMgr != "apk" {
+			ndsUpdate := sshRun(client, "opkg update 2>&1")
+			job.addLog("opkg update (nodogsplash prereq): " + truncate(ndsUpdate, 60))
+			ndsInstall := sshRun(client, "opkg install nodogsplash 2>&1 | tail -3")
+			job.addLog("nodogsplash prereq: " + truncate(ndsInstall, 80))
+		}
 		// opkg does lexical version compare — 'v0.5.0' > 'main.56...' so it refuses
 		// to downgrade unless forced. --force-reinstall ensures the files land even
 		// if opkg thinks the package is already present. Detect "Not downgrading"
