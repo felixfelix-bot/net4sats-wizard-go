@@ -212,7 +212,7 @@ func runDeployment(job *Job, req deployRequest) {
 		// to downgrade unless forced. --force-reinstall ensures the files land even
 		// if opkg thinks the package is already present. Detect "Not downgrading"
 		// in the output as a hard failure regardless of binary existence.
-		installCmd := "opkg install --force-downgrade --force-reinstall --force-overwrite /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
+		installCmd := "opkg install --force-downgrade --force-reinstall --force-overwrite --force-depends /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		if pkgMgr == "apk" {
 			// apk has no downgrade refusal, but --force-overwrite guards against
 			// existing-file conflicts on reinstall.
