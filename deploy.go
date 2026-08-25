@@ -51,7 +51,7 @@ const (
 	// directive pointing to the fixed gonuts-tollgate repo.
 	// After .ipk install we download this binary on the laptop and push it
 	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
-	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha1/tollgate-wrt-alpha1"
+	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha3/tollgate-wrt-alpha1"
 )
 
 // deploySteps returns the ordered deployment step definitions.
@@ -258,14 +258,29 @@ func runDeployment(job *Job, req deployRequest) {
 			"cat > /tmp/tollgate-wrt-fixed && chmod +x /tmp/tollgate-wrt-fixed && echo FIXED_PUSHED")
 		if strings.Contains(pushFixed, "FIXED_PUSHED") {
 			job.addLog(fmt.Sprintf("Fixed binary downloaded (%d KB), replacing /usr/bin/tollgate-wrt...", len(fixedData)/1024))
+			// Stop service first to avoid "Text file busy" — the binary is in use.
+			// The version check is wrapped in a subshell so its || does NOT
+			// mask a cp/chmod failure: without the subshell, shell precedence
+			// (A && B && C || D && E) makes D catch C's failure AND B's failure,
+			// so REPLACE_OK is echoed even when cp fails.
 			replaceOut := sshRun(client, strings.Join([]string{
+				"/etc/init.d/tollgate-wrt stop 2>/dev/null; sleep 1",
 				"cp /tmp/tollgate-wrt-fixed /usr/bin/tollgate-wrt",
 				"chmod +x /usr/bin/tollgate-wrt",
-				"/usr/bin/tollgate-wrt --version 2>/dev/null || echo 'binary replaced (version check N/A)'",
+				"(/usr/bin/tollgate-wrt --version 2>/dev/null || true)",
 				"echo 'REPLACE_OK'",
 			}, " && "))
 			if strings.Contains(replaceOut, "REPLACE_OK") {
-				job.addLog("Fixed tollgate-wrt binary installed (keyset + multimint fixes)")
+				// Verify the binary actually has the fixed code (not just that
+				// the cp succeeded — a wrong-arch binary would copy fine but
+				// crash on exec). Check for GetActiveKeysets string marker.
+				verifyFix := sshRun(client, "strings /usr/bin/tollgate-wrt 2>/dev/null | grep -c GetActiveKeysets")
+				verifyFix = strings.TrimSpace(verifyFix)
+				if verifyFix != "" && verifyFix != "0" {
+					job.addLog(fmt.Sprintf("Fixed tollgate-wrt binary installed + verified (GetActiveKeysets found %s times)", verifyFix))
+				} else {
+					job.addLog("Fixed binary replaced but verification failed (GetActiveKeysets not found) — binary may be wrong arch or corrupt")
+				}
 			} else {
 				job.addLog("WARNING: fixed binary replace failed: " + truncate(replaceOut, 80))
 			}
