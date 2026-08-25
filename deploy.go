@@ -637,6 +637,16 @@ func runDeployment(job *Job, req deployRequest) {
 		jobFail(job, 9, "tollgate-wrt not installed", "tollgate-wrt init script missing — package install failed")
 		return
 	}
+	// Clear wallet.db so the fresh wallet path is taken on redeploy —
+	// forces the service to re-initialise keysets instead of reusing
+	// stale state from the previous (buggy) binary.
+	clearOut := sshRun(client, "rm -f /etc/tollgate/wallet.db && echo WALLET_DB_CLEARED")
+	if strings.Contains(clearOut, "WALLET_DB_CLEARED") {
+		job.addLog("wallet.db cleared — fresh keyset init on service start")
+	} else {
+		job.addLog("WARNING: wallet.db clear may have failed: " + truncate(clearOut, 60))
+	}
+
 	svcOut := sshRun(client, strings.Join([]string{
 		"/etc/init.d/rpcd restart 2>&1",
 		// Use stop||true;start instead of restart — on OpenWrt 25, restart
