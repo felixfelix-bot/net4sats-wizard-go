@@ -36,7 +36,7 @@ const (
 	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
 	// separate overlay download is needed (that step was removed — its URL
 	// 404'd because the .nft file was never a release asset).
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha7/tollgate-wrt_0.7.0-alpha7_aarch64_cortex-a53.ipk"
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha8/tollgate-wrt_v0.7.0-alpha8_aarch64_cortex-a53.ipk"
 	// tollgate-wrt .apk download URL (OpenWrt 25+ with APK support).
 	// This is the primary format for OpenWrt 25.12+ which uses APK instead of OPKG.
 	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
@@ -44,14 +44,6 @@ const (
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.3-alpha/net4sats-configwiz-1.0.3.tar.gz"
-	// Fixed tollgate-wrt backend binary (keyset + multimint fixes).
-	// The .ipk/.apk package ships gonuts-tollgate v0.10.0 which has the keyset
-	// bug (GET /v1/keys/{id} two-call → 400 "Unknown Keyset"). This binary was
-	// cross-compiled from tollgate-module-basic-go/src with a local replace
-	// directive pointing to the fixed gonuts-tollgate repo.
-	// After .ipk install we download this binary on the laptop and push it
-	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
-	fixedBinaryURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha7/tollgate-wrt_0.7.0-alpha7_aarch64_cortex-a53.ipk"
 )
 
 // deploySteps returns the ordered deployment step definitions.
@@ -177,7 +169,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// PRIMARY: download the package on the LAPTOP and push it over SSH stdin.
 	// This eliminates the router's DNS/TLS stack from the critical path —
 	// a freshly STA-connected router often has no working DNS yet.
-	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge " + pkgExtension + " (laptop-side)...")
+	job.addLog("Downloading tollgate-wrt v0.7.0-alpha8 " + pkgExtension + " (laptop-side)...")
 	pkgOnRouter := false
 	if data, err := httpGetFile(selectedPkgURL); err == nil && len(data) > 0 {
 		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt"+pkgExtension+" && echo PUSH_OK")
@@ -208,6 +200,49 @@ func runDeployment(job *Job, req deployRequest) {
 	if pkgOnRouter {
 		job.addLog("Installing package via " + pkgMgr + "...")
 		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
+		// Install nodogsplash + jq prerequisites BEFORE the tollgate-wrt .ipk so
+		// opkg's dependency resolver doesn't fail on a fresh OpenWrt that
+		// doesn't have them pre-installed. Try opkg feed first; if that fails
+		// (nodogsplash not in default feeds on fresh 24.10.4), download the
+		// .ipk files from the OpenWrt package repo on the laptop and push them
+		// to the router via SSH — same pattern as the tollgate-wrt .ipk.
+		if pkgMgr != "apk" {
+			ndsUpdate := sshRun(client, "opkg update 2>&1")
+			job.addLog("opkg update (prereq): " + truncate(ndsUpdate, 60))
+			ndsInstall := sshRun(client, "opkg install nodogsplash jq 2>&1 | tail -5")
+			if strings.Contains(ndsInstall, "installed") || strings.Contains(ndsInstall, "already") {
+				job.addLog("nodogsplash+jq installed via opkg feed: " + truncate(ndsInstall, 80))
+			} else {
+				job.addLog("opkg feed install failed, downloading .ipk from OpenWrt repo...")
+				// Download nodogsplash + jq .ipk from OpenWrt package repo
+				// on laptop, push to router, install. The feed URL pattern:
+				// https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/packages/
+				ndsURL := "https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/packages/"
+				ndsListHTML := string(httpGetFileOrEmpty(ndsURL))
+				ndsPkg := extractIPKFilename(ndsListHTML, "nodogsplash")
+				jqPkg := extractIPKFilename(ndsListHTML, "jq")
+				if ndsPkg != "" {
+					ndsData, ndsErr := httpGetFile(ndsURL + ndsPkg)
+					if ndsErr == nil && len(ndsData) > 1000 {
+						pushNds := sshUploadPipe(client, ndsData, "cat > /tmp/"+ndsPkg+" && echo NDS_PUSHED")
+						if strings.Contains(pushNds, "NDS_PUSHED") {
+							job.addLog(fmt.Sprintf("nodogsplash .ipk downloaded (%d KB), pushed to router", len(ndsData)/1024))
+						}
+					}
+				}
+				if jqPkg != "" {
+					jqData, jqErr := httpGetFile(ndsURL + jqPkg)
+					if jqErr == nil && len(jqData) > 1000 {
+						pushJq := sshUploadPipe(client, jqData, "cat > /tmp/"+jqPkg+" && echo JQ_PUSHED")
+						if strings.Contains(pushJq, "JQ_PUSHED") {
+							job.addLog(fmt.Sprintf("jq .ipk downloaded (%d KB), pushed to router", len(jqData)/1024))
+						}
+					}
+				}
+				manualInstall := sshRun(client, "opkg install /tmp/nodogsplash_*.ipk /tmp/jq_*.ipk 2>&1 | tail -5")
+				job.addLog("nodogsplash+jq manual install: " + truncate(manualInstall, 80))
+			}
+		}
 		// opkg does lexical version compare — 'v0.5.0' > 'main.56...' so it refuses
 		// to downgrade unless forced. --force-reinstall ensures the files land even
 		// if opkg thinks the package is already present. Detect "Not downgrading"
@@ -261,48 +296,8 @@ func runDeployment(job *Job, req deployRequest) {
 		job.setStep(4, "done", net4satsPackage+" installed (feed, "+pkgMgr+")")
 	}
 
-	// Post-install: replace the .ipk/.apk-installed tollgate-wrt binary with
-	// the fixed version (keyset + multimint bug fixes). The package gives us
-	// the init scripts, config dirs, and nftables rules; we only need to
-	// swap the binary so the service runs the fixed code on restart (step 9).
-	job.addLog("Downloading fixed tollgate-wrt binary (keyset fix)...")
-	if fixedData, fixedErr := httpGetFile(fixedBinaryURL); fixedErr == nil && len(fixedData) > 100000 {
-		pushFixed := sshUploadPipe(client, fixedData,
-			"cat > /tmp/tollgate-wrt-fixed && chmod +x /tmp/tollgate-wrt-fixed && echo FIXED_PUSHED")
-		if strings.Contains(pushFixed, "FIXED_PUSHED") {
-			job.addLog(fmt.Sprintf("Fixed binary downloaded (%d KB), replacing /usr/bin/tollgate-wrt...", len(fixedData)/1024))
-			// Stop service first to avoid "Text file busy" — the binary is in use.
-			// No --version check: tollgate-wrt doesn't support --version, it just
-			// starts the server (blocks forever, causing SSH timeout). We verify
-			// with strings after the copy instead.
-			replaceOut := sshRun(client, strings.Join([]string{
-				"/etc/init.d/tollgate-wrt stop 2>/dev/null; sleep 1",
-				"cp /tmp/tollgate-wrt-fixed /usr/bin/tollgate-wrt",
-				"chmod +x /usr/bin/tollgate-wrt",
-				"echo 'REPLACE_OK'",
-			}, " && "))
-			if strings.Contains(replaceOut, "REPLACE_OK") {
-				// Verify the binary actually has the fixed code (not just that
-				// the cp succeeded — a wrong-arch binary would copy fine but
-				// crash on exec). Check for GetActiveKeysets string marker.
-				verifyFix := sshRun(client, "strings /usr/bin/tollgate-wrt 2>/dev/null | grep -c GetActiveKeysets")
-				verifyFix = strings.TrimSpace(verifyFix)
-				if verifyFix != "" && verifyFix != "0" {
-					job.addLog(fmt.Sprintf("Fixed tollgate-wrt binary installed + verified (GetActiveKeysets found %s times)", verifyFix))
-				} else {
-					job.addLog("Fixed binary replaced but verification failed (GetActiveKeysets not found) — binary may be wrong arch or corrupt")
-				}
-			} else {
-				job.addLog("WARNING: fixed binary replace failed: " + truncate(replaceOut, 80))
-			}
-		} else {
-			job.addLog("WARNING: failed to push fixed binary to router: " + truncate(pushFixed, 80))
-		}
-	} else if fixedErr != nil {
-		job.addLog("WARNING: fixed binary download failed: " + truncate(fixedErr.Error(), 80) + " — using .ipk binary (may have keyset bug)")
-	} else {
-		job.addLog("WARNING: fixed binary too small (" + strconv.Itoa(len(fixedData)) + " bytes) — skipping replace")
-	}
+	// The .ipk now ships gonuts v0.11.1 with all keyset/multimint/existing-wallet
+	// fixes built in — no binary replacement needed.
 	time.Sleep(500 * time.Millisecond)
 
 	// Step 5: Brand as net4sats — hostname, SSID, DNS, nodogsplash config
@@ -881,6 +876,42 @@ func httpGetFile(url string) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP %s", resp.Status)
 	}
 	return io.ReadAll(io.LimitReader(resp.Body, 64<<20))
+}
+
+// httpGetFileOrEmpty is like httpGetFile but returns an empty slice on error
+// instead of an error — used for best-effort directory listing fetches where
+// a failure just means we can't parse the page (non-fatal).
+func httpGetFileOrEmpty(url string) []byte {
+	data, err := httpGetFile(url)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
+// extractIPKFilename scans an OpenWrt package directory listing (HTML) and
+// returns the first .ipk filename that starts with the given package name.
+// e.g. extractIPKFilename(html, "nodogsplash") → "nodogsplash_5.0.2-1_aarch64_cortex-a53.ipk"
+func extractIPKFilename(html string, pkgName string) string {
+	// The listing has entries like: <a href="nodogsplash_5.0.2-1_aarch64_cortex-a53.ipk">
+	prefix := pkgName + "_"
+	for _, line := range strings.Split(html, "\n") {
+		idx := strings.Index(line, prefix)
+		if idx < 0 {
+			continue
+		}
+		rest := line[idx:]
+		end := strings.Index(rest, ".ipk")
+		if end < 0 {
+			continue
+		}
+		// Verify the character after .ipk is a quote or end of attribute
+		afterIPK := rest[end+4:]
+		if len(afterIPK) == 0 || afterIPK[0] == '"' || afterIPK[0] == '\'' || afterIPK[0] == '<' {
+			return rest[:end+4]
+		}
+	}
+	return ""
 }
 
 func truncate(s string, maxLen int) string {
