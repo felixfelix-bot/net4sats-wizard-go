@@ -630,7 +630,13 @@ func runDeployment(job *Job, req deployRequest) {
 		job.setStep(10, "done", "API healthy on :2121")
 	} else {
 		job.addLog("Health check FAILED: " + truncate(healthOut, 80))
-		jobFail(job, 10, "tollgate API not responding on :2121", "Health check failed — tollgate API not responding")
+		// Roll back wireless config so the router's radios are usable for
+		// re-scanning after a failed deploy (e.g. old binary crashed with
+		// new config, leaving radio0 stuck in STA mode).
+		job.addLog("Rolling back wireless config to pre-deploy state...")
+		rollbackWireless(client)
+		job.addLog("Wireless config restored — radios should be available for scanning")
+		jobFail(job, 10, "tollgate API not responding on :2121", "Health check failed — wireless config rolled back for recovery")
 		return
 	}
 
