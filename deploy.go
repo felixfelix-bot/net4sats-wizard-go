@@ -36,7 +36,7 @@ const (
 	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
 	// separate overlay download is needed (that step was removed — its URL
 	// 404'd because the .nft file was never a release asset).
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha7/tollgate-wrt_0.7.0-alpha7_aarch64_cortex-a53.ipk"
+	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha8/tollgate-wrt_0.7.0-alpha8_aarch64_cortex-a53.ipk"
 	// tollgate-wrt .apk download URL (OpenWrt 25+ with APK support).
 	// This is the primary format for OpenWrt 25.12+ which uses APK instead of OPKG.
 	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
@@ -177,7 +177,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// PRIMARY: download the package on the LAPTOP and push it over SSH stdin.
 	// This eliminates the router's DNS/TLS stack from the critical path —
 	// a freshly STA-connected router often has no working DNS yet.
-	job.addLog("Downloading tollgate-wrt v0.6.1-post-merge " + pkgExtension + " (laptop-side)...")
+	job.addLog("Downloading tollgate-wrt v0.7.0-alpha8 " + pkgExtension + " (laptop-side)...")
 	pkgOnRouter := false
 	if data, err := httpGetFile(selectedPkgURL); err == nil && len(data) > 0 {
 		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt"+pkgExtension+" && echo PUSH_OK")
