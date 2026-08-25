@@ -44,6 +44,14 @@ const (
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// Point to fork release v1.0.2 which includes PR #22 (balance redirect fix).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.2/net4sats-configwiz-1.0.2.tar.gz"
+	// Fixed tollgate-wrt backend binary (keyset + multimint fixes).
+	// The .ipk/.apk package ships gonuts-tollgate v0.10.0 which has the keyset
+	// bug (GET /v1/keys/{id} two-call → 400 "Unknown Keyset"). This binary was
+	// cross-compiled from tollgate-module-basic-go/src with a local replace
+	// directive pointing to the fixed gonuts-tollgate repo.
+	// After .ipk install we download this binary on the laptop and push it
+	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
+	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha1/tollgate-wrt-alpha1"
 )
 
 // deploySteps returns the ordered deployment step definitions.
@@ -53,7 +61,7 @@ func deploySteps() []Step {
 		{Name: "firmware", Desc: "Checking firmware version...", Status: "pending"},
 		{Name: "password", Desc: "Setting root password...", Status: "pending"},
 		{Name: "upstream", Desc: "Configuring upstream connection...", Status: "pending"},
-		{Name: "install", Desc: "Installing net4sats package...", Status: "pending"},
+		{Name: "install", Desc: "Installing net4sats package + patching backend...", Status: "pending"},
 		{Name: "brand", Desc: "Branding captive portal as net4sats...", Status: "pending"},
 		{Name: "portal", Desc: "Deploying net4sats captive portal...", Status: "pending"},
 		{Name: "admin", Desc: "Installing net4sats admin panel...", Status: "pending"},
@@ -238,6 +246,36 @@ func runDeployment(job *Job, req deployRequest) {
 			return
 		}
 		job.setStep(4, "done", net4satsPackage+" installed (feed, "+pkgMgr+")")
+	}
+
+	// Post-install: replace the .ipk/.apk-installed tollgate-wrt binary with
+	// the fixed version (keyset + multimint bug fixes). The package gives us
+	// the init scripts, config dirs, and nftables rules; we only need to
+	// swap the binary so the service runs the fixed code on restart (step 9).
+	job.addLog("Downloading fixed tollgate-wrt binary (keyset fix)...")
+	if fixedData, fixedErr := httpGetFile(fixedBinaryURL); fixedErr == nil && len(fixedData) > 100000 {
+		pushFixed := sshUploadPipe(client, fixedData,
+			"cat > /tmp/tollgate-wrt-fixed && chmod +x /tmp/tollgate-wrt-fixed && echo FIXED_PUSHED")
+		if strings.Contains(pushFixed, "FIXED_PUSHED") {
+			job.addLog(fmt.Sprintf("Fixed binary downloaded (%d KB), replacing /usr/bin/tollgate-wrt...", len(fixedData)/1024))
+			replaceOut := sshRun(client, strings.Join([]string{
+				"cp /tmp/tollgate-wrt-fixed /usr/bin/tollgate-wrt",
+				"chmod +x /usr/bin/tollgate-wrt",
+				"/usr/bin/tollgate-wrt --version 2>/dev/null || echo 'binary replaced (version check N/A)'",
+				"echo 'REPLACE_OK'",
+			}, " && "))
+			if strings.Contains(replaceOut, "REPLACE_OK") {
+				job.addLog("Fixed tollgate-wrt binary installed (keyset + multimint fixes)")
+			} else {
+				job.addLog("WARNING: fixed binary replace failed: " + truncate(replaceOut, 80))
+			}
+		} else {
+			job.addLog("WARNING: failed to push fixed binary to router: " + truncate(pushFixed, 80))
+		}
+	} else if fixedErr != nil {
+		job.addLog("WARNING: fixed binary download failed: " + truncate(fixedErr.Error(), 80) + " — using .ipk binary (may have keyset bug)")
+	} else {
+		job.addLog("WARNING: fixed binary too small (" + strconv.Itoa(len(fixedData)) + " bytes) — skipping replace")
 	}
 	time.Sleep(500 * time.Millisecond)
 
