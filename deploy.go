@@ -43,7 +43,7 @@ const (
 	tollgatePkgURLApk = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.apk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
-	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.3-alpha/net4sats-configwiz-1.0.3.tar.gz"
+	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.4-alpha/net4sats-configwiz-1.0.4.tar.gz"
 )
 
 // deploySteps returns the ordered deployment step definitions.
