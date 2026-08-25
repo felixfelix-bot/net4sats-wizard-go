@@ -56,7 +56,7 @@ var forbiddenDeployIdentifiers = []string{
 // (verified via the GitHub releases API on 2026-08-16). A previous pin
 // referenced a main.53 asset that does not exist on that release (HTTP 404),
 // which broke every fresh wizard deploy.
-const wantTollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha8/tollgate-wrt_0.7.0-alpha8_aarch64_cortex-a53.ipk"
+const wantTollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha9/tollgate-wrt_v0.7.0-alpha9_aarch64_cortex-a53.ipk"
 
 // TestTollgatePkgURLPinsExistingAsset pins the package download URL to the
 // exact asset that exists on the v0.6.1-post-merge release. Any intentional
