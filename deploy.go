@@ -51,7 +51,7 @@ const (
 	// directive pointing to the fixed gonuts-tollgate repo.
 	// After .ipk install we download this binary on the laptop and push it
 	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
-	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha5/tollgate-wrt-fixed"
+	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha6/tollgate-wrt-fixed-v2"
 )
 
 // deploySteps returns the ordered deployment step definitions.
