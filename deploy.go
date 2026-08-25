@@ -508,13 +508,18 @@ func runDeployment(job *Job, req deployRequest) {
 	// 7c: uhttpd config — add net4sats (:8090) and luci (:8080) instances via UCI
 	// Must go into /etc/config/uhttpd (the only file uhttpd init reads)
 	uhttpdOut := sshRun(client, strings.Join([]string{
-		// Remove conflicting listeners from main uhttpd
-		"uci -q del_list uhttpd.main.listen_http='0.0.0.0:80' 2>/dev/null; true",
-		"uci -q del_list uhttpd.main.listen_http='[::]:80' 2>/dev/null; true",
+		// Main uhttpd on port 80 → redirect to net4sats admin (:8090)
 		"uci -q del_list uhttpd.main.listen_http='0.0.0.0:8080' 2>/dev/null; true",
 		"uci -q del_list uhttpd.main.listen_http='[::]:8080' 2>/dev/null; true",
 		"uci -q del_list uhttpd.main.listen_http='0.0.0.0:8090' 2>/dev/null; true",
 		"uci -q del_list uhttpd.main.listen_http='[::]:8090' 2>/dev/null; true",
+		"uci -q del_list uhttpd.main.listen_http='0.0.0.0:80' 2>/dev/null; true",
+		"uci add_list uhttpd.main.listen_http='0.0.0.0:80'",
+		"uci -q del_list uhttpd.main.listen_http='[::]:80' 2>/dev/null; true",
+		"uci add_list uhttpd.main.listen_http='[::]:80'",
+		"uci set uhttpd.main.home='/www/net4sats-redirect'",
+		"mkdir -p /www/net4sats-redirect",
+		"echo '<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" content=\"0; url=http://tollgate.lan:8090/\"><script>location.replace(\"http://tollgate.lan:8090/\")</script></head><body>Redirecting to net4sats admin...</body></html>' > /www/net4sats-redirect/index.html",
 		// net4sats admin instance on :8090
 		"uci set uhttpd.net4sats=uhttpd",
 		"uci -q del_list uhttpd.net4sats.listen_http='0.0.0.0:8090' 2>/dev/null; true",
