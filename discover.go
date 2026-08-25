@@ -27,21 +27,31 @@ func discoverRouters() []RouterInfo {
 	// 1. Scan ARP table for known router MACs
 	arpEntries := readARPTable()
 
-	// 2. Always check common router gateway IPs
-	commonIPs := []string{"192.168.1.1", "192.168.8.1", "192.168.0.1", "192.168.2.1", "10.47.41.1"}
-
-	// Merge: ARP entries first, then common IPs
-	var candidates []string
-	for _, e := range arpEntries {
-		if !seen[e.IP] {
-			seen[e.IP] = true
-			candidates = append(candidates, e.IP)
-		}
+	// 2. Always check common router gateway IPs.
+	// Include 192.168.21.1 (GL.iNet default WiFi-AP subnet seen on Felix's
+	// T14Gen5) so it's tried early, but still AFTER the classic wired subnets.
+	commonIPs := []string{
+		"192.168.1.1", "192.168.8.1", "192.168.0.1", "192.168.2.1",
+		"10.47.41.1", "192.168.21.1",
 	}
+
+	// Merge: common router IPs FIRST, then ARP entries.
+	// On some laptops (e.g. Felix's T14Gen5) the router shows up in the ARP
+	// table as 192.168.21.1 (the WiFi AP address) and would be listed before
+	// the wired gateway 192.168.1.1. By checking commonIPs first we ensure
+	// the wired/LAN address — which is what the wizard needs for SSH — is
+	// probed before any WiFi-AP address from the ARP table.
+	var candidates []string
 	for _, ip := range commonIPs {
 		if !seen[ip] {
 			seen[ip] = true
 			candidates = append(candidates, ip)
+		}
+	}
+	for _, e := range arpEntries {
+		if !seen[e.IP] {
+			seen[e.IP] = true
+			candidates = append(candidates, e.IP)
 		}
 	}
 
@@ -115,6 +125,17 @@ func probeRouter(ip string) RouterInfo {
 }
 
 func tcpProbe(ip string, port int, timeout time.Duration) bool {
+	// Handle IPv6 addresses by wrapping them in brackets
+	if strings.Contains(ip, ":") {
+		addr := fmt.Sprintf("[%s]:%d", ip, port)
+		conn, err := net.DialTimeout("tcp", addr, timeout)
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}
+	// IPv4 addresses
 	addr := fmt.Sprintf("%s:%d", ip, port)
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {

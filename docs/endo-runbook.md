@@ -160,6 +160,16 @@ Default credentials: the password you set in Step 5.
 - Captive portal: nodogsplash 5.0.2
 - Pricing: NIP-61 kind 10021 (1 sat per 21MB, 3 mints)
 
+### Supported routers
+
+| Device | Status | Sysupgrade image |
+|---|---|---|
+| GL-MT6000 | Fully tested | [OpenWrt filogic](https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/) — `glinet_gl-mt6000-squashfs-sysupgrade.bin` |
+| GL-MT3000 | Tested (v0.3.8-alpha) | [OpenWrt filogic](https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/) — `glinet_gl-mt3000-squashfs-sysupgrade.bin` |
+
+Firmware download page for all MediaTek filogic devices:
+https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/
+
 ### Deployment sources (what the wizard downloads)
 
 The wizard pins its downloads in `deploy.go` (`pins_test.go` enforces that

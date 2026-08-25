@@ -55,9 +55,11 @@ func TestDeployRequestValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "missing password",
+			// Fresh-reset OpenWrt routers ship with an empty root password —
+			// an empty password is no longer a validation error.
+			name:    "empty password (fresh reset)",
 			req:     deployRequest{IP: "192.168.1.1", Password: "", LNURL: "test@wallet.app"},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "missing IP",
@@ -83,7 +85,9 @@ func TestDeployRequestValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.req.IP == "" || tt.req.Password == "" {
+			// Empty password is valid (fresh-reset router); only a missing IP
+			// short-circuits validation.
+			if tt.req.IP == "" {
 				if !tt.wantErr {
 					t.Errorf("%s: expected error, got none", tt.name)
 				}

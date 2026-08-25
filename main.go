@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -129,7 +131,7 @@ type wifiSSID struct {
 // Some versions prefix with "Cell 01 - Address: ..." instead of the interface name.
 func parseIwinfoScan(output string) []wifiSSID {
 	seen := map[string]bool{}
-	var ssids []wifiSSID
+	ssids := []wifiSSID{}
 	var currentName, currentEnc string
 	var currentSignal int
 
@@ -204,7 +206,7 @@ func parseIwinfoScan(output string) []wifiSSID {
 //	    * primary channel: 1
 func parseIwScan(output string) []wifiSSID {
 	seen := map[string]bool{}
-	var ssids []wifiSSID
+	ssids := []wifiSSID{}
 	var currentName string
 
 	for _, line := range strings.Split(output, "\n") {
@@ -231,6 +233,21 @@ func parseIwScan(output string) []wifiSSID {
 	return ssids
 }
 
+// scanFailedHeuristic returns true if the output text indicates a scan
+// failure rather than real scan results. Checks for common error strings
+// emitted by iwinfo and iw on OpenWrt when a device doesn't exist, is in
+// the wrong mode, or the command is unavailable.
+func scanFailedHeuristic(out string) bool {
+	return strings.TrimSpace(out) == "" ||
+		strings.Contains(out, "command not found") ||
+		strings.Contains(out, "No such device") ||
+		strings.Contains(out, "No such wireless device") ||
+		strings.Contains(out, "Operation not supported") ||
+		strings.Contains(out, "Operation not permitted") ||
+		strings.Contains(out, "Device or resource busy") ||
+		strings.Contains(out, "Usage:")
+}
+
 func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, 405, "method not allowed")
@@ -241,8 +258,10 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 
@@ -256,56 +275,174 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Close()
 
-	// Auto-detect wireless interfaces from `iwinfo` (no args) output.
-	// OpenWrt interfaces can be named phy0-ap0, wlan0, wl0-sha0, etc —
-	// not predictable, so we parse the list first.
+	// A fresh-reset OpenWrt router ships with radios DISABLED in UCI —
+	// `iwinfo scan` would return nothing and the UI would show an empty
+	// SSID list. Enable all radios, bring wifi up, and wait until every
+	// radio reports up before scanning (see enableWifiAndWait).
+	enableWifiAndWait(client)
+
+	// ---- WiFi scan with prioritised fallback chain ----
+	//
+	// Priority:
+	//   1. `iwinfo scan` (no device arg) — scans ALL radios, works on
+	//      OpenWrt 25.12 / GL-MT3000 without needing to pick a specific
+	//      interface. This is what worked in the July version.
+	//   2. Per-interface: only Client/Managed mode interfaces (skip
+	//      Master/AP mode interfaces like phy0-ap0 which can't scan).
+	//   3. `iw phy phy0 scan` + `iw phy phy1 scan` — phy-level scan
+	//      works regardless of interface mode.
+	//   4. Existing fallbacks: iwinfo wlan0/wlan1 scan, iw dev scan.
+	//
+	// parseIwinfoScan and parseIwScan are kept as-is.
+
+	var debugLog strings.Builder
+
+	// --- Strategy 1: iwinfo scan (no args) — scans all radios ---
+	scanOut := sshRun(client, "iwinfo scan 2>/dev/null")
+	debugLog.WriteString("[1] iwinfo scan (no args): ")
+	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
+		debugLog.WriteString("got results\n")
+		ssids := parseIwinfoScan(scanOut)
+		w.Header().Set("Content-Type", "application/json")
+		if len(ssids) == 0 {
+			json.NewEncoder(w).Encode(map[string]any{
+				"ssids": ssids,
+				"debug": truncate(scanOut, 200),
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+		}
+		return
+	}
+	debugLog.WriteString("no results\n")
+
+	// --- Strategy 2: per-interface scan (Client/Managed only) ---
+	// Auto-detect wireless interfaces from `iwinfo` (no args) listing.
+	// For each interface, check `iwinfo <dev> info` Mode: field and skip
+	// Master (AP) mode interfaces — they can't scan.
 	iwinfoOut := sshRun(client, "iwinfo 2>/dev/null")
-	var wifiDevs []string
+	var clientDevs []string
 	for _, line := range strings.Split(iwinfoOut, "\n") {
 		trimmed := strings.TrimSpace(line)
-		// iwinfo lines look like: "phy0-ap0 ESSID: \"TollGate-F794\""
-		// or "wlan0     ESSID: \"mywifi\""
-		// The first token before "ESSID:" is the interface name
 		if idx := strings.Index(trimmed, "ESSID:"); idx > 0 {
 			iface := strings.TrimSpace(trimmed[:idx])
-			if iface != "" && !strings.HasPrefix(iface, "Usage") {
-				wifiDevs = append(wifiDevs, iface)
+			if iface == "" || strings.HasPrefix(iface, "Usage") {
+				continue
 			}
+			// Check mode: skip Master (AP) interfaces.
+			infoOut := sshRun(client, "iwinfo "+iface+" info 2>/dev/null")
+			mode := ""
+			for _, infoLine := range strings.Split(infoOut, "\n") {
+				infoLine = strings.TrimSpace(infoLine)
+				if strings.HasPrefix(infoLine, "Mode:") {
+					mode = strings.TrimSpace(strings.TrimPrefix(infoLine, "Mode:"))
+					break
+				}
+			}
+			debugLog.WriteString("[2] iface " + iface + " mode=" + mode + " — will scan\n")
+			// Don't skip Master (AP) interfaces — iwinfo <dev> scan works
+			// on AP interfaces on many OpenWrt versions (e.g. GL-MT3000
+			// with OpenWrt 25.12). The scan triggers a passive/active
+			// scan on the underlying phy regardless of interface mode.
+			clientDevs = append(clientDevs, iface)
 		}
 	}
 
-	var scanOut string
-	if len(wifiDevs) > 0 {
-		// Scan each detected interface
-		for _, dev := range wifiDevs {
+	if len(clientDevs) > 0 {
+		var perIfaceScan string
+		for _, dev := range clientDevs {
 			out := sshRun(client, "iwinfo "+dev+" scan 2>/dev/null")
-			if strings.TrimSpace(out) != "" && !strings.Contains(out, "command not found") {
-				scanOut += out + "\n"
+			if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
+				perIfaceScan += out + "\n"
 			}
 		}
-	}
-
-	// Fallback: try common interface names if auto-detect found nothing
-	if strings.TrimSpace(scanOut) == "" {
-		scanOut = sshRun(client, "iwinfo wlan0 scan 2>/dev/null || iwinfo wlan1 scan 2>/dev/null")
-	}
-
-	// Fallback: try iw dev scan
-	if strings.TrimSpace(scanOut) == "" || strings.Contains(scanOut, "command not found") || strings.Contains(scanOut, "No such device") {
-		scanOut = sshRun(client, "iw dev scan 2>/dev/null")
-		if strings.TrimSpace(scanOut) != "" && !strings.Contains(scanOut, "command not found") {
-			ssids := parseIwScan(scanOut)
+		if strings.TrimSpace(perIfaceScan) != "" {
+			debugLog.WriteString("[2] per-interface scan: got results\n")
+			scanOut = perIfaceScan
+			ssids := parseIwinfoScan(scanOut)
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			if len(ssids) == 0 {
+				json.NewEncoder(w).Encode(map[string]any{
+					"ssids": ssids,
+					"debug": truncate(scanOut, 200),
+				})
+			} else {
+				json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			}
 			return
 		}
-		writeError(w, 500, "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available")
+	}
+	debugLog.WriteString("[2] per-interface scan: no results\n")
+
+	// --- Strategy 3: phy-level scan (mode-independent) ---
+	// `iw phy phy0 scan` works regardless of interface mode — it creates
+	// a temporary scan request on the physical device. Try phy0 and phy1.
+	var phyScanOut string
+	for _, phy := range []string{"phy0", "phy1"} {
+		out := sshRun(client, "iw phy "+phy+" scan 2>/dev/null")
+		if strings.TrimSpace(out) != "" && !strings.Contains(out, "command not found") {
+			phyScanOut += out + "\n"
+		}
+	}
+	if strings.TrimSpace(phyScanOut) != "" {
+		debugLog.WriteString("[3] phy-level scan: got results\n")
+		ssids := parseIwScan(phyScanOut)
+		w.Header().Set("Content-Type", "application/json")
+		if len(ssids) == 0 {
+			json.NewEncoder(w).Encode(map[string]any{
+				"ssids": ssids,
+				"debug": truncate(phyScanOut, 200),
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+		}
+		return
+	}
+	debugLog.WriteString("[3] phy-level scan: no results\n")
+
+	// --- Strategy 4: existing fallbacks ---
+	// Try common interface names (wlan0/wlan1) then iw dev scan.
+	scanOut = sshRun(client, "iwinfo wlan0 scan 2>/dev/null || iwinfo wlan1 scan 2>/dev/null")
+	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
+		debugLog.WriteString("[4] iwinfo wlan0/wlan1 fallback: got results\n")
+		ssids := parseIwinfoScan(scanOut)
+		w.Header().Set("Content-Type", "application/json")
+		if len(ssids) == 0 {
+			json.NewEncoder(w).Encode(map[string]any{
+				"ssids": ssids,
+				"debug": truncate(scanOut, 200),
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+		}
 		return
 	}
 
-	ssids := parseIwinfoScan(scanOut)
+	// Last resort: iw dev scan
+	scanOut = sshRun(client, "iw dev scan 2>/dev/null")
+	if strings.TrimSpace(scanOut) != "" && !strings.Contains(scanOut, "command not found") {
+		debugLog.WriteString("[4] iw dev scan: got results\n")
+		ssids := parseIwScan(scanOut)
+		w.Header().Set("Content-Type", "application/json")
+		if len(ssids) == 0 {
+			json.NewEncoder(w).Encode(map[string]any{
+				"ssids": ssids,
+				"debug": truncate(scanOut, 200),
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+		}
+		return
+	}
+	debugLog.WriteString("[4] all fallbacks exhausted\n")
+
+	// All strategies failed — return diagnostic info.
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+	w.WriteHeader(500)
+	json.NewEncoder(w).Encode(map[string]any{
+		"error": "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.",
+		"debug": truncate(debugLog.String(), 500),
+	})
 }
 
 type deployRequest struct {
@@ -326,8 +463,10 @@ func handleDeploy(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if req.IP == "" || req.Password == "" {
-		writeError(w, 400, "IP and password required")
+	// Password is optional: a fresh-reset OpenWrt router ships with an
+	// EMPTY root password (see sshConnect's auth chain).
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
 		return
 	}
 	if !validLightningAddress(req.LNURL) {
@@ -382,6 +521,44 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// enableWifiAndWait enables all UCI wifi-devices, starts wifi, and polls
+// `ubus call network.wireless status` until every radio reports up
+// (~15s budget; fixed sleeps race slow driver init, polling removes that).
+// Best-effort: the scan proceeds regardless after the timeout — errors
+// surface in the scan step itself where they are actionable.
+func enableWifiAndWait(client *ssh.Client) {
+	sshRun(client, strings.Join([]string{
+		`for r in $(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)=wifi-device$/\1/p"); do uci -q set wireless.$r.disabled='0'; done`,
+		`uci commit wireless`,
+		`wifi up 2>/dev/null || wifi 2>/dev/null || true`,
+	}, " && "))
+	for i := 0; i < 10; i++ {
+		if allRadiosUp(sshRun(client, "ubus call network.wireless status 2>/dev/null")) {
+			return
+		}
+		time.Sleep(1500 * time.Millisecond)
+	}
+}
+
+// allRadiosUp parses `ubus call network.wireless status` output
+// ({"radio0":{"up":true,...},"radio1":{...}}) and reports whether EVERY
+// radio reports up. Empty/garbage output parses to false (keep polling).
+func allRadiosUp(statusJSON string) bool {
+	var status map[string]map[string]any
+	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
+		return false
+	}
+	if len(status) == 0 {
+		return false
+	}
+	for _, radio := range status {
+		if up, _ := radio["up"].(bool); !up {
+			return false
+		}
+	}
+	return true
 }
 
 func main() {
