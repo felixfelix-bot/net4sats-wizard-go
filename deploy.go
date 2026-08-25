@@ -525,7 +525,7 @@ func runDeployment(job *Job, req deployRequest) {
 	lnOut := sshRun(client, lnCmd)
 
 	// 8b: Write margin + profit_share to config.json.
-	// Also inject testnut mints so users can test with free/test sats.
+	// Also inject the operator's chosen mint + testnut mints for testing.
 	devSplit := clamp(req.DevSplit, 0, 50)
 	margin := clamp(req.Margin, 0, 100)
 	ownerFactor := strconv.FormatFloat(1.0-float64(devSplit)/100.0, 'f', 4, 64)
@@ -533,6 +533,7 @@ func runDeployment(job *Job, req deployRequest) {
 	cfgCmd := "jq --argjson m " + strconv.Itoa(margin) + " " +
 		"--argjson of " + ownerFactor + " " +
 		"--argjson df " + devFactor + " " +
+		"--arg mu " + req.Mint + " " +
 		"'.margin=$m | " +
 		"(.profit_share[] | select(.identity == \"owner\") | .factor) = $of | " +
 		"(.profit_share[] | select(.identity == \"developer\") | .factor) = $df | " +
@@ -540,11 +541,15 @@ func runDeployment(job *Job, req deployRequest) {
 		// verifies DLEQ proofs against the mint's current active keyset instead of
 		// the keyset that signed the proofs, causing failures after key rotation).
 		".accepted_mints = (.accepted_mints | map(select(.url | test(\"minibits\") | not))) | " +
+		// Add operator's chosen mint if non-empty and not already present.
+		".accepted_mints = (if ($mu != \"\" and (.accepted_mints | map(.url) | index($mu)) | not) then " +
+		".accepted_mints + [{\"url\":$mu,\"min_balance\":64,\"balance_tolerance_percent\":10,\"payout_interval_seconds\":60,\"min_payout_amount\":128,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
+		"else .accepted_mints end) | " +
 		// Add testnut test mints if not already present (idempotent by URL check).
 		// Uses map + index instead of unique_by for jq <1.7 compatibility on OpenWrt.
 		".accepted_mints = (if (.accepted_mints | map(.url) | index(\"https://nofee.testnut.cashu.space\")) | not then " +
 		".accepted_mints + " +
-		"[{\"url\":\"https://nofee.testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}," +
+		"[{\"url\":\"https://nofee.testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}, " +
 		" {\"url\":\"https://testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
 		"else .accepted_mints end)' " +
 		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
