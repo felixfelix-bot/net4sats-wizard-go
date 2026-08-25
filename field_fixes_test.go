@@ -7,6 +7,34 @@ import (
 	"testing"
 )
 
+// TestScanFailedHeuristic covers the error-string detection used by the
+// WiFi scan fallback chain to distinguish real scan results from error
+// text emitted by iwinfo/iw on OpenWrt.
+func TestScanFailedHeuristic(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"empty output", "", true},
+		{"whitespace only", "   \n	  ", true},
+		{"command not found", "iwinfo: command not found", true},
+		{"No such device", "No such device: wlan0", true},
+		{"No such wireless device", "No such wireless device: phy0-ap0", true},
+		{"Operation not supported", "Operation not supported", true},
+		{"Operation not permitted", "Operation not permitted", true},
+		{"Device or resource busy", "Device or resource busy", true},
+		{"real scan output", "Cell 01 - Address: AA:BB:CC:DD:EE:FF\n  ESSID: \"MyWiFi\"\n  Signal: -45 dBm", false},
+		{"iwinfo scan with SSIDs", "phy0-ap0   ESSID: \"TollGate-F794\"\n          Cell 01 - Address: ...\n          ESSID: \"Net4Sats\"", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := scanFailedHeuristic(tc.in); got != tc.want {
+				t.Errorf("scanFailedHeuristic(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
 // TestAllRadiosUp covers the `ubus call network.wireless status` parser used
 // by enableWifiAndWait (WiFi scan pre-flight): every radio must report up.
 func TestAllRadiosUp(t *testing.T) {

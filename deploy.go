@@ -42,8 +42,8 @@ const (
 	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
 	tollgatePkgURLApk = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.apk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
-	// Point to fork release v1.0.2 which includes PR #22 (balance redirect fix).
-	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.2/net4sats-configwiz-1.0.2.tar.gz"
+	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
+	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.3-alpha/net4sats-configwiz-1.0.3.tar.gz"
 	// Fixed tollgate-wrt backend binary (keyset + multimint fixes).
 	// The .ipk/.apk package ships gonuts-tollgate v0.10.0 which has the keyset
 	// bug (GET /v1/keys/{id} two-call → 400 "Unknown Keyset"). This binary was
@@ -208,13 +208,26 @@ func runDeployment(job *Job, req deployRequest) {
 	if pkgOnRouter {
 		job.addLog("Installing package via " + pkgMgr + "...")
 		sshRun(client, "rm -f /var/lock/opkg.lock 2>/dev/null")
-		installCmd := "opkg install /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
+		// opkg does lexical version compare — 'v0.5.0' > 'main.56...' so it refuses
+		// to downgrade unless forced. --force-reinstall ensures the files land even
+		// if opkg thinks the package is already present. Detect "Not downgrading"
+		// in the output as a hard failure regardless of binary existence.
+		installCmd := "opkg install --force-downgrade --force-reinstall /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		if pkgMgr == "apk" {
-			installCmd = "apk add --allow-untrusted /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
+			// apk has no downgrade refusal, but --force-overwrite guards against
+			// existing-file conflicts on reinstall.
+			installCmd = "apk add --allow-untrusted --force-overwrite /tmp/tollgate-wrt" + pkgExtension + " 2>&1 | tail -5"
 		}
 		installOut := sshRun(client, installCmd)
 		job.addLog("Package installed (" + pkgMgr + "): " + truncate(installOut, 100))
-		// Verify the binary actually exists
+		// If opkg refuses to downgrade, the OLD binary stays and the new config
+		// will crash against it — treat as a hard failure even if the binary exists.
+		if strings.Contains(installOut, "Not downgrading") {
+			job.addLog("ERROR: opkg refused to downgrade the package (old version kept)")
+			job.setStep(4, "error", "opkg refused to downgrade tollgate-wrt")
+			return
+		}
+		// Verify the binary actually exists (secondary check)
 		verifyOut := sshRun(client, "ls /usr/bin/tollgate-wrt 2>/dev/null || ls /usr/sbin/tollgate-wrt 2>/dev/null || which tollgate-wrt 2>/dev/null || echo 'NOT FOUND'")
 		if !strings.Contains(verifyOut, "NOT FOUND") {
 			// NOTE (SW4a): the fw4/nftables enforcement rules (PR #283) ship
@@ -563,7 +576,7 @@ func runDeployment(job *Job, req deployRequest) {
 	lnOut := sshRun(client, lnCmd)
 
 	// 8b: Write margin + profit_share to config.json.
-	// Also inject testnut mints so users can test with free/test sats.
+	// Also inject the operator's chosen mint + testnut mints for testing.
 	devSplit := clamp(req.DevSplit, 0, 50)
 	margin := clamp(req.Margin, 0, 100)
 	ownerFactor := strconv.FormatFloat(1.0-float64(devSplit)/100.0, 'f', 4, 64)
@@ -571,6 +584,7 @@ func runDeployment(job *Job, req deployRequest) {
 	cfgCmd := "jq --argjson m " + strconv.Itoa(margin) + " " +
 		"--argjson of " + ownerFactor + " " +
 		"--argjson df " + devFactor + " " +
+		"--arg mu " + req.Mint + " " +
 		"'.margin=$m | " +
 		"(.profit_share[] | select(.identity == \"owner\") | .factor) = $of | " +
 		"(.profit_share[] | select(.identity == \"developer\") | .factor) = $df | " +
@@ -578,11 +592,15 @@ func runDeployment(job *Job, req deployRequest) {
 		// verifies DLEQ proofs against the mint's current active keyset instead of
 		// the keyset that signed the proofs, causing failures after key rotation).
 		".accepted_mints = (.accepted_mints | map(select(.url | test(\"minibits\") | not))) | " +
+		// Add operator's chosen mint if non-empty and not already present.
+		".accepted_mints = (if ($mu != \"\" and (.accepted_mints | map(.url) | index($mu)) | not) then " +
+		".accepted_mints + [{\"url\":$mu,\"min_balance\":64,\"balance_tolerance_percent\":10,\"payout_interval_seconds\":60,\"min_payout_amount\":128,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
+		"else .accepted_mints end) | " +
 		// Add testnut test mints if not already present (idempotent by URL check).
 		// Uses map + index instead of unique_by for jq <1.7 compatibility on OpenWrt.
 		".accepted_mints = (if (.accepted_mints | map(.url) | index(\"https://nofee.testnut.cashu.space\")) | not then " +
 		".accepted_mints + " +
-		"[{\"url\":\"https://nofee.testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}," +
+		"[{\"url\":\"https://nofee.testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}, " +
 		" {\"url\":\"https://testnut.cashu.space\",\"min_balance\":0,\"balance_tolerance_percent\":0,\"payout_interval_seconds\":999999,\"min_payout_amount\":999999,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
 		"else .accepted_mints end)' " +
 		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
@@ -638,8 +656,22 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 10: Health check
 	job.setStep(10, "running", "")
 	job.addLog("Running health check...")
-	healthOut := sshRun(client, "wget -qO- http://127.0.0.1:2121/ 2>/dev/null | head -c 100 || echo 'health check failed'")
-	if strings.Contains(healthOut, "kind") || strings.Contains(healthOut, "metric") || strings.Contains(healthOut, "pubkey") {
+	// Retry health check up to 5 times — a single wget 3.5s after service
+	// restart is too fast: the freshly-installed binary may still be starting,
+	// or an old crashing binary may need time before it fails to bind :2121.
+	healthOK := false
+	var healthOut string
+	for attempt := 1; attempt <= 5; attempt++ {
+		time.Sleep(2 * time.Second)
+		healthOut = sshRun(client, "wget -qO- http://127.0.0.1:2121/ 2>/dev/null | head -c 100 || echo 'health check failed'")
+		if strings.Contains(healthOut, "kind") || strings.Contains(healthOut, "metric") || strings.Contains(healthOut, "pubkey") {
+			healthOK = true
+			job.addLog(fmt.Sprintf("Health check passed on attempt %d", attempt))
+			break
+		}
+		job.addLog(fmt.Sprintf("Health check attempt %d failed, retrying...", attempt))
+	}
+	if healthOK {
 		job.addLog("Health check passed — TollGate API responding")
 		// Also verify rpcd tollgate plugin responds
 		rpcdOut := sshRun(client, "ubus list tollgate 2>/dev/null && echo 'rpcd ok' || echo 'rpcd missing'")
@@ -658,7 +690,13 @@ func runDeployment(job *Job, req deployRequest) {
 		job.setStep(10, "done", "API healthy on :2121")
 	} else {
 		job.addLog("Health check FAILED: " + truncate(healthOut, 80))
-		jobFail(job, 10, "tollgate API not responding on :2121", "Health check failed — tollgate API not responding")
+		// Roll back wireless config so the router's radios are usable for
+		// re-scanning after a failed deploy (e.g. old binary crashed with
+		// new config, leaving radio0 stuck in STA mode).
+		job.addLog("Rolling back wireless config to pre-deploy state...")
+		rollbackWireless(client)
+		job.addLog("Wireless config restored — radios should be available for scanning")
+		jobFail(job, 10, "tollgate API not responding on :2121", "Health check failed — wireless config rolled back for recovery")
 		return
 	}
 
