@@ -438,6 +438,17 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 
 	// All strategies failed — return diagnostic info.
 	w.Header().Set("Content-Type", "application/json")
+	// If 0 SSIDs found despite non-empty scan output from the last strategy,
+	// include diagnostic info so the operator can see what the router returned.
+	// This catches format mismatches (new iwinfo output) and error text that
+	// slipped past the checks above.
+	if strings.TrimSpace(scanOut) != "" {
+		json.NewEncoder(w).Encode(map[string]any{
+			"ssids": []string{},
+			"debug": truncate(scanOut, 200),
+		})
+		return
+	}
 	w.WriteHeader(500)
 	json.NewEncoder(w).Encode(map[string]any{
 		"error": "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.",

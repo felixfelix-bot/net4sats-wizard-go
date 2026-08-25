@@ -17,7 +17,7 @@ func TestScanFailedHeuristic(t *testing.T) {
 		want bool
 	}{
 		{"empty output", "", true},
-		{"whitespace only", "   \n\t  ", true},
+		{"whitespace only", "   \n	  ", true},
 		{"command not found", "iwinfo: command not found", true},
 		{"No such device", "No such device: wlan0", true},
 		{"No such wireless device", "No such wireless device: phy0-ap0", true},
@@ -35,7 +35,6 @@ func TestScanFailedHeuristic(t *testing.T) {
 		})
 	}
 }
-
 // TestAllRadiosUp covers the `ubus call network.wireless status` parser used
 // by enableWifiAndWait (WiFi scan pre-flight): every radio must report up.
 func TestAllRadiosUp(t *testing.T) {

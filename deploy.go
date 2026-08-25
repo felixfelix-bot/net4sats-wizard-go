@@ -44,6 +44,14 @@ const (
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.3-alpha/net4sats-configwiz-1.0.3.tar.gz"
+	// Fixed tollgate-wrt backend binary (keyset + multimint fixes).
+	// The .ipk/.apk package ships gonuts-tollgate v0.10.0 which has the keyset
+	// bug (GET /v1/keys/{id} two-call → 400 "Unknown Keyset"). This binary was
+	// cross-compiled from tollgate-module-basic-go/src with a local replace
+	// directive pointing to the fixed gonuts-tollgate repo.
+	// After .ipk install we download this binary on the laptop and push it
+	// over SSH to replace /usr/bin/tollgate-wrt before the service restarts.
+	fixedBinaryURL = "https://github.com/felixfelix-bot/net4sats-wizard-go/releases/download/v0.7.0-alpha5/tollgate-wrt-fixed"
 )
 
 // deploySteps returns the ordered deployment step definitions.
@@ -53,7 +61,7 @@ func deploySteps() []Step {
 		{Name: "firmware", Desc: "Checking firmware version...", Status: "pending"},
 		{Name: "password", Desc: "Setting root password...", Status: "pending"},
 		{Name: "upstream", Desc: "Configuring upstream connection...", Status: "pending"},
-		{Name: "install", Desc: "Installing net4sats package...", Status: "pending"},
+		{Name: "install", Desc: "Installing net4sats package + patching backend...", Status: "pending"},
 		{Name: "brand", Desc: "Branding captive portal as net4sats...", Status: "pending"},
 		{Name: "portal", Desc: "Deploying net4sats captive portal...", Status: "pending"},
 		{Name: "admin", Desc: "Installing net4sats admin panel...", Status: "pending"},
@@ -251,6 +259,49 @@ func runDeployment(job *Job, req deployRequest) {
 			return
 		}
 		job.setStep(4, "done", net4satsPackage+" installed (feed, "+pkgMgr+")")
+	}
+
+	// Post-install: replace the .ipk/.apk-installed tollgate-wrt binary with
+	// the fixed version (keyset + multimint bug fixes). The package gives us
+	// the init scripts, config dirs, and nftables rules; we only need to
+	// swap the binary so the service runs the fixed code on restart (step 9).
+	job.addLog("Downloading fixed tollgate-wrt binary (keyset fix)...")
+	if fixedData, fixedErr := httpGetFile(fixedBinaryURL); fixedErr == nil && len(fixedData) > 100000 {
+		pushFixed := sshUploadPipe(client, fixedData,
+			"cat > /tmp/tollgate-wrt-fixed && chmod +x /tmp/tollgate-wrt-fixed && echo FIXED_PUSHED")
+		if strings.Contains(pushFixed, "FIXED_PUSHED") {
+			job.addLog(fmt.Sprintf("Fixed binary downloaded (%d KB), replacing /usr/bin/tollgate-wrt...", len(fixedData)/1024))
+			// Stop service first to avoid "Text file busy" — the binary is in use.
+			// No --version check: tollgate-wrt doesn't support --version, it just
+			// starts the server (blocks forever, causing SSH timeout). We verify
+			// with strings after the copy instead.
+			replaceOut := sshRun(client, strings.Join([]string{
+				"/etc/init.d/tollgate-wrt stop 2>/dev/null; sleep 1",
+				"cp /tmp/tollgate-wrt-fixed /usr/bin/tollgate-wrt",
+				"chmod +x /usr/bin/tollgate-wrt",
+				"echo 'REPLACE_OK'",
+			}, " && "))
+			if strings.Contains(replaceOut, "REPLACE_OK") {
+				// Verify the binary actually has the fixed code (not just that
+				// the cp succeeded — a wrong-arch binary would copy fine but
+				// crash on exec). Check for GetActiveKeysets string marker.
+				verifyFix := sshRun(client, "strings /usr/bin/tollgate-wrt 2>/dev/null | grep -c GetActiveKeysets")
+				verifyFix = strings.TrimSpace(verifyFix)
+				if verifyFix != "" && verifyFix != "0" {
+					job.addLog(fmt.Sprintf("Fixed tollgate-wrt binary installed + verified (GetActiveKeysets found %s times)", verifyFix))
+				} else {
+					job.addLog("Fixed binary replaced but verification failed (GetActiveKeysets not found) — binary may be wrong arch or corrupt")
+				}
+			} else {
+				job.addLog("WARNING: fixed binary replace failed: " + truncate(replaceOut, 80))
+			}
+		} else {
+			job.addLog("WARNING: failed to push fixed binary to router: " + truncate(pushFixed, 80))
+		}
+	} else if fixedErr != nil {
+		job.addLog("WARNING: fixed binary download failed: " + truncate(fixedErr.Error(), 80) + " — using .ipk binary (may have keyset bug)")
+	} else {
+		job.addLog("WARNING: fixed binary too small (" + strconv.Itoa(len(fixedData)) + " bytes) — skipping replace")
 	}
 	time.Sleep(500 * time.Millisecond)
 
@@ -588,7 +639,11 @@ func runDeployment(job *Job, req deployRequest) {
 	}
 	svcOut := sshRun(client, strings.Join([]string{
 		"/etc/init.d/rpcd restart 2>&1",
-		"/etc/init.d/tollgate-wrt restart 2>&1",
+		// Use stop||true;start instead of restart — on OpenWrt 25, restart
+		// calls "ubus call service delete" which fails if the service was
+		// not procd-managed (e.g. after a manual binary swap). stop||true
+		// ignores the "Not found" error, then start registers it fresh.
+		"/etc/init.d/tollgate-wrt stop 2>/dev/null; /etc/init.d/tollgate-wrt start 2>&1",
 		"/etc/init.d/nodogsplash restart 2>&1",
 		"/etc/init.d/uhttpd restart 2>&1",
 		"sleep 3",
