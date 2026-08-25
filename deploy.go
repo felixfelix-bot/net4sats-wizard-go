@@ -215,14 +215,17 @@ func runDeployment(job *Job, req deployRequest) {
 			} else {
 				job.addLog("opkg feed install failed, downloading .ipk from OpenWrt repo...")
 				// Download nodogsplash + jq .ipk from OpenWrt package repo
-				// on laptop, push to router, install. The feed URL pattern:
-				// https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/packages/
-				ndsURL := "https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/packages/"
-				ndsListHTML := string(httpGetFileOrEmpty(ndsURL))
+				// on laptop, push to router, install. nodogsplash is in the
+				// routing/ subdirectory, jq is in packages/.
+				baseURL := "https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/"
+				routingURL := baseURL + "routing/"
+				packagesURL := baseURL + "packages/"
+				ndsListHTML := string(httpGetFileOrEmpty(routingURL))
+				jqListHTML := string(httpGetFileOrEmpty(packagesURL))
 				ndsPkg := extractIPKFilename(ndsListHTML, "nodogsplash")
-				jqPkg := extractIPKFilename(ndsListHTML, "jq")
+				jqPkg := extractIPKFilename(jqListHTML, "jq")
 				if ndsPkg != "" {
-					ndsData, ndsErr := httpGetFile(ndsURL + ndsPkg)
+					ndsData, ndsErr := httpGetFile(routingURL + ndsPkg)
 					if ndsErr == nil && len(ndsData) > 1000 {
 						pushNds := sshUploadPipe(client, ndsData, "cat > /tmp/"+ndsPkg+" && echo NDS_PUSHED")
 						if strings.Contains(pushNds, "NDS_PUSHED") {
@@ -231,7 +234,7 @@ func runDeployment(job *Job, req deployRequest) {
 					}
 				}
 				if jqPkg != "" {
-					jqData, jqErr := httpGetFile(ndsURL + jqPkg)
+					jqData, jqErr := httpGetFile(packagesURL + jqPkg)
 					if jqErr == nil && len(jqData) > 1000 {
 						pushJq := sshUploadPipe(client, jqData, "cat > /tmp/"+jqPkg+" && echo JQ_PUSHED")
 						if strings.Contains(pushJq, "JQ_PUSHED") {
