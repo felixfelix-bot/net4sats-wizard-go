@@ -519,7 +519,7 @@ func runDeployment(job *Job, req deployRequest) {
 		"uci add_list uhttpd.main.listen_http='[::]:80'",
 		"uci set uhttpd.main.home='/www/net4sats-redirect'",
 		"mkdir -p /www/net4sats-redirect",
-		"echo '<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" content=\"0; url=http://tollgate.lan:8090/\"><script>location.replace(\"http://tollgate.lan:8090/\")</script></head><body>Redirecting to net4sats admin...</body></html>' > /www/net4sats-redirect/index.html",
+		"echo '<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" content=\"0; url=http://tollgate.lan:2051/splash.html\"><script>location.replace(\"http://tollgate.lan:2051/splash.html\")</script></head><body>Redirecting to net4sats portal...</body></html>' > /www/net4sats-redirect/index.html",
 		// net4sats admin instance on :8090
 		"uci set uhttpd.net4sats=uhttpd",
 		"uci -q del_list uhttpd.net4sats.listen_http='0.0.0.0:8090' 2>/dev/null; true",
