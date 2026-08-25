@@ -865,6 +865,58 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 		return false
 	}
 	job.addLog("WiFi STA connected: " + ssid)
+
+	// --- Upstream subnet conflict detection ---
+	// If the router's LAN subnet (e.g. 192.168.1.0/24) overlaps with the
+	// upstream WiFi subnet that phy0-sta0 just joined, routing breaks: both
+	// br-lan and the STA interface are in the same /24, so the router can't
+	// reach the upstream gateway. Fix by moving br-lan to a random 10.x.y.1/24.
+	upstreamGW := strings.TrimSpace(sshRun(client, "ip route show default 2>/dev/null | grep -E 'phy|wlan|wwan' | awk '{print $3}' | head -1"))
+	lanIP := strings.TrimSpace(sshRun(client, "uci -q get network.lan.ipaddr 2>/dev/null | tr -d \"'\" | awk '{print $1}'"))
+	if upstreamGW != "" && lanIP != "" {
+		lanParts := strings.Split(lanIP, ".")
+		gwParts := strings.Split(upstreamGW, ".")
+		if len(lanParts) >= 3 && len(gwParts) >= 3 {
+			lanPrefix := strings.Join(lanParts[:3], ".")
+			gwPrefix := strings.Join(gwParts[:3], ".")
+			if lanPrefix == gwPrefix {
+				// CONFLICT — change LAN to a random 10.x.y.1/24
+				randBytes := make([]byte, 2)
+				cryptorand.Read(randBytes)
+				newSecond := int(randBytes[0])%200 + 10  // 10-210
+				newThird := int(randBytes[1])%200 + 2    // 2-202
+				newLanIP := fmt.Sprintf("10.%d.%d.1", newSecond, newThird)
+
+				job.addLog(fmt.Sprintf("LAN subnet conflict with upstream (%s.0/24 == %s.0/24), changing LAN to %s/24", lanPrefix, gwPrefix, newLanIP))
+
+				sshRun(client, strings.Join([]string{
+					"uci set network.lan.ipaddr='" + newLanIP + "'",
+					"uci commit network",
+					"/etc/init.d/network restart 2>/dev/null",
+					"sleep 2",
+				}, " && "))
+
+				// Network restart drops the SSH session — reconnect.
+				// Try the new LAN IP first, then fall back to the original IP.
+				client.Close()
+				newClient := reconnectSSH(newLanIP, password, 5, 3*time.Second)
+				if newClient == nil {
+					job.addLog(fmt.Sprintf("Could not reconnect on new LAN IP %s, trying original IP %s...", newLanIP, ip))
+					newClient = reconnectSSH(ip, password, 3, 5*time.Second)
+				}
+				if newClient != nil {
+					*pclient = newClient
+					client = newClient
+					job.addLog(fmt.Sprintf("Reconnected to router on new LAN IP %s", newLanIP))
+				} else {
+					job.addLog("WARNING: Could not reconnect after LAN IP change — subsequent steps may fail")
+				}
+			} else {
+				job.addLog(fmt.Sprintf("No LAN/upstream subnet conflict (LAN=%s.0/24, upstream=%s.0/24)", lanPrefix, gwPrefix))
+			}
+		}
+	}
+
 	job.setStep(3, "done", "STA mode: "+ssid)
 	return true
 }
