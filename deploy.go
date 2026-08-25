@@ -259,15 +259,13 @@ func runDeployment(job *Job, req deployRequest) {
 		if strings.Contains(pushFixed, "FIXED_PUSHED") {
 			job.addLog(fmt.Sprintf("Fixed binary downloaded (%d KB), replacing /usr/bin/tollgate-wrt...", len(fixedData)/1024))
 			// Stop service first to avoid "Text file busy" — the binary is in use.
-			// The version check is wrapped in a subshell so its || does NOT
-			// mask a cp/chmod failure: without the subshell, shell precedence
-			// (A && B && C || D && E) makes D catch C's failure AND B's failure,
-			// so REPLACE_OK is echoed even when cp fails.
+			// No --version check: tollgate-wrt doesn't support --version, it just
+			// starts the server (blocks forever, causing SSH timeout). We verify
+			// with strings after the copy instead.
 			replaceOut := sshRun(client, strings.Join([]string{
 				"/etc/init.d/tollgate-wrt stop 2>/dev/null; sleep 1",
 				"cp /tmp/tollgate-wrt-fixed /usr/bin/tollgate-wrt",
 				"chmod +x /usr/bin/tollgate-wrt",
-				"(/usr/bin/tollgate-wrt --version 2>/dev/null || true)",
 				"echo 'REPLACE_OK'",
 			}, " && "))
 			if strings.Contains(replaceOut, "REPLACE_OK") {
@@ -623,7 +621,11 @@ func runDeployment(job *Job, req deployRequest) {
 	}
 	svcOut := sshRun(client, strings.Join([]string{
 		"/etc/init.d/rpcd restart 2>&1",
-		"/etc/init.d/tollgate-wrt restart 2>&1",
+		// Use stop||true;start instead of restart — on OpenWrt 25, restart
+		// calls "ubus call service delete" which fails if the service was
+		// not procd-managed (e.g. after a manual binary swap). stop||true
+		// ignores the "Not found" error, then start registers it fresh.
+		"/etc/init.d/tollgate-wrt stop 2>/dev/null; /etc/init.d/tollgate-wrt start 2>&1",
 		"/etc/init.d/nodogsplash restart 2>&1",
 		"/etc/init.d/uhttpd restart 2>&1",
 		"sleep 3",
