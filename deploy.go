@@ -431,9 +431,17 @@ func runDeployment(job *Job, req deployRequest) {
 	job.addLog("NDS htdocs: redirect stub installed (port 2050 → 2051)")
 
 	// 6c: NDS preauth script — ensures NDS intercepts and redirects to portal
+	// NDS sets $clientip, $clientmac, $gatewayaddress as env vars in preauth.sh.
+	// Use double-quoted heredoc (no 'EOF') so shell vars expand at runtime.
+	// The port 80 redirect (redirectHTML) stays static — it has no client info.
+	preauthHTML := "<!DOCTYPE html><html><head>" +
+		"<meta http-equiv=\"refresh\" content=\"0; url=http://$gatewayaddress:2051/splash.html?clientip=$clientip&clientmac=$clientmac\">" +
+		"<script>location.replace(\"http://$gatewayaddress:2051/splash.html?clientip=$clientip&clientmac=$clientmac\");</script>" +
+		"<title>net4sats Portal</title></head><body>Redirecting...</body></html>"
 	preauthScript := "#!/bin/sh\n" +
 		"# NDS preauth: redirect intercepted clients to uhttpd-served portal\n" +
-		"cat << 'EOF'\n" + redirectHTML + "\nEOF\nexit 0\n"
+		"# NDS provides $clientip, $clientmac, $gatewayaddress as env vars\n" +
+		"cat << EOF\n" + preauthHTML + "\nEOF\nexit 0\n"
 	sshWriteFile(client, "/etc/nodogsplash/preauth.sh", []byte(preauthScript))
 	sshRun(client, "chmod +x /etc/nodogsplash/preauth.sh")
 
