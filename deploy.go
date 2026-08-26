@@ -500,17 +500,29 @@ func runDeployment(job *Job, req deployRequest) {
 	job.addLog("Admin JS patched: dhcp ipv4leases → tollgate clients")
 
 	// 7b3: Deploy balance page to admin panel
-	// balance.html exists in portal FS — copy it, fix paths for admin base
-	balanceHTML := readFromEmbedFS(portalFS, "portal/balance.html")
-	if balanceHTML != nil {
-		fixed := strings.ReplaceAll(string(balanceHTML), "/assets/", "./assets/")
-		fixed = strings.ReplaceAll(fixed, "/favicon.ico", "./favicon.ico")
-		fixed = strings.ReplaceAll(fixed, "/manifest.json", "./manifest.json")
-		sshWriteFile(client, "/www/net4sats/balance.html", []byte(fixed))
-		// Copy shared vendor assets from portal to admin (balance JS/CSS + shared bundles)
-		sshRun(client, "for f in balance-*.js balance-*.css index-C9QTYeLH.js index-DoTOgCNp.css; do "+
-			"cp /etc/tollgate/net4sats-captive-portal-site/assets/$f /www/net4sats/assets/ 2>/dev/null; done; true")
-		job.addLog("Balance page deployed to admin panel")
+	// balance.html and its JS/CSS assets are in the admin embed FS (merged
+	// during configurationwizzard build via scripts/build-app.mjs).
+	// sshDeployFS in step 7a already copies all admin/ files to /www/net4sats/,
+	// so balance.html is already in place. This step is a no-op safety net
+	// that verifies the file landed correctly.
+	balanceCheck := sshRun(client, "test -f /www/net4sats/balance.html && echo ok || echo missing")
+	if strings.TrimSpace(balanceCheck) == "ok" {
+		job.addLog("Balance page present at /www/net4sats/balance.html")
+	} else {
+		// Fallback: try to copy from portal FS if it exists there (older builds)
+		balanceHTML := readFromEmbedFS(portalFS, "portal/balance.html")
+		if balanceHTML == nil {
+			balanceHTML = readFromEmbedFS(adminFS, "admin/balance.html")
+		}
+		if balanceHTML != nil {
+			fixed := strings.ReplaceAll(string(balanceHTML), "/assets/", "./assets/")
+			fixed = strings.ReplaceAll(fixed, "/favicon.ico", "./favicon.ico")
+			fixed = strings.ReplaceAll(fixed, "/manifest.json", "./manifest.json")
+			sshWriteFile(client, "/www/net4sats/balance.html", []byte(fixed))
+			job.addLog("Balance page deployed to admin panel (fallback)")
+		} else {
+			job.addLog("WARNING: balance.html not found in any embed FS")
+		}
 	}
 
 	// 7c: uhttpd config — add net4sats (:8090) and luci (:8080) instances via UCI
