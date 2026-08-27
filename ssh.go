@@ -159,7 +159,17 @@ func sshDeployPortal(client *ssh.Client, fs embed.FS, rootDir string) error {
 
 // sshDeployFS recursively deploys an embedded FS to a remote directory.
 // Works with arbitrary nesting depth (e.g. assets/icon/colour/).
-func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir string) error {
+//
+// exclude lists embed-relative paths (e.g. "index.html") that are skipped.
+// Used when mirroring a bundle into a shared docroot so files owned by
+// another service are left alone — e.g. OpenWrt's /www/index.html is the
+// LuCI redirect page served on :8080 and must not be clobbered by a
+// portal mirror landing in /www.
+func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir string, exclude ...string) error {
+	skip := make(map[string]bool, len(exclude))
+	for _, e := range exclude {
+		skip[e] = true
+	}
 	sshRun(client, "mkdir -p "+remoteDir)
 
 	return fs.WalkDir(fsys, embedRoot, func(fullPath string, d fs.DirEntry, err error) error {
@@ -173,6 +183,9 @@ func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir 
 			relPath = fullPath[len(prefix):]
 		}
 		if relPath == "" || relPath == embedRoot {
+			return nil
+		}
+		if skip[relPath] {
 			return nil
 		}
 		if d.IsDir() {

@@ -410,12 +410,36 @@ func runDeployment(job *Job, req deployRequest) {
 	// 6a: uhttpd portal instance (port 2051) — serves full Preact SPA with JS/CSS.
 	// NDS 5.0.2 built-in HTTP server returns 500 for files >64KB (splash JS is 200KB).
 	// uhttpd handles large files fine. Portal is served from here, NDS redirects to it.
+	//
+	// portalDeployDir is the ACTUAL uhttpd :2051 document root (wired up in
+	// 6e below as uhttpd.portal.home with index_page 'splash.html'). It is
+	// the only directory :2051 reads: portal bundles copied elsewhere (e.g.
+	// /www) never reach splash clients, who keep seeing a stale bundle. That
+	// failure was proven on a physical router — the full-mode Playwright
+	// suite passed only after the fixed bundle was manually copied into
+	// this docroot:
+	// https://github.com/net4sats/configurationwizzard/pull/30#issuecomment-5438262589
 	portalDeployDir := "/etc/tollgate/net4sats-captive-portal-site"
 	portalErr2 := sshDeployFS(client, portalFS, "portal", portalDeployDir)
 	if portalErr2 != nil {
 		job.addLog("Portal upload error (uhttpd 2051): " + truncate(portalErr2.Error(), 80))
 	} else {
 		job.addLog("Portal deployed to " + portalDeployDir + "/ (port 2051)")
+	}
+
+	// 6a2: mirror the same bundle to /www so both docroots stay in sync.
+	// Other net4sats tooling still treats /www as the portal docroot
+	// (configurationwizzard's documented `scp dist/* root@router:/www/`
+	// flow; legacy port-80 NDS splash setups reading /www/splash.html), so
+	// keeping the two trees identical prevents bundle-skew between them.
+	// index.html is excluded: /www/index.html is OpenWrt's LuCI redirect
+	// page (served by the luci uhttpd instance on :8080) and must not be
+	// replaced by the portal SPA — :2051 uses index_page 'splash.html', so
+	// it never needs /www/index.html.
+	if wwwErr := sshDeployFS(client, portalFS, "portal", "/www", "index.html"); wwwErr != nil {
+		job.addLog("Portal /www mirror error: " + truncate(wwwErr.Error(), 80))
+	} else {
+		job.addLog("Portal mirrored to /www (in sync with :2051 docroot; LuCI index preserved)")
 	}
 
 	// 6b: NDS htdocs — replace with redirect stub (NOT the full SPA).
