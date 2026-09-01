@@ -110,15 +110,15 @@ func defaultMintsJSON(includeTestnut bool) string {
 //   - a config.json without accepted_mints (// []) is handled.
 //
 // Fixes vs the alpha16 filter, which NEVER wrote any config at all:
-//   1. the dedup check inside `($dm | map(...))` referenced .accepted_mints
-//      while `.` was bound to each $dm element (null) → "Cannot iterate
-//      over null" on every router; the fix snapshots the CURRENT url list
-//      into $have BEFORE appending defaults;
-//   2. `($mu != "" and $idx | not)` mis-parsed as `(cond) | not`, inverting
-//      the condition so an EMPTY mint appended a {"url":""} entry; the fix
-//      parenthesizes `(($mu != "") and (index == null))`;
-//   3. the filter string is now shell-quoted — with an empty --arg value
-//      alpha16's unquoted token made jq consume the filter itself as $mu.
+//  1. the dedup check inside `($dm | map(...))` referenced .accepted_mints
+//     while `.` was bound to each $dm element (null) → "Cannot iterate
+//     over null" on every router; the fix snapshots the CURRENT url list
+//     into $have BEFORE appending defaults;
+//  2. `($mu != "" and $idx | not)` mis-parsed as `(cond) | not`, inverting
+//     the condition so an EMPTY mint appended a {"url":""} entry; the fix
+//     parenthesizes `(($mu != "") and (index == null))`;
+//  3. the filter string is now shell-quoted — with an empty --arg value
+//     alpha16's unquoted token made jq consume the filter itself as $mu.
 //
 // This filter is exercised end-to-end against local jq by
 // TestMintConfigJqMerge (merge, dedup, idempotency, // [] fallback).
@@ -309,7 +309,7 @@ func runDeployment(job *Job, req deployRequest) {
 					}
 				}
 				if jqPkg != "" {
-				jqData, jqErr := httpGetFile(packagesURL + jqPkg)
+					jqData, jqErr := httpGetFile(packagesURL + jqPkg)
 					if jqErr == nil && len(jqData) > 1000 {
 						pushJq := sshUploadPipe(client, jqData, "cat > /tmp/"+jqPkg+" && echo JQ_PUSHED")
 						if strings.Contains(pushJq, "JQ_PUSHED") {
@@ -747,23 +747,44 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 10: Health check
 	job.setStep(10, "running", "")
 	job.addLog("Running health check...")
-	// Retry health check up to 5 times — a single wget 3.5s after service
-	// restart is too fast: the freshly-installed binary may still be starting,
-	// or an old crashing binary may need time before it fails to bind :2121.
-	healthOK := false
-	var healthOut string
-	for attempt := 1; attempt <= 5; attempt++ {
-		time.Sleep(2 * time.Second)
-		healthOut = sshRun(client, "wget -qO- http://127.0.0.1:2121/ 2>/dev/null | head -c 100 || echo 'health check failed'")
-		if strings.Contains(healthOut, "kind") || strings.Contains(healthOut, "metric") || strings.Contains(healthOut, "pubkey") {
-			healthOK = true
-			job.addLog(fmt.Sprintf("Health check passed on attempt %d", attempt))
+	// W2: poll for the backend to bind :2121 before probing HTTP. A cold
+	// install runs a sequential 7-mint probe (30s timeout each, worst ~210s)
+	// before the backend binds :2121; the old 5×2s retry window (~13s) was far
+	// too short. Poll netstat -tln every 5s for up to 240s total. BusyBox
+	// netstat lacks -p, so only -tln is used.
+	const (
+		portPollInterval = 5 * time.Second
+		portPollTimeout  = 240 * time.Second
+	)
+	portBoundAt := time.Duration(0)
+	portBoundNow := false
+	portPollStart := time.Now()
+	for {
+		netstatOut := sshRun(client, "netstat -tln 2>/dev/null | grep ':2121'")
+		if portBound(netstatOut) {
+			portBoundAt = time.Since(portPollStart)
+			portBoundNow = true
+			job.addLog(fmt.Sprintf("Backend bound :2121 after %s", portBoundAt.Round(time.Second)))
 			break
 		}
-		job.addLog(fmt.Sprintf("Health check attempt %d failed, retrying...", attempt))
+		if time.Since(portPollStart) >= portPollTimeout {
+			break
+		}
+		time.Sleep(portPollInterval)
 	}
-	if healthOK {
-		job.addLog("Health check passed — TollGate API responding")
+
+	// W1: single-command HTTP probe that captures body + exit status + stderr.
+	probe := parseHealthOutput(sshRun(client, healthProbeScript()))
+	httpOK := probe.rc == 0 && advertisementOK(probe.body)
+
+	// W4: classify. Process liveness is checked via `ps w | grep '[t]ollgate-wrt'`.
+	psOut := sshRun(client, "ps w | grep '[t]ollgate-wrt'")
+	alive := processAlive(psOut)
+	state := classifyHealthState(alive, portBoundNow, httpOK)
+
+	switch state {
+	case healthHealthy:
+		job.addLog("Health check passed — TollGate API responding on :2121")
 		// Also verify rpcd tollgate plugin responds
 		rpcdOut := sshRun(client, "ubus list tollgate 2>/dev/null && echo 'rpcd ok' || echo 'rpcd missing'")
 		if strings.Contains(rpcdOut, "rpcd ok") {
@@ -772,18 +793,38 @@ func runDeployment(job *Job, req deployRequest) {
 			job.addLog("WARNING: rpcd tollgate plugin not responding")
 		}
 		// Verify admin panel serving on 8090
-		adminOut := sshRun(client, "netstat -tlnp 2>/dev/null | grep 8090 && echo 'admin ok' || echo 'admin missing'")
+		adminOut := sshRun(client, "netstat -tln 2>/dev/null | grep 8090 && echo 'admin ok' || echo 'admin missing'")
 		if strings.Contains(adminOut, "admin ok") {
 			job.addLog("Admin panel on :8090: OK")
 		} else {
 			job.addLog("WARNING: admin panel not serving on 8090")
 		}
 		job.setStep(10, "done", "API healthy on :2121")
-	} else {
-		job.addLog("Health check FAILED: " + truncate(healthOut, 80))
-		// Roll back wireless config so the router's radios are usable for
-		// re-scanning after a failed deploy (e.g. old binary crashed with
-		// new config, leaving radio0 stuck in STA mode).
+
+	case healthStarting:
+		// W4a: process alive but :2121 not bound after the full poll window —
+		// the backend is still running its cold-boot mint probe. Soft-fail:
+		// warn clearly, do NOT roll back wireless, do NOT fail the job.
+		job.addLog("WARNING: backend process alive but :2121 not bound after " + portPollTimeout.String() + " — still starting (cold-boot mint probe)")
+		job.addLog("Deployment is complete; the backend will finish initializing and bind :2121 on its own.")
+		job.setStep(10, "done", "backend still starting (cold boot mint probe)")
+
+	case healthDead:
+		// W4b: process gone (or respawn exhaustion). Hard-fail + rollback.
+		job.addLog("Health check FAILED: tollgate-wrt process not running")
+		runHealthDiagnostics(job, client)
+		job.addLog("Rolling back wireless config to pre-deploy state...")
+		rollbackWireless(client)
+		job.addLog("Wireless config restored — radios should be available for scanning")
+		jobFail(job, 10, "tollgate-wrt process not running", "Health check failed — wireless config rolled back for recovery")
+		return
+
+	case healthHTTPBad:
+		// W4c: port bound but HTTP body is not a valid advertisement. Run
+		// diagnostics, then hard-fail with the captured body + error.
+		job.addLog("Health check FAILED: :2121 bound but HTTP body is not a valid advertisement")
+		job.addLog("HTTP probe rc=" + strconv.Itoa(probe.rc) + " body=" + truncate(probe.body, 120) + " stderr=" + truncate(probe.stderr, 120))
+		runHealthDiagnostics(job, client)
 		job.addLog("Rolling back wireless config to pre-deploy state...")
 		rollbackWireless(client)
 		job.addLog("Wireless config restored — radios should be available for scanning")
@@ -850,6 +891,28 @@ echo "STA_CFG_OK target=$target"`
 // wireless state. Safe to call when no snapshot exists (no-op).
 func rollbackWireless(client *ssh.Client) {
 	sshRun(client, "[ -f /tmp/wireless.pre-net4sats ] && cp /tmp/wireless.pre-net4sats /etc/config/wireless && uci commit wireless && (wifi reload 2>/dev/null || wifi 2>/dev/null); true")
+}
+
+// runHealthDiagnostics captures backend diagnostics into the job log (W3):
+// the backend's real log (procd_set_param file target), the process list, the
+// procd service registration, and recent logread lines. Each is truncated for
+// log sanity.
+func runHealthDiagnostics(job *Job, client *ssh.Client) {
+	job.addLog("--- health-check diagnostics ---")
+
+	debugLog := sshRun(client, "tail -n 40 /tmp/tollgate-debug.log 2>/dev/null")
+	job.addLog("tollgate-debug.log (tail 40): " + truncate(debugLog, 2000))
+
+	psOut := sshRun(client, "ps w | grep '[t]ollgate-wrt'")
+	job.addLog("ps tollgate-wrt: " + truncate(psOut, 500))
+
+	svcOut := sshRun(client, "ubus call service list '{\"name\":\"tollgate-wrt\"}' 2>/dev/null")
+	job.addLog("ubus service list: " + truncate(svcOut, 1000))
+
+	logreadOut := sshRun(client, "logread | grep -iE 'tollgate|procd|mint probe' | tail -n 30")
+	job.addLog("logread (tollgate/procd/mint probe): " + truncate(logreadOut, 2000))
+
+	job.addLog("--- end diagnostics ---")
 }
 
 // reconnectSSH retries sshConnect (radios may be restarting after a wifi
@@ -971,8 +1034,8 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 				// CONFLICT — change LAN to a random 10.x.y.1/24
 				randBytes := make([]byte, 2)
 				cryptorand.Read(randBytes)
-				newSecond := int(randBytes[0])%200 + 10  // 10-210
-				newThird := int(randBytes[1])%200 + 2    // 2-202
+				newSecond := int(randBytes[0])%200 + 10 // 10-210
+				newThird := int(randBytes[1])%200 + 2   // 2-202
 				newLanIP := fmt.Sprintf("10.%d.%d.1", newSecond, newThird)
 
 				job.addLog(fmt.Sprintf("LAN subnet conflict with upstream (%s.0/24 == %s.0/24), changing LAN to %s/24", lanPrefix, gwPrefix, newLanIP))
