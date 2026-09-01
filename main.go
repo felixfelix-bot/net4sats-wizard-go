@@ -320,6 +320,70 @@ func scanFailedHeuristic(out string) bool {
 		strings.Contains(out, "Usage:")
 }
 
+// parseIwDevList extracts interface names from `iw dev` output: lines of
+// the form "	Interface <name>" (single-tab indent) at the top level of
+// each phy block, e.g.
+//
+//	phy#0
+//		Unnamed/non-netdev interface
+//			wdev 0x2
+//		Interface wlp58s0      ← parsed
+//			ifindex 4
+//
+// Deeper-indented lines, usage text, and garbage yield nothing. Used by the
+// last-resort scan to enumerate concrete interfaces — the old code ran
+// `iw dev scan`, which is INVALID iw syntax (no such subcommand without an
+// interface name).
+func parseIwDevList(output string) []string {
+	seen := map[string]bool{}
+	var ifaces []string
+	for _, line := range strings.Split(output, "\n") {
+		if !strings.HasPrefix(line, "	Interface ") {
+			continue
+		}
+		name := strings.TrimSpace(strings.TrimPrefix(line, "	Interface "))
+		if name == "" || strings.ContainsAny(name, " 	") || seen[name] {
+			continue
+		}
+		seen[name] = true
+		ifaces = append(ifaces, name)
+	}
+	return ifaces
+}
+
+// iwIfaceNameRe is the strict charset of real wireless interface names
+// (wlan0, phy0-ap0, wlp58s0, …). Anything else — shell metachars,
+// whitespace, empty — is rejected so a name parsed from router output can
+// never smuggle a second command into the SSH session.
+var iwIfaceNameRe = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+// iwInterfaceScanCommand builds the last-resort per-interface scan command:
+// `iw dev <iface> scan 2>&1`. stderr is MERGED (not discarded) so real
+// router-side errors reach the UI; the interface name is validated against
+// iwIfaceNameRe because it is interpolated into an SSH command string.
+func iwInterfaceScanCommand(iface string) (string, error) {
+	if !iwIfaceNameRe.MatchString(iface) {
+		return "", fmt.Errorf("invalid interface name %q", iface)
+	}
+	return "iw dev " + iface + " scan 2>&1", nil
+}
+
+// scanDebug assembles the "debug" field for scan responses: the
+// strategy-by-strategy debug log plus a tail of the last raw router output.
+// The old code sent only truncate(lastOut, 200), hiding which strategies
+// ran and what the router actually said — including the router-side
+// errors that stderr capture now surfaces.
+func scanDebug(debugLog, lastOut string) string {
+	s := strings.TrimSpace(debugLog)
+	if tail := truncate(lastOut, 400); tail != "" {
+		if s != "" {
+			s += "\n"
+		}
+		s += "router output: " + tail
+	}
+	return s
+}
+
 func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, 405, "method not allowed")
@@ -370,7 +434,10 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	var debugLog strings.Builder
 
 	// --- Strategy 1: iwinfo scan (no args) — scans all radios ---
-	scanOut := sshRun(client, "iwinfo scan 2>/dev/null")
+	// All scan commands MERGE stderr (2>&1) so real router-side errors
+	// (device down, radio busy, command missing) reach the debug output
+	// instead of being discarded on the router (v0.7.0-alpha16 fix).
+	scanOut := sshRun(client, "iwinfo scan 2>&1")
 	debugLog.WriteString("[1] iwinfo scan (no args): ")
 	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
 		debugLog.WriteString("got results\n")
@@ -378,31 +445,31 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
 			json.NewEncoder(w).Encode(map[string]any{
-				"ssids": ssids,
-				"debug": truncate(scanOut, 200),
+				"ssids":  ssids,
+				"debug":  scanDebug(debugLog.String(), scanOut),
 			})
 		} else {
 			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
-	debugLog.WriteString("no results\n")
+	debugLog.WriteString("no results (" + truncate(scanOut, 200) + ")\n")
 
 	// --- Strategy 2: per-interface scan (Client/Managed only) ---
 	// Auto-detect wireless interfaces from `iwinfo` (no args) listing.
 	// For each interface, check `iwinfo <dev> info` Mode: field and skip
 	// Master (AP) mode interfaces — they can't scan.
-	iwinfoOut := sshRun(client, "iwinfo 2>/dev/null")
+	iwinfoOut := sshRun(client, "iwinfo 2>&1")
 	var clientDevs []string
 	for _, line := range strings.Split(iwinfoOut, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if idx := strings.Index(trimmed, "ESSID:"); idx > 0 {
 			iface := strings.TrimSpace(trimmed[:idx])
-			if iface == "" || strings.HasPrefix(iface, "Usage") {
+			if iface == "" || strings.HasPrefix(trimmed, "Usage") || scanFailedHeuristic(trimmed) {
 				continue
 			}
 			// Check mode: skip Master (AP) interfaces.
-			infoOut := sshRun(client, "iwinfo "+iface+" info 2>/dev/null")
+			infoOut := sshRun(client, "iwinfo "+iface+" info 2>&1")
 			mode := ""
 			for _, infoLine := range strings.Split(infoOut, "\n") {
 				infoLine = strings.TrimSpace(infoLine)
@@ -423,7 +490,7 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	if len(clientDevs) > 0 {
 		var perIfaceScan string
 		for _, dev := range clientDevs {
-			out := sshRun(client, "iwinfo "+dev+" scan 2>/dev/null")
+			out := sshRun(client, "iwinfo "+dev+" scan 2>&1")
 			if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
 				perIfaceScan += out + "\n"
 			}
@@ -436,7 +503,7 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 			if len(ssids) == 0 {
 				json.NewEncoder(w).Encode(map[string]any{
 					"ssids": ssids,
-					"debug": truncate(scanOut, 200),
+					"debug": scanDebug(debugLog.String(), scanOut),
 				})
 			} else {
 				json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
@@ -449,10 +516,14 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	// --- Strategy 3: phy-level scan (mode-independent) ---
 	// `iw phy phy0 scan` works regardless of interface mode — it creates
 	// a temporary scan request on the physical device. Try phy0 and phy1.
+	// scanFailedHeuristic (not just "command not found") must be applied
+	// here too: iw prints its usage text to stdout with exit 0 on invalid
+	// syntax, and "Operation not supported"/"No such device" are the real
+	// router-side errors (v0.7.0-alpha16 fix).
 	var phyScanOut string
 	for _, phy := range []string{"phy0", "phy1"} {
-		out := sshRun(client, "iw phy "+phy+" scan 2>/dev/null")
-		if strings.TrimSpace(out) != "" && !strings.Contains(out, "command not found") {
+		out := sshRun(client, "iw phy "+phy+" scan 2>&1")
+		if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
 			phyScanOut += out + "\n"
 		}
 	}
@@ -463,7 +534,7 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		if len(ssids) == 0 {
 			json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
-				"debug": truncate(phyScanOut, 200),
+				"debug": scanDebug(debugLog.String(), phyScanOut),
 			})
 		} else {
 			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
@@ -473,8 +544,8 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	debugLog.WriteString("[3] phy-level scan: no results\n")
 
 	// --- Strategy 4: existing fallbacks ---
-	// Try common interface names (wlan0/wlan1) then iw dev scan.
-	scanOut = sshRun(client, "iwinfo wlan0 scan 2>/dev/null || iwinfo wlan1 scan 2>/dev/null")
+	// Try common interface names (wlan0/wlan1), then per-interface iw scan.
+	scanOut = sshRun(client, "iwinfo wlan0 scan 2>&1 || iwinfo wlan1 scan 2>&1")
 	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
 		debugLog.WriteString("[4] iwinfo wlan0/wlan1 fallback: got results\n")
 		ssids := parseIwinfoScan(scanOut)
@@ -482,7 +553,7 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		if len(ssids) == 0 {
 			json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
-				"debug": truncate(scanOut, 200),
+				"debug": scanDebug(debugLog.String(), scanOut),
 			})
 		} else {
 			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
@@ -490,41 +561,68 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Last resort: iw dev scan
-	scanOut = sshRun(client, "iw dev scan 2>/dev/null")
-	if strings.TrimSpace(scanOut) != "" && !strings.Contains(scanOut, "command not found") {
-		debugLog.WriteString("[4] iw dev scan: got results\n")
-		ssids := parseIwScan(scanOut)
-		w.Header().Set("Content-Type", "application/json")
-		if len(ssids) == 0 {
-			json.NewEncoder(w).Encode(map[string]any{
-				"ssids": ssids,
-				"debug": truncate(scanOut, 200),
-			})
-		} else {
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+	// Last resort (v0.7.0-alpha16 fix): per-interface `iw dev <iface> scan`.
+	// The old code ran `iw dev scan` — INVALID iw syntax (no such subcommand
+	// without an interface name). iw prints its usage text to STDOUT with
+	// exit 0, so the usage text passed as "results" and the UI showed
+	// "Router returned: Usage: iw...". Instead: list interfaces via
+	// `iw dev` (parsing "	Interface <name>" lines), scan each one, and
+	// run every output through scanFailedHeuristic so error/usage text can
+	// never masquerade as results.
+	iwDevsOut := sshRun(client, "iw dev 2>&1")
+	iwScanOut := "" // fresh accumulator: strategy-4 output already failed
+	if scanFailedHeuristic(iwDevsOut) {
+		debugLog.WriteString("[4] iw dev listing failed (" + truncate(iwDevsOut, 200) + ")\n")
+	} else {
+		for _, iface := range parseIwDevList(iwDevsOut) {
+			cmd, err := iwInterfaceScanCommand(iface)
+			if err != nil {
+				debugLog.WriteString("[4] skip iface " + iface + ": " + err.Error() + "\n")
+				continue
+			}
+			out := sshRun(client, cmd)
+			debugLog.WriteString("[4] iw dev " + iface + " scan: ")
+			if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
+				iwScanOut += out + "\n"
+				debugLog.WriteString("got results\n")
+			} else {
+				debugLog.WriteString("no results (" + truncate(out, 200) + ")\n")
+			}
 		}
-		return
+		if strings.TrimSpace(iwScanOut) != "" {
+			scanOut = iwScanOut
+			ssids := parseIwScan(scanOut)
+			w.Header().Set("Content-Type", "application/json")
+			if len(ssids) == 0 {
+				json.NewEncoder(w).Encode(map[string]any{
+					"ssids": ssids,
+					"debug": scanDebug(debugLog.String(), scanOut),
+				})
+			} else {
+				json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			}
+			return
+		}
 	}
 	debugLog.WriteString("[4] all fallbacks exhausted\n")
 
 	// All strategies failed — return diagnostic info.
 	w.Header().Set("Content-Type", "application/json")
-	// If 0 SSIDs found despite non-empty scan output from the last strategy,
-	// include diagnostic info so the operator can see what the router returned.
-	// This catches format mismatches (new iwinfo output) and error text that
-	// slipped past the checks above.
+	// Include the full strategy-by-strategy debug log plus a tail of the
+	// last raw router output (which now includes router-side stderr), so
+	// the operator sees exactly what each strategy tried and what the
+	// router said — not just a 200-char slice of the last attempt.
 	if strings.TrimSpace(scanOut) != "" {
 		json.NewEncoder(w).Encode(map[string]any{
-			"ssids": []string{},
-			"debug": truncate(scanOut, 200),
+			"ssids":  []wifiSSID{},
+			"debug":  scanDebug(debugLog.String(), scanOut),
 		})
 		return
 	}
 	w.WriteHeader(500)
 	json.NewEncoder(w).Encode(map[string]any{
 		"error": "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.",
-		"debug": truncate(debugLog.String(), 500),
+		"debug":  scanDebug(debugLog.String(), scanOut),
 	})
 }
 
