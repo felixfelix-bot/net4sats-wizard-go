@@ -63,6 +63,81 @@ func deploySteps() []Step {
 	}
 }
 
+// mintCfg mirrors one entry of the router's accepted_mints config.
+type mintCfg struct {
+	URL                     string `json:"url"`
+	MinBalance              int    `json:"min_balance"`
+	BalanceTolerancePercent int    `json:"balance_tolerance_percent"`
+	PayoutIntervalSeconds   int    `json:"payout_interval_seconds"`
+	MinPayoutAmount         int    `json:"min_payout_amount"`
+	PricePerStep            int    `json:"price_per_step"`
+	PriceUnit               string `json:"price_unit"`
+	MinPurchaseSteps        int    `json:"min_purchase_steps"`
+}
+
+const prodMintJSONTemplate = `{"url":"https://mint.coinos.io","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.minibits.cash/Bitcoin","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.lnserver.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.macadamia.cash","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.westernbtc.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://kashu.me","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}`
+
+const testMintJSONTemplate = `{"url":"https://nofee.testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}`
+
+// defaultMintsJSON returns the accepted_mints JSON array the wizard writes
+// to the router's /etc/tollgate/config.json. ALWAYS the 7 production mints;
+// the 2 testnut test mints (fake Lightning, E2E purchase testing only) are
+// appended ONLY when includeTestnut is true — test mints are strictly
+// opt-in, real customer deployments never get them by default.
+func defaultMintsJSON(includeTestnut bool) string {
+	if includeTestnut {
+		return "[\n    " + prodMintJSONTemplate + ",\n    " + testMintJSONTemplate + "\n  ]"
+	}
+	return "[\n    " + prodMintJSONTemplate + "\n  ]"
+}
+
+// configJqFilter returns the jq filter used by deploy step 8b to merge
+// margin, profit_share and mints into /etc/tollgate/config.json.
+//
+// Semantics (unchanged from the documented behavior):
+//   - margin/profit_share factors are overwritten from the deploy payload;
+//   - the operator's chosen mint ($mu) is APPENDED if non-empty and not
+//     already present (it never replaces the default list);
+//   - every default mint ($dm) not already in accepted_mints is APPENDED
+//     (idempotent by URL — re-running a deploy adds nothing new);
+//   - a config.json without accepted_mints (// []) is handled.
+//
+// Fixes vs the alpha16 filter, which NEVER wrote any config at all:
+//   1. the dedup check inside `($dm | map(...))` referenced .accepted_mints
+//      while `.` was bound to each $dm element (null) → "Cannot iterate
+//      over null" on every router; the fix snapshots the CURRENT url list
+//      into $have BEFORE appending defaults;
+//   2. `($mu != "" and $idx | not)` mis-parsed as `(cond) | not`, inverting
+//      the condition so an EMPTY mint appended a {"url":""} entry; the fix
+//      parenthesizes `(($mu != "") and (index == null))`;
+//   3. the filter string is now shell-quoted — with an empty --arg value
+//      alpha16's unquoted token made jq consume the filter itself as $mu.
+//
+// This filter is exercised end-to-end against local jq by
+// TestMintConfigJqMerge (merge, dedup, idempotency, // [] fallback).
+func configJqFilter() string {
+	return ".margin=$m | " +
+		"(.profit_share[] | select(.identity == \"owner\") | .factor) = $of | " +
+		"(.profit_share[] | select(.identity == \"developer\") | .factor) = $df | " +
+		// Add operator's chosen mint if non-empty and not already present.
+		".accepted_mints = (if (($mu != \"\") and (((.accepted_mints // []) | map(.url) | index($mu)) == null)) then " +
+		"(.accepted_mints // []) + [{\"url\":$mu,\"min_balance\":64,\"balance_tolerance_percent\":10,\"payout_interval_seconds\":60,\"min_payout_amount\":128,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
+		"else (.accepted_mints // []) end) | " +
+		// Add any default mints that aren't already present (idempotent by
+		// URL; map+index instead of unique_by for jq <1.7 on OpenWrt).
+		// $have = the CURRENT url list (after the $mu merge above), so a
+		// custom mint equal to a default URL is not appended twice.
+		"((.accepted_mints // []) | map(.url)) as $have | " +
+		".accepted_mints = ((.accepted_mints // []) + ($dm | map(.url as $u | select(($have | index($u)) == null))))"
+}
+
 // runDeployment executes the full deployment sequence.
 func runDeployment(job *Job, req deployRequest) {
 	client := sshConnect(req.IP, req.Password)
@@ -599,38 +674,22 @@ func runDeployment(job *Job, req deployRequest) {
 	lnOut := sshRun(client, lnCmd)
 
 	// 8b: Write margin + profit_share to config.json.
-	// Also ensure 9 default mints (7 production + 2 testnut zero-fee) are present (idempotent).
+	// Also ensure the default mints are present (idempotent):
+	//   7 production mints always;
+	//   2 testnut zero-fee test mints ONLY when req.TestMints is set
+	//   (E2E purchase testing — opt-in, never a real customer default).
 	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
 	devSplit := clamp(req.DevSplit, 0, 50)
 	margin := clamp(req.Margin, 0, 100)
 	ownerFactor := strconv.FormatFloat(1.0-float64(devSplit)/100.0, 'f', 4, 64)
 	devFactor := strconv.FormatFloat(float64(devSplit)/100.0, 'f', 4, 64)
-	defaultMints := `[
-    {"url":"https://mint.coinos.io","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.minibits.cash/Bitcoin","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.lnserver.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.macadamia.cash","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.westernbtc.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://kashu.me","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://nofee.testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
-  ]`
+	defaultMints := defaultMintsJSON(req.TestMints)
 	cfgCmd := "jq --argjson m " + strconv.Itoa(margin) + " " +
 		"--argjson of " + ownerFactor + " " +
 		"--argjson df " + devFactor + " " +
 		"--argjson dm '" + defaultMints + "' " +
-		"--arg mu " + req.Mint + " " +
-		"'.margin=$m | " +
-		"(.profit_share[] | select(.identity == \"owner\") | .factor) = $of | " +
-		"(.profit_share[] | select(.identity == \"developer\") | .factor) = $df | " +
-		// Add operator's chosen mint if non-empty and not already present.
-		".accepted_mints = (if ($mu != \"\" and (.accepted_mints | map(.url) | index($mu)) | not) then " +
-		".accepted_mints + [{\"url\":$mu,\"min_balance\":64,\"balance_tolerance_percent\":10,\"payout_interval_seconds\":60,\"min_payout_amount\":128,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
-		"else .accepted_mints end) | " +
-		// Add any of the 7 default mints that aren't already present (idempotent by URL).
-		// Uses map + index instead of unique_by for jq <1.7 compatibility on OpenWrt.
-		".accepted_mints = (.accepted_mints + ($dm | map(select(.url as $u | (.accepted_mints | map(.url) | index($u)) | not))))' " +
+		"--arg mu '" + req.Mint + "' " +
+		"'" + configJqFilter() + "' " +
 		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
 		"mv /tmp/cfg.tmp /etc/tollgate/config.json && echo 'config updated' || echo 'no config'"
 	cfgOut := sshRun(client, cfgCmd)
@@ -640,7 +699,11 @@ func runDeployment(job *Job, req deployRequest) {
 	}
 	if strings.Contains(cfgOut, "config updated") {
 		job.addLog("config.json: margin=" + strconv.Itoa(margin) + "%, devSplit=" + strconv.Itoa(devSplit) + "% (profit_share updated)")
-		job.addLog("config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin, testnut x2)")
+		mintsLog := "config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin)"
+		if req.TestMints {
+			mintsLog += " + testnut x2 (E2E test mints — opt-in)"
+		}
+		job.addLog(mintsLog)
 	}
 
 	// 8c: Default mints already injected in 8b above (accepted_mints array).

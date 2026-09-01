@@ -636,6 +636,11 @@ type deployRequest struct {
 	DevSplit int    `json:"devSplit"` // advanced: % to dev fund (0-50, default 10)
 	Margin   int    `json:"margin"`   // advanced: operator markup % (0-100, default 0)
 	Mint     string `json:"mint"`     // advanced: preferred Cashu mint URL
+	// TestMints is OPT-IN: when false/absent (the default for real customer
+	// deployments) the wizard configures ONLY the 7 production mints. When
+	// true it additionally appends the 2 testnut test mints, which fake
+	// Lightning payments for E2E purchase testing — never for production.
+	TestMints bool `json:"test_mints"` // advanced: include testnut test mints (E2E only, default false)
 }
 
 func handleDeploy(w http.ResponseWriter, r *http.Request) {
