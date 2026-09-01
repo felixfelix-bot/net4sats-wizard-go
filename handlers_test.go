@@ -146,9 +146,14 @@ func TestMainFunctionStructure(t *testing.T) {
 	// Test that the main function sets up routes correctly
 	// This is a basic structural test since we can't easily run the main function
 
-	// Check that listenAddr is properly set
-	if listenAddr != ":8099" {
-		t.Errorf("listenAddr = %q, want %q", listenAddr, ":8099")
+	// Check that the default port is 8099 and the fallback chain is sane
+	if defaultPort != 8099 {
+		t.Errorf("defaultPort = %d, want %d", defaultPort, 8099)
+	}
+	// The documented fallback order is 8099 → 8109 (next ten ports).
+	fbs := fallbackPorts(defaultPort)
+	if len(fbs) == 0 || fbs[0] != 8100 || fbs[len(fbs)-1] != 8109 {
+		t.Errorf("fallbackPorts(%d) = %v; want 8100..8109", defaultPort, fbs)
 	}
 
 	// Verify the regex patterns are compiled

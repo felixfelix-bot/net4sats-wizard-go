@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -40,7 +42,77 @@ func validLightningAddress(s string) bool {
 	return lnAddrRe.MatchString(s) || lnurlRe.MatchString(s)
 }
 
-const listenAddr = ":8099"
+// ─── Listen address / port fallback ────────────────────────────
+//
+// BUG FIX (v0.7.0-alpha16): the wizard used to print its URL banner
+// BEFORE binding and then log.Fatal on EADDRINUSE — an operator with a
+// second wizard instance running saw "running on http://localhost:8099"
+// followed by an unexplained "bind: address already in use". Now:
+//
+//   - the socket is bound FIRST via net.Listen, the URL is printed only
+//     after the bind succeeds (a success banner always means a live socket);
+//   - PORT overrides 8099 (e.g. PORT=8199); a typo'd PORT is a loud error,
+//     not a silent fallback;
+//   - on EADDRINUSE the wizard walks 8099→8109 in order before giving up;
+//   - if every candidate is busy it prints how to find the holder
+//     (ss -tlnp) and how to kill the old instance (pkill), then exits
+//     non-zero.
+
+const defaultPort = 8099
+
+// listenPort returns the port to serve on: PORT if set, else 8099.
+// PORT must be a valid TCP port number (1-65535) — anything else is an
+// error. A typo'd PORT must be loud, not silently ignored.
+func listenPort() (int, error) {
+	raw := strings.TrimSpace(os.Getenv("PORT"))
+	if raw == "" {
+		return defaultPort, nil
+	}
+	port, err := strconv.Atoi(raw)
+	if err != nil || port < 1 || port > 65535 {
+		return 0, fmt.Errorf("invalid PORT %q: must be a port number between 1 and 65535", raw)
+	}
+	return port, nil
+}
+
+// fallbackPorts returns the ordered fallback candidates tried when the
+// preferred port is busy (EADDRINUSE): the next ten ports, capped at 65535.
+func fallbackPorts(preferred int) []int {
+	var out []int
+	for p := preferred + 1; p <= preferred+10 && p <= 65535; p++ {
+		out = append(out, p)
+	}
+	return out
+}
+
+// pickPort binds the preferred address, falling back through candidates on
+// failure (EADDRINUSE and friends). It returns the bound listener and the
+// concrete address. On full failure it returns the preferred address in the
+// error so callers can tell the operator exactly which port was busy.
+func pickPort(preferred string, fallbacks []string) (net.Listener, string, error) {
+	var lastErr error
+	for _, addr := range append([]string{preferred}, fallbacks...) {
+		ln, err := net.Listen("tcp", addr)
+		if err == nil {
+			return ln, addr, nil
+		}
+		lastErr = err
+	}
+	return nil, "", fmt.Errorf("cannot bind %s (or any fallback %v): %w", preferred, fallbacks, lastErr)
+}
+
+// urlFor returns the operator-facing http:// URL for a bound address.
+// A wildcard host renders as "localhost" so the banner stays copyable.
+func urlFor(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "http://" + addr
+	}
+	if host == "" {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, port)
+}
 
 // ─── Job tracking ─────────────────────────────────────────────
 
@@ -592,8 +664,33 @@ func main() {
 		mux.ServeHTTP(w, r)
 	})
 
-	fmt.Printf("net4sats wizard running on http://localhost%s\n", listenAddr)
+	// Bind BEFORE printing anything (v0.7.0-alpha16): the URL banner is
+	// only shown once a socket actually listens, so "running on …" always
+	// means a working wizard. PORT overrides the 8099 default; if the
+	// preferred port is busy we walk 8099→8109 before giving up.
+	port, err := listenPort()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fallbacks := make([]string, 0, len(fallbackPorts(port)))
+	for _, p := range fallbackPorts(port) {
+		fallbacks = append(fallbacks, net.JoinHostPort("", strconv.Itoa(p)))
+	}
+	ln, addr, err := pickPort(net.JoinHostPort("", strconv.Itoa(port)), fallbacks)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ERROR: "+err.Error())
+		fmt.Fprintf(os.Stderr, "The port is busy — likely another wizard instance.\n")
+		fmt.Fprintf(os.Stderr, "  Find the holder:   ss -tlnp | grep %d\n", port)
+		fmt.Fprintf(os.Stderr, "  Kill the old one:  pkill -f net4sats-wizard\n")
+		fmt.Fprintf(os.Stderr, "  Or pick another:   PORT=8199 ./net4sats-wizard\n")
+		os.Exit(1)
+	}
+	url := urlFor(addr)
+	fmt.Printf("net4sats wizard running on %s\n", url)
+	if addr != fmt.Sprintf(":%d", port) {
+		fmt.Printf("(port %d was busy — using %s instead; PORT=<n> picks explicitly)\n", port, url)
+	}
 	fmt.Println("Open this URL in your browser to set up a router.")
-	log.Fatal(http.ListenAndServe(listenAddr, handler))
+	log.Fatal(http.Serve(ln, handler))
 	_ = io.Discard // keep import
 }
