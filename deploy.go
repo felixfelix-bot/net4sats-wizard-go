@@ -239,7 +239,20 @@ func runDeployment(job *Job, req deployRequest) {
 	// MT3000-class routers have no RTC — after a cold boot the clock is far
 	// in the past and router-side TLS to github.com fails cert validation.
 	// Sync from the laptop clock before any router-side download attempt.
-	sshRun(client, "date -s @"+strconv.FormatInt(time.Now().Unix(), 10)+" >/dev/null 2>&1; true")
+	laptopNow := time.Now().Unix()
+	sshRun(client, "date -s @"+strconv.FormatInt(laptopNow, 10)+" >/dev/null 2>&1; true")
+	// W6: read the clock back and log the drift. A large drift is a warning
+	// only — never a deploy failure (the router may have no RTC and the sync
+	// may have raced a slow SSH round-trip).
+	if routerNowStr := strings.TrimSpace(sshRun(client, "date +%s")); routerNowStr != "" {
+		if routerNow, err := strconv.ParseInt(routerNowStr, 10, 64); err == nil {
+			job.addLog(clockSyncLog(laptopNow, routerNow))
+		} else {
+			job.addLog("clock sync FAILED (unparseable read-back: " + truncate(routerNowStr, 40) + ")")
+		}
+	} else {
+		job.addLog("clock sync FAILED (empty read-back)")
+	}
 
 	// PRIMARY: download the package on the LAPTOP and push it over SSH stdin.
 	// This eliminates the router's DNS/TLS stack from the critical path —
