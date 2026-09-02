@@ -74,6 +74,20 @@ func sshRun(client *ssh.Client, cmd string) string {
 	return string(output)
 }
 
+// sshRunStatus executes a command and returns combined output AND the error
+// from CombinedOutput (non-nil on a non-zero remote exit). sshRun discards
+// the error, so empty output is ambiguous (command produced nothing vs.
+// command failed); the wifi-scan path uses this to distinguish the two.
+func sshRunStatus(client *ssh.Client, cmd string) (string, error) {
+	session, err := client.NewSession()
+	if err != nil {
+		return "", err
+	}
+	defer session.Close()
+	output, err := session.CombinedOutput(cmd)
+	return string(output), err
+}
+
 // sshUploadPipe writes binary data to the router via SSH stdin.
 func sshUploadPipe(client *ssh.Client, data []byte, extractCmd string) string {
 	session, err := client.NewSession()
