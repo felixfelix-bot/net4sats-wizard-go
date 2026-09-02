@@ -17,8 +17,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -411,12 +409,6 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Close()
 
-	// A fresh-reset OpenWrt router ships with radios DISABLED in UCI —
-	// `iwinfo scan` would return nothing and the UI would show an empty
-	// SSID list. Enable all radios, bring wifi up, and wait until every
-	// radio reports up before scanning (see enableWifiAndWait).
-	enableWifiAndWait(client)
-
 	// ---- WiFi scan: ubus/uci-first enumeration (driver-agnostic) ----
 	//
 	// Priority:
@@ -461,16 +453,17 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if status.AnyDisabled && len(status.Ifaces) == 0 {
-		// Radios exist but are all disabled (or no usable ifaces) — give the
-		// operator the exact uci commands to enable them instead of a generic
-		// "no results".
+		// Radios exist but are all disabled (or no usable ifaces) — surface
+		// the DISCOVERED radio section names so the UI can render a
+		// consent-gated enable button (POST /api/wifi-enable) instead of a
+		// generic hint. No silent enable happens here.
+		radioNames := make([]string, 0, len(status.Radios))
+		for _, r := range status.Radios {
+			radioNames = append(radioNames, r.Name)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(500)
-		json.NewEncoder(w).Encode(map[string]any{
-			"error":           "radios disabled or down — enable via: uci set wireless.radio0.disabled=0; uci set wireless.radio1.disabled=0; wifi up",
-			"radios_disabled": true,
-			"debug":           scanDebug(debugLog.String(), ubusOut),
-		})
+		json.NewEncoder(w).Encode(radiosDisabledResponse(radioNames, scanDebug(debugLog.String(), ubusOut)))
 		return
 	}
 
@@ -615,6 +608,87 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// wifiEnableRequest is the JSON body for /api/wifi-enable.
+type wifiEnableRequest struct {
+	IP       string `json:"ip"`
+	Password string `json:"password"`
+}
+
+// handleWifiEnable is the consent-gated radio-enable endpoint. It mirrors
+// handleWifiScan's SSH connect chain (empty password falls back to the empty
+// string via sshConnect's auth chain), then runs the discovered-radio enable
+// command + `uci commit wireless` + `wifi up`, polls allRadiosUp, and
+// auto-rescans by re-invoking the scan logic. Response: {enabled:[...], ok:true}
+// or an error.
+func handleWifiEnable(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, 405, "method not allowed")
+		return
+	}
+	var req wifiEnableRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, 400, "invalid JSON")
+		return
+	}
+	if req.IP == "" {
+		writeError(w, 400, "IP required")
+		return
+	}
+
+	client := sshConnect(req.IP, req.Password)
+	if client == nil && req.Password != "" {
+		client = sshConnect(req.IP, "")
+	}
+	if client == nil {
+		writeError(w, 502, "cannot connect to router via SSH")
+		return
+	}
+	defer client.Close()
+
+	// Enumerate DISCOVERED radio + owned iface section names (never hardcoded).
+	ubusOut, _ := sshRunStatus(client, "ubus call network.wireless status 2>&1")
+	uciOut, _ := sshRunStatus(client, "uci show wireless 2>&1")
+	status := parseWirelessStatus(ubusOut, uciOut)
+
+	radioNames := make([]string, 0, len(status.Radios))
+	for _, r := range status.Radios {
+		radioNames = append(radioNames, r.Name)
+	}
+	ifaceNames := make([]string, 0, len(status.Ifaces))
+	for _, i := range status.Ifaces {
+		if i.Section != "" {
+			ifaceNames = append(ifaceNames, i.Section)
+		}
+	}
+
+	cmd := enableRadiosCommand(radioNames, ifaceNames)
+	if cmd == "" {
+		writeError(w, 400, "no radios discovered to enable")
+		return
+	}
+
+	sshRun(client, strings.Join([]string{
+		cmd,
+		`uci commit wireless`,
+		`wifi up 2>/dev/null || wifi 2>/dev/null || true`,
+	}, " && "))
+
+	// Poll allRadiosUp (~10 × 1.5s budget) before reporting success.
+	for i := 0; i < 10; i++ {
+		if allRadiosUp(sshRun(client, "ubus call network.wireless status 2>/dev/null")) {
+			break
+		}
+		time.Sleep(1500 * time.Millisecond)
+	}
+
+	// The UI auto-rescans on success (re-invoking /api/wifi-scan).
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"enabled": radioNames,
+		"ok":      true,
+	})
+}
+
 type deployRequest struct {
 	IP       string `json:"ip"`
 	Password string `json:"password"`
@@ -698,25 +772,6 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
-// enableWifiAndWait enables all UCI wifi-devices, starts wifi, and polls
-// `ubus call network.wireless status` until every radio reports up
-// (~15s budget; fixed sleeps race slow driver init, polling removes that).
-// Best-effort: the scan proceeds regardless after the timeout — errors
-// surface in the scan step itself where they are actionable.
-func enableWifiAndWait(client *ssh.Client) {
-	sshRun(client, strings.Join([]string{
-		`for r in $(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)=wifi-device$/\1/p"); do uci -q set wireless.$r.disabled='0'; done`,
-		`uci commit wireless`,
-		`wifi up 2>/dev/null || wifi 2>/dev/null || true`,
-	}, " && "))
-	for i := 0; i < 10; i++ {
-		if allRadiosUp(sshRun(client, "ubus call network.wireless status 2>/dev/null")) {
-			return
-		}
-		time.Sleep(1500 * time.Millisecond)
-	}
-}
-
 // allRadiosUp parses `ubus call network.wireless status` output
 // ({"radio0":{"up":true,...},"radio1":{...}}) and reports whether EVERY
 // radio reports up. Empty/garbage output parses to false (keep polling).
@@ -740,6 +795,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scan", handleScan)
 	mux.HandleFunc("/api/wifi-scan", handleWifiScan)
+	mux.HandleFunc("/api/wifi-enable", handleWifiEnable)
 	mux.HandleFunc("/api/deploy", handleDeploy)
 	mux.HandleFunc("/api/status/", handleStatus)
 	mux.HandleFunc("/", handleIndex)

@@ -15,9 +15,10 @@ type Radio struct {
 
 // Iface is a single wireless interface discovered via ubus/uci.
 type Iface struct {
-	Device string // interface device name (ifname), e.g. "wlan0"
-	Radio  string // owning radio section, e.g. "radio0"
-	Mode   string // "ap", "sta", "client", "adhoc", …
+	Device  string // interface device name (ifname), e.g. "wlan0"
+	Radio   string // owning radio section, e.g. "radio0"
+	Mode    string // "ap", "sta", "client", "adhoc", …
+	Section string // uci wifi-iface section name, e.g. "default_radio0" ("" for ubus-only)
 }
 
 // wirelessStatus is the parsed result of ubus/uci wireless enumeration.
@@ -46,12 +47,12 @@ func parseWirelessStatus(ubusJSON, uciOut string) wirelessStatus {
 		st.Radios = append(st.Radios, Radio{Name: name})
 		return &st.Radios[len(st.Radios)-1]
 	}
-	addIface := func(dev, radio, mode string) {
+	addIface := func(dev, radio, mode, section string) {
 		if dev == "" || ifaceSeen[dev] {
 			return
 		}
 		ifaceSeen[dev] = true
-		st.Ifaces = append(st.Ifaces, Iface{Device: dev, Radio: radio, Mode: mode})
+		st.Ifaces = append(st.Ifaces, Iface{Device: dev, Radio: radio, Mode: mode, Section: section})
 	}
 
 	// --- ubus JSON ---
@@ -73,7 +74,7 @@ func parseWirelessStatus(ubusJSON, uciOut string) wirelessStatus {
 					r.Disabled = true
 				}
 				for _, iface := range radio.Config.Iface {
-					addIface(iface.Ifname, name, iface.Mode)
+					addIface(iface.Ifname, name, iface.Mode, "")
 				}
 			}
 		}
@@ -140,7 +141,7 @@ func parseWirelessStatus(ubusJSON, uciOut string) wirelessStatus {
 			continue
 		}
 		mode := uciIfaceMode[section]
-		addIface(dev, radio, mode)
+		addIface(dev, radio, mode, section)
 	}
 
 	// anyDisabled: any radio disabled OR zero ifaces with a disabled radio.
