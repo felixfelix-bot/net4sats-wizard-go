@@ -314,9 +314,30 @@ async function wifiScan() {
     const data = await resp.json();
 
     if (data.error) {
-      ssidSelect.innerHTML = '<option value="">Scan failed</option>';
-      ssidHint.textContent = data.error + ' — check router password and try Rescan.';
-      ssidSelect.disabled = true;
+      // W14: when radios are disabled, render the consent-gated enable button
+      // (labeled with the REAL discovered radio names) instead of the generic
+      // "check router password" hint.
+      if (data.radios_disabled === true) {
+        const radios = data.radios || [];
+        ssidSelect.innerHTML = '<option value="">Radios disabled</option>';
+        ssidSelect.disabled = true;
+        if (radios.length > 0) {
+          ssidHint.innerHTML = '';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-secondary';
+          btn.style.cssText = 'width:auto; padding:10px 14px; margin-top:0.5rem; white-space:nowrap;';
+          btn.textContent = 'Enable radios: ' + radios.join(', ');
+          btn.onclick = function() { enableRadios(radios); };
+          ssidHint.appendChild(btn);
+        } else {
+          ssidHint.textContent = data.error;
+        }
+      } else {
+        ssidSelect.innerHTML = '<option value="">Scan failed</option>';
+        ssidHint.textContent = data.error + ' — check router password and try Rescan.';
+        ssidSelect.disabled = true;
+      }
       wifiScanned = false;
       return;
     }
@@ -368,6 +389,35 @@ async function wifiScan() {
     ssidHint.textContent = 'Network error during scan. Try Rescan.';
     ssidSelect.disabled = true;
     wifiScanned = false;
+  } finally {
+    rescanBtn.disabled = false;
+  }
+}
+
+async function enableRadios(radios) {
+  const ip = document.getElementById('router-select').value;
+  const password = document.getElementById('password').value;
+  const ssidHint = document.getElementById('ssid-hint');
+  const rescanBtn = document.getElementById('rescan-btn');
+
+  ssidHint.textContent = 'Enabling radios...';
+  rescanBtn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/wifi-enable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: ip, password: password }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      // Auto-rescan on success.
+      await wifiScan();
+    } else {
+      ssidHint.textContent = data.error || 'Failed to enable radios.';
+    }
+  } catch (e) {
+    ssidHint.textContent = 'Network error enabling radios. Try again.';
   } finally {
     rescanBtn.disabled = false;
   }
