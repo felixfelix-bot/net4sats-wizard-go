@@ -417,112 +417,109 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	// radio reports up before scanning (see enableWifiAndWait).
 	enableWifiAndWait(client)
 
-	// ---- WiFi scan with prioritised fallback chain ----
+	// ---- WiFi scan: ubus/uci-first enumeration (driver-agnostic) ----
 	//
 	// Priority:
-	//   1. `iwinfo scan` (no device arg) — scans ALL radios, works on
-	//      OpenWrt 25.12 / GL-MT3000 without needing to pick a specific
-	//      interface. This is what worked in the July version.
-	//   2. Per-interface: only Client/Managed mode interfaces (skip
-	//      Master/AP mode interfaces like phy0-ap0 which can't scan).
-	//   3. `iw phy phy0 scan` + `iw phy phy1 scan` — phy-level scan
-	//      works regardless of interface mode.
-	//   4. Existing fallbacks: iwinfo wlan0/wlan1 scan, iw dev scan.
+	//   1. Enumerate radios/interfaces via `ubus call network.wireless status`
+	//      and `uci show wireless` (parseWirelessStatus). This is
+	//      driver-agnostic and works on OpenWrt 25.12 regardless of the
+	//      underlying wireless driver (mac80211, mt76, …).
+	//   2. Per-device `iwinfo <dev> scan` for each discovered interface,
+	//      skipping Master/AP-mode interfaces (they can't scan).
+	//   3. Fallback (only when ubus/uci yield nothing): `iw phy phy0/phy1
+	//      scan` (phy-level) and `iw dev` listing + per-interface `iw dev
+	//      <iface> scan`.
 	//
-	// parseIwinfoScan and parseIwScan are kept as-is.
+	// iwinfo remains the scan executor; ubus/uci are the enumerator.
 
 	var debugLog strings.Builder
 
-	// --- Strategy 1: iwinfo scan (no args) — scans all radios ---
-	// All scan commands MERGE stderr (2>&1) so real router-side errors
-	// (device down, radio busy, command missing) reach the debug output
-	// instead of being discarded on the router (v0.7.0-alpha16 fix).
-	scanOut := sshRun(client, "iwinfo scan 2>&1")
-	debugLog.WriteString("[1] iwinfo scan (no args): ")
-	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
-		debugLog.WriteString("got results\n")
+	// --- Enumeration: ubus + uci (both merged, defensively parsed) ---
+	ubusOut, ubusErr := sshRunStatus(client, "ubus call network.wireless status 2>&1")
+	uciOut, _ := sshRunStatus(client, "uci show wireless 2>&1")
+	_ = ubusErr // ubus may legitimately fail on non-OpenWrt; uci is the fallback
+	status := parseWirelessStatus(ubusOut, uciOut)
+	debugLog.WriteString("[1] ubus/uci enumeration: " +
+		fmt.Sprintf("%d radios, %d ifaces\n", len(status.Radios), len(status.Ifaces)))
+
+	// --- W9: radio-down / zero-radio actionable diagnostics ---
+	if len(status.Radios) == 0 {
+		// Genuinely no radios — surface raw outputs so diagnosis is possible.
+		raw := strings.TrimSpace(ubusOut)
+		if u := strings.TrimSpace(uciOut); u != "" {
+			if raw != "" {
+				raw += "\n"
+			}
+			raw += u
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		json.NewEncoder(w).Encode(map[string]any{
+			"error": "no wireless radios found — ubus/uci enumeration empty",
+			"debug": scanDebug(debugLog.String(), raw),
+		})
+		return
+	}
+	if status.AnyDisabled && len(status.Ifaces) == 0 {
+		// Radios exist but are all disabled (or no usable ifaces) — give the
+		// operator the exact uci commands to enable them instead of a generic
+		// "no results".
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		json.NewEncoder(w).Encode(map[string]any{
+			"error":           "radios disabled or down — enable via: uci set wireless.radio0.disabled=0; uci set wireless.radio1.disabled=0; wifi up",
+			"radios_disabled": true,
+			"debug":           scanDebug(debugLog.String(), ubusOut),
+		})
+		return
+	}
+
+	// --- W8: per-device scan from enumeration (skip AP/Master ifaces) ---
+	var scanOut string
+	var scanned int
+	for _, iface := range status.Ifaces {
+		if isAPMode(iface.Mode) {
+			debugLog.WriteString("[2] skip iface " + iface.Device + " (mode=" + iface.Mode + ")\n")
+			continue
+		}
+		cmd, err := iwinfoScanCommand(iface.Device)
+		if err != nil {
+			debugLog.WriteString("[2] skip iface " + iface.Device + ": " + err.Error() + "\n")
+			continue
+		}
+		out, _ := sshRunStatus(client, cmd)
+		scanned++
+		if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
+			scanOut += out + "\n"
+			debugLog.WriteString("[2] iwinfo " + iface.Device + " scan: got results\n")
+		} else {
+			debugLog.WriteString("[2] iwinfo " + iface.Device + " scan: no results (" + truncate(out, 200) + ")\n")
+		}
+	}
+	if strings.TrimSpace(scanOut) != "" {
 		ssids := parseIwinfoScan(scanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
 			json.NewEncoder(w).Encode(map[string]any{
-				"ssids":  ssids,
-				"debug":  scanDebug(debugLog.String(), scanOut),
+				"ssids": ssids,
+				"debug": scanDebug(debugLog.String(), scanOut),
 			})
 		} else {
 			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
-	debugLog.WriteString("no results (" + truncate(scanOut, 200) + ")\n")
-
-	// --- Strategy 2: per-interface scan (Client/Managed only) ---
-	// Auto-detect wireless interfaces from `iwinfo` (no args) listing.
-	// For each interface, check `iwinfo <dev> info` Mode: field and skip
-	// Master (AP) mode interfaces — they can't scan.
-	iwinfoOut := sshRun(client, "iwinfo 2>&1")
-	var clientDevs []string
-	for _, line := range strings.Split(iwinfoOut, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if idx := strings.Index(trimmed, "ESSID:"); idx > 0 {
-			iface := strings.TrimSpace(trimmed[:idx])
-			if iface == "" || strings.HasPrefix(trimmed, "Usage") || scanFailedHeuristic(trimmed) {
-				continue
-			}
-			// Check mode: skip Master (AP) interfaces.
-			infoOut := sshRun(client, "iwinfo "+iface+" info 2>&1")
-			mode := ""
-			for _, infoLine := range strings.Split(infoOut, "\n") {
-				infoLine = strings.TrimSpace(infoLine)
-				if strings.HasPrefix(infoLine, "Mode:") {
-					mode = strings.TrimSpace(strings.TrimPrefix(infoLine, "Mode:"))
-					break
-				}
-			}
-			debugLog.WriteString("[2] iface " + iface + " mode=" + mode + " — will scan\n")
-			// Don't skip Master (AP) interfaces — iwinfo <dev> scan works
-			// on AP interfaces on many OpenWrt versions (e.g. GL-MT3000
-			// with OpenWrt 25.12). The scan triggers a passive/active
-			// scan on the underlying phy regardless of interface mode.
-			clientDevs = append(clientDevs, iface)
-		}
+	if scanned == 0 {
+		debugLog.WriteString("[2] no scannable (non-AP) interfaces enumerated\n")
+	} else {
+		debugLog.WriteString("[2] per-device scan: no results\n")
 	}
 
-	if len(clientDevs) > 0 {
-		var perIfaceScan string
-		for _, dev := range clientDevs {
-			out := sshRun(client, "iwinfo "+dev+" scan 2>&1")
-			if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
-				perIfaceScan += out + "\n"
-			}
-		}
-		if strings.TrimSpace(perIfaceScan) != "" {
-			debugLog.WriteString("[2] per-interface scan: got results\n")
-			scanOut = perIfaceScan
-			ssids := parseIwinfoScan(scanOut)
-			w.Header().Set("Content-Type", "application/json")
-			if len(ssids) == 0 {
-				json.NewEncoder(w).Encode(map[string]any{
-					"ssids": ssids,
-					"debug": scanDebug(debugLog.String(), scanOut),
-				})
-			} else {
-				json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
-			}
-			return
-		}
-	}
-	debugLog.WriteString("[2] per-interface scan: no results\n")
-
-	// --- Strategy 3: phy-level scan (mode-independent) ---
-	// `iw phy phy0 scan` works regardless of interface mode — it creates
-	// a temporary scan request on the physical device. Try phy0 and phy1.
-	// scanFailedHeuristic (not just "command not found") must be applied
-	// here too: iw prints its usage text to stdout with exit 0 on invalid
-	// syntax, and "Operation not supported"/"No such device" are the real
-	// router-side errors (v0.7.0-alpha16 fix).
+	// --- Strategy 3 (fallback): phy-level scan (mode-independent) ---
+	// Only reached when ubus/uci enumeration yielded no scannable results.
 	var phyScanOut string
 	for _, phy := range []string{"phy0", "phy1"} {
-		out := sshRun(client, "iw phy "+phy+" scan 2>&1")
+		out, _ := sshRunStatus(client, "iw phy "+phy+" scan 2>&1")
 		if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
 			phyScanOut += out + "\n"
 		}
@@ -543,11 +540,10 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	}
 	debugLog.WriteString("[3] phy-level scan: no results\n")
 
-	// --- Strategy 4: existing fallbacks ---
-	// Try common interface names (wlan0/wlan1), then per-interface iw scan.
-	scanOut = sshRun(client, "iwinfo wlan0 scan 2>&1 || iwinfo wlan1 scan 2>&1")
+	// --- Strategy 4a (fallback): common interface names wlan0/wlan1 ---
+	scanOut, _ = sshRunStatus(client, "iwinfo wlan0 scan 2>&1 || iwinfo wlan1 scan 2>&1")
 	if strings.TrimSpace(scanOut) != "" && !scanFailedHeuristic(scanOut) {
-		debugLog.WriteString("[4] iwinfo wlan0/wlan1 fallback: got results\n")
+		debugLog.WriteString("[4a] iwinfo wlan0/wlan1 fallback: got results\n")
 		ssids := parseIwinfoScan(scanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
@@ -560,28 +556,25 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	debugLog.WriteString("[4a] iwinfo wlan0/wlan1 fallback: no results\n")
 
-	// Last resort (v0.7.0-alpha16 fix): per-interface `iw dev <iface> scan`.
-	// The old code ran `iw dev scan` — INVALID iw syntax (no such subcommand
-	// without an interface name). iw prints its usage text to STDOUT with
-	// exit 0, so the usage text passed as "results" and the UI showed
-	// "Router returned: Usage: iw...". Instead: list interfaces via
-	// `iw dev` (parsing "	Interface <name>" lines), scan each one, and
-	// run every output through scanFailedHeuristic so error/usage text can
-	// never masquerade as results.
-	iwDevsOut := sshRun(client, "iw dev 2>&1")
-	iwScanOut := "" // fresh accumulator: strategy-4 output already failed
+	// --- Strategy 4 (fallback): iw dev listing + per-interface iw scan ---
+	// Last resort when ubus/uci AND phy-level both yield nothing. `iw dev`
+	// returns empty when radios are down or absent, so this is only a
+	// best-effort path.
+	iwDevsOut, _ := sshRunStatus(client, "iw dev 2>&1")
+	iwScanOut := ""
 	if scanFailedHeuristic(iwDevsOut) {
-		debugLog.WriteString("[4] iw dev listing failed (" + truncate(iwDevsOut, 200) + ")\n")
+		debugLog.WriteString("[4b] iw dev listing failed (" + truncate(iwDevsOut, 200) + ")\n")
 	} else {
 		for _, iface := range parseIwDevList(iwDevsOut) {
 			cmd, err := iwInterfaceScanCommand(iface)
 			if err != nil {
-				debugLog.WriteString("[4] skip iface " + iface + ": " + err.Error() + "\n")
+				debugLog.WriteString("[4c] skip iface " + iface + ": " + err.Error() + "\n")
 				continue
 			}
-			out := sshRun(client, cmd)
-			debugLog.WriteString("[4] iw dev " + iface + " scan: ")
+			out, _ := sshRunStatus(client, cmd)
+			debugLog.WriteString("[4d] iw dev " + iface + " scan: ")
 			if strings.TrimSpace(out) != "" && !scanFailedHeuristic(out) {
 				iwScanOut += out + "\n"
 				debugLog.WriteString("got results\n")
@@ -604,25 +597,21 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	debugLog.WriteString("[4] all fallbacks exhausted\n")
+	debugLog.WriteString("[4e] all fallbacks exhausted\n")
 
 	// All strategies failed — return diagnostic info.
 	w.Header().Set("Content-Type", "application/json")
-	// Include the full strategy-by-strategy debug log plus a tail of the
-	// last raw router output (which now includes router-side stderr), so
-	// the operator sees exactly what each strategy tried and what the
-	// router said — not just a 200-char slice of the last attempt.
 	if strings.TrimSpace(scanOut) != "" {
 		json.NewEncoder(w).Encode(map[string]any{
-			"ssids":  []wifiSSID{},
-			"debug":  scanDebug(debugLog.String(), scanOut),
+			"ssids": []wifiSSID{},
+			"debug": scanDebug(debugLog.String(), scanOut),
 		})
 		return
 	}
 	w.WriteHeader(500)
 	json.NewEncoder(w).Encode(map[string]any{
 		"error": "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.",
-		"debug":  scanDebug(debugLog.String(), scanOut),
+		"debug": scanDebug(debugLog.String(), scanOut),
 	})
 }
 
