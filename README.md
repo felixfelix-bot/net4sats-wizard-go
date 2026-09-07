@@ -89,6 +89,18 @@ The deployment runs 9 steps over SSH:
 | 8 | Restart services | Restarts `tollgate-wrt` + `nodogsplash` |
 | 9 | Health check | Verifies TollGate API responding on `:2121` |
 
+For WiFi repeater (STA) mode, the wizard first runs a **pre-flight WiFi
+password check** on the router over SSH: it creates a temporary
+`wpa_supplicant` association against the chosen SSID with the entered key
+*before* committing any live wireless config. A wrong WPA2 key is reported
+immediately ("wrong password for this SSID") so you can correct it instead
+of waiting on a doomed deploy. If the SSID isn't visible on any radio you're
+told that too. This check is best-effort: if the router can't host a
+throwaway probe interface, deployment falls back to the normal association
+path, which polls (up to ~22s) and detects a wrong key during the handshake
+as well. STA association in this step uses a bounded retry loop rather than a
+single fixed sleep, so a slow handshake no longer false-fails.
+
 ## Verify binaries
 
 ```sh

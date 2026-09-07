@@ -969,6 +969,32 @@ func ifaceUp(statusJSON string) bool {
 func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass string) bool {
 	client := *pclient
 	job.addLog("Configuring WiFi STA uplink: " + ssid)
+
+	// PRE-FLIGHT PASSWORD CHECK — before touching any live wireless config.
+	// Best-effort: a definitive wrong-key / SSID-not-found aborts here with a
+	// clear message and NO config is committed (nothing to roll back). If the
+	// probe infra is unavailable, it degrades gracefully to the bounded-retry
+	// association path below, which remains the authoritative check.
+	probeOut := sshRun(client, buildWifiProbeScript(ssid, wifiPass))
+	switch mapProbeResult(probeOut) {
+	case ProbeWrongKey:
+		job.addLog("WiFi password check FAILED: the WPA2 key for \"" + ssid + "\" is wrong.")
+		jobFail(job, 3, "Wrong WiFi password",
+			"Wrong WiFi password for \""+ssid+"\" — please correct it and retry")
+		return false
+	case ProbeNoAP:
+		job.addLog("WiFi password check: SSID \"" + ssid + "\" not visible on any radio.")
+		jobFail(job, 3, "SSID not reachable",
+			"SSID \""+ssid+"\" was not found on any radio — check the SSID and that the target AP is in range")
+		return false
+	case ProbeOK:
+		job.addLog("WiFi password check passed for \"" + ssid + "\".")
+	default:
+		// ProbeUnavailable / ProbeTimeout: warn and fall through — the STA
+		// association below does its own wrong-key detection.
+		job.addLog("WiFi pre-flight probe skipped (" + mapProbeResult(probeOut) + ") — validating during association.")
+	}
+
 	out := sshRun(client, staSetupScript(ssid, wifiPass))
 	if strings.Contains(out, "NO_RADIO") {
 		jobFail(job, 3, "no wireless radio found", "No wifi-device found in UCI — cannot configure STA uplink")
