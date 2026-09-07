@@ -1098,6 +1098,10 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 					*pclient = newClient
 					client = newClient
 					job.addLog(fmt.Sprintf("Reconnected to router on new LAN IP %s", newLanIP))
+					// Laptop-side: renew the operator's DHCP lease so it lands on the
+					// new subnet and can reach the router again. Best-effort — on
+					// no-permission it logs a copy-paste one-liner instead.
+					renewLaptopDHCP(job, lanPrefix, newLanIP)
 				} else {
 					job.addLog("WARNING: Could not reconnect after LAN IP change — subsequent steps may fail")
 				}

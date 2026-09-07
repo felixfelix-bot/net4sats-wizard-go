@@ -101,6 +101,10 @@ path, which polls (up to ~22s) and detects a wrong key during the handshake
 as well. STA association in this step uses a bounded retry loop rather than a
 single fixed sleep, so a slow handshake no longer false-fails.
 
+After deploy, your laptop may need a DHCP renewal to reach the router at the new
+IP. The wizard attempts this automatically (best-effort, OS-specific). If it
+can't elevate privileges, it logs a copy-paste one-liner in the deploy log.
+
 ## Verify binaries
 
 ```sh
