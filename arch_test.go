@@ -242,39 +242,54 @@ func TestDownloadBaseURL(t *testing.T) {
 }
 
 // TestArchAssetsAreLive is the live HTTP 200 guard for the tollgate-wrt
-// assets in tollgateArchAssets — the per-arch replacement for the old
-// tollgatePkgURL pin that was live-checked in pins_test.go. Only the
-// aarch64_cortex-a53 tuple has published assets today; those are exactly what
-// a fresh deploy downloads. Run with -short to skip network access; the
-// CI-parity command is plain `go test ./...`.
+// assets in tollgateArchAssets (feed) AND tollgateGithubFallback (fallback) —
+// the per-arch replacement for the old tollgatePkgURL pin that was live-checked
+// in pins_test.go. Every asset a fresh deploy might download (feed primary or
+// GitHub fallback) is probed with a 1-byte Range request. Run with -short to
+// skip network access; the CI-parity command is plain `go test ./...`.
 func TestArchAssetsAreLive(t *testing.T) {
 	if testing.Short() {
 		t.Skip("live URL check skipped: -short mode (CI-parity runs without -short)")
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
+
+	probe := func(source, url string) {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatalf("building request for %s %q: %v", source, url, err)
+		}
+		req.Header.Set("Range", "bytes=0-0") // fetch 1 byte, not the asset
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Errorf("%s = %q: request failed: %v", source, url, err)
+			return
+		}
+		defer resp.Body.Close()
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1))
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+			t.Errorf("%s = %q: got HTTP %d, want 200 — broken asset, fresh deploys will fail",
+				source, url, resp.StatusCode)
+		}
+	}
+
 	for arch, asset := range tollgateArchAssets {
 		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
-			url := url
 			if url == "" {
 				continue // no published asset yet — not checked
 			}
-			t.Run(arch+"_"+name, func(t *testing.T) {
-				req, err := http.NewRequest(http.MethodGet, url, nil)
-				if err != nil {
-					t.Fatalf("building request: %v", err)
-				}
-				req.Header.Set("Range", "bytes=0-0") // fetch 1 byte, not the asset
-				resp, err := client.Do(req)
-				if err != nil {
-					t.Fatalf("%s = %q: request failed: %v", name, url, err)
-				}
-				defer resp.Body.Close()
-				_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1))
-				if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-					t.Errorf("%s %s = %q: got HTTP %d, want 200 — broken asset, fresh deploys will fail",
-						arch, name, url, resp.StatusCode)
-				}
+			t.Run("feed_"+arch+"_"+name, func(t *testing.T) {
+				probe("feed "+arch+" "+name, url)
+			})
+		}
+	}
+	for arch, asset := range tollgateGithubFallback {
+		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
+			if url == "" {
+				continue
+			}
+			t.Run("fallback_"+arch+"_"+name, func(t *testing.T) {
+				probe("gh-fallback "+arch+" "+name, url)
 			})
 		}
 	}
