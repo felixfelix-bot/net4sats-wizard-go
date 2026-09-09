@@ -1,7 +1,7 @@
 # Feed per-arch tollgate-wrt URLs (Phase 3)
 
 **Branch:** `feat/feed-per-arch-urls`
-**Status:** implemented, tested, awaiting review
+**Status:** implemented, tested, E2E-verified against bench GL-MT6000, awaiting review
 
 ## Problem
 
