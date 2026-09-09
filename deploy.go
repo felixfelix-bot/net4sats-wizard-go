@@ -16,31 +16,6 @@ import (
 const (
 	// net4satsPackage is the apk package name.
 	net4satsPackage = "net4sats"
-	// tollgate-wrt .ipk download URL (OpenWrt <= 24.10 back-compat).
-	//
-	// Fallback strategy (Endo handover):
-	//   Primary  — OpenTollGate/tollgate-module-basic-go upstream releases
-	//              (https://github.com/OpenTollGate/tollgate-module-basic-go/releases)
-	//   Fallback — felixfelix-bot fork releases for the v0.6.1-post-merge tag
-	//              until an equivalent upstream release is cut.
-	//
-	// The constant below currently points at the fork's v0.6.1-post-merge
-	// release because that tag does not yet exist upstream. Once an upstream
-	// OpenTollGate release with a matching asset is published, switch the host
-	// from felixfelix-bot to OpenTollGate (keeping the same path/asset name).
-	// v0.6.1-post-merge includes the NDS gate-open fix.
-	//
-	// SW4a (Aug 2026): repinned from main.53 (asset never existed on this
-	// release — HTTP 404, broke every fresh deploy) to the only asset the
-	// release actually publishes: main.56.b528e1d. The nftables enforcement
-	// rules (PR #283) ship INSIDE this ipk under ./etc/nftables.d/, so no
-	// separate overlay download is needed (that step was removed — its URL
-	// 404'd because the .nft file was never a release asset).
-	tollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha10/tollgate-wrt_v0.7.0-alpha10_aarch64_cortex-a53.ipk"
-	// tollgate-wrt .apk download URL (OpenWrt 25+ with APK support).
-	// This is the primary format for OpenWrt 25.12+ which uses APK instead of OPKG.
-	// OpenWrt 25.12+ cannot install legacy .ipk (ar archive) packages.
-	tollgatePkgURLApk = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.apk"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
 	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
 	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.7-alpha/net4sats-configwiz-1.0.7-alpha.tar.gz"
@@ -218,23 +193,42 @@ func runDeployment(job *Job, req deployRequest) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Step 4: Install tollgate package from GitHub releases
-	// OpenWrt 25+ uses apk; OpenWrt 24.x uses opkg. Detect at runtime.
+	// OpenWrt 25+ uses apk; OpenWrt 24.x uses opkg. Detect both at runtime.
 	job.setStep(4, "running", "")
 	pkgMgr := strings.TrimSpace(sshRun(client, "command -v apk >/dev/null 2>&1 && echo apk || echo opkg"))
 
-	// Select appropriate package URL based on package manager
-	// OpenWrt 25.12+ uses APK and cannot install legacy .ipk packages
-	var selectedPkgURL string
-	var pkgExtension string
-	if pkgMgr == "apk" {
-		selectedPkgURL = tollgatePkgURLApk
-		pkgExtension = ".apk"
-		job.addLog("OpenWrt 25+ detected with APK package manager")
-	} else {
-		selectedPkgURL = tollgatePkgURL
-		pkgExtension = ".ipk"
-		job.addLog("OpenWrt <=24.x detected with OPKG package manager")
+	// Auto-detect the router's CPU architecture and select the matching
+	// tollgate-wrt asset per-arch. Previously the download URL was hardcoded
+	// to aarch64_cortex-a53 — on any other router the wrong-arch binary simply
+	// won't execute, which is the exact silent failure this removes.
+	routerArch := detectArch(client)
+	job.addLog("Detected router CPU arch: " + routerArch)
+	if routerArch == "" {
+		// FAIL LOUDLY on an undetectable arch. Never silently default to
+		// aarch64_cortex-a53 — that is the bug being fixed.
+		job.addLog("Could not determine router CPU architecture (DISTRIB_ARCH empty)")
+		jobFail(job, 4,
+			"Could not determine router CPU architecture (DISTRIB_ARCH empty)",
+			"Could not determine router CPU architecture (DISTRIB_ARCH empty)")
+		return
 	}
+
+	// Select appropriate package URL based on package manager + arch.
+	// OpenWrt 25.12+ uses APK and cannot install legacy .ipk packages.
+	selectedPkgURL, pkgExtension, ok := selectPkgURL(routerArch, pkgMgr)
+	if !ok {
+		// Unknown arch OR this arch has no published asset in this format —
+		// fail, never substitute aarch64.
+		jobFail(job, 4, "Unsupported CPU arch "+routerArch,
+			"Unsupported CPU arch "+routerArch)
+		return
+	}
+	if pkgExtension == ".apk" {
+		job.addLog("OpenWrt 25+ detected with APK package manager (arch " + routerArch + ")")
+	} else {
+		job.addLog("OpenWrt <=24.x detected with OPKG package manager (arch " + routerArch + ")")
+	}
+	job.addLog("Selected tollgate-wrt asset: " + selectedPkgURL)
 
 	// MT3000-class routers have no RTC — after a cold boot the clock is far
 	// in the past and router-side TLS to github.com fails cert validation.
@@ -304,8 +298,10 @@ func runDeployment(job *Job, req deployRequest) {
 				job.addLog("opkg feed install failed, downloading .ipk from OpenWrt repo...")
 				// Download nodogsplash + jq .ipk from OpenWrt package repo
 				// on laptop, push to router, install. nodogsplash is in the
-				// routing/ subdirectory, jq is in packages/.
-				baseURL := "https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/"
+				// routing/ subdirectory, jq is in packages/. The base URL is
+				// threaded with the router's detected arch so the packages
+				// resolve for ANY router, not just aarch64_cortex-a53.
+				baseURL := downloadBaseURL(routerArch)
 				routingURL := baseURL + "routing/"
 				packagesURL := baseURL + "packages/"
 				ndsListHTML := string(httpGetFileOrEmpty(routingURL))

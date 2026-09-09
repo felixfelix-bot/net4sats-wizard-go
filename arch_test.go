@@ -1,8 +1,11 @@
 package main
 
 import (
+	"io"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestNormalizeBareArch verifies normalizeBareArch maps bare CPU arch strings
@@ -107,5 +110,160 @@ func TestArchAssetsMatchDetectedArch(t *testing.T) {
 	}
 	if !strings.Contains(apk, "tollgate-wrt") {
 		t.Errorf("aarch64_cortex-a53 .apk must reference tollgate-wrt: %q", apk)
+	}
+}
+
+// TestDetectArchPrecedence drills the precedence ladder of detectArchFrom:
+// DISTRIB_ARCH wins; then opkg print-architecture; then ubus board; then the
+// bare apk --print-arch (normalized); then uname -m (normalized, last resort).
+// It also verifies a router that answers nothing yields "" (no hardcoded
+// default ever).
+func TestDetectArchPrecedence(t *testing.T) {
+	cases := []struct {
+		name string
+		// outputs maps the command prefix to the output it produces.
+		outputs map[string]string
+		want    string
+	}{
+		{
+			name: "distrib_arch authoritative",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "DISTRIB_ID='OpenWrt'\nDISTRIB_ARCH=\"aarch64_cortex-a53\"\n",
+				"opkg print-architecture":                "arch all 1\narch noarch 10\narch aarch64_cortex-a53 100\n",
+			},
+			want: "aarch64_cortex-a53",
+		},
+		{
+			name: "opkg print-architecture first arch line",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "", // no DISTRIB_ARCH key
+				"opkg print-architecture":                "arch all 1\narch noarch 10\narch mipsel_24kc 100\n",
+			},
+			want: "mipsel_24kc",
+		},
+		{
+			name: "ubus board architecture json",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "", // empty
+				"opkg print-architecture":                "",
+				"ubus call system board":                 `{"architecture":"mips_24kc","board_name":"bananapi"}`,
+			},
+			want: "mips_24kc",
+		},
+		{
+			name: "bare apk arch normalized",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "",
+				"opkg print-architecture":                "",
+				"ubus call system board":                 "",
+				"apk --print-arch":                       "aarch64\n",
+			},
+			want: "aarch64_cortex-a53",
+		},
+		{
+			name: "uname -m coarse last resort normalized",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "",
+				"opkg print-architecture":                "",
+				"ubus call system board":                 "",
+				"apk --print-arch":                       "", // apk absent on OpenWrt 24.x
+				"uname -m":                               "mips\n",
+			},
+			want: "mips_24kc",
+		},
+		{
+			name: "nothing detected returns empty",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "",
+				"opkg print-architecture":                "",
+				"ubus call system board":                 "",
+				"apk --print-arch":                       "",
+				"uname -m":                               "",
+			},
+			want: "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			get := func(cmd string) string {
+				for prefix, out := range tc.outputs {
+					if strings.HasPrefix(cmd, prefix) {
+						return out
+					}
+				}
+				return ""
+			}
+			if got := detectArchFrom(get); got != tc.want {
+				t.Errorf("detectArchFrom = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	// A nil runner must yield "" too (defensive — detectArch guards this).
+	if got := detectArchFrom(nil); got != "" {
+		t.Errorf("detectArchFrom(nil) = %q, want \"\"", got)
+	}
+
+	// detectArch with a nil client must also yield "" (the SSH wrapper's
+	// defensive nil guard).
+	if got := detectArch(nil); got != "" {
+		t.Errorf("detectArch(nil) = %q, want \"\"", got)
+	}
+}
+
+// TestDownloadBaseURL verifies the nodogsplash/jq package-repository base URL
+// is threaded with the router's detected arch tuple, so the packages resolve
+// for ANY router — not just aarch64_cortex-a53.
+func TestDownloadBaseURL(t *testing.T) {
+	cases := map[string]string{
+		"aarch64_cortex-a53": "https://downloads.openwrt.org/releases/24.10.4/packages/aarch64_cortex-a53/",
+		"mipsel_24kc":        "https://downloads.openwrt.org/releases/24.10.4/packages/mipsel_24kc/",
+		"mips_24kc":          "https://downloads.openwrt.org/releases/24.10.4/packages/mips_24kc/",
+		"x86_64":             "https://downloads.openwrt.org/releases/24.10.4/packages/x86_64/",
+	}
+	for in, want := range cases {
+		if got := downloadBaseURL(in); got != want {
+			t.Errorf("downloadBaseURL(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestArchAssetsAreLive is the live HTTP 200 guard for the tollgate-wrt
+// assets in tollgateArchAssets — the per-arch replacement for the old
+// tollgatePkgURL pin that was live-checked in pins_test.go. Only the
+// aarch64_cortex-a53 tuple has published assets today; those are exactly what
+// a fresh deploy downloads. Run with -short to skip network access; the
+// CI-parity command is plain `go test ./...`.
+func TestArchAssetsAreLive(t *testing.T) {
+	if testing.Short() {
+		t.Skip("live URL check skipped: -short mode (CI-parity runs without -short)")
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	for arch, asset := range tollgateArchAssets {
+		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
+			url := url
+			if url == "" {
+				continue // no published asset yet — not checked
+			}
+			t.Run(arch+"_"+name, func(t *testing.T) {
+				req, err := http.NewRequest(http.MethodGet, url, nil)
+				if err != nil {
+					t.Fatalf("building request: %v", err)
+				}
+				req.Header.Set("Range", "bytes=0-0") // fetch 1 byte, not the asset
+				resp, err := client.Do(req)
+				if err != nil {
+					t.Fatalf("%s = %q: request failed: %v", name, url, err)
+				}
+				defer resp.Body.Close()
+				_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1))
+				if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+					t.Errorf("%s %s = %q: got HTTP %d, want 200 — broken asset, fresh deploys will fail",
+						arch, name, url, resp.StatusCode)
+				}
+			})
+		}
 	}
 }

@@ -26,8 +26,14 @@ var deployGoSrc string
 // deploy.go declares exactly this set — a new pin cannot be added without
 // registering it here, and every registered pin is exercised live by
 // TestPinnedURLsAreLive (add new pins to liveCheckPins too).
+//
+// NOTE: the tollgate-wrt download URLs moved from constants (tollgatePkgURL /
+// tollgatePkgURLApk, both hardcoded to aarch64_cortex-a53) into the per-arch
+// tollgateArchAssets map in arch.go (feat/auto-detect-arch). Those fallback
+// assets are live-checked by TestArchAssetsAreLive in arch_test.go instead —
+// the registry here only tracks remaining string-literal URL consts in
+// deploy.go (configwizURL).
 var expectedPinnedURLConsts = []string{
-	"tollgatePkgURL",
 	"configwizURL",
 }
 
@@ -56,15 +62,23 @@ var forbiddenDeployIdentifiers = []string{
 // (verified via the GitHub releases API on 2026-08-16). A previous pin
 // referenced a main.53 asset that does not exist on that release (HTTP 404),
 // which broke every fresh wizard deploy.
+//
+// NOTE (feat/auto-detect-arch): the per-arch selectable URLs now live in the
+// tollgateArchAssets map in arch.go. This constant documents the aarch64
+// fallback source and is asserted to match the map by
+// TestArchAssetsMatchDetectedArch, which also drives the live HTTP 200 check
+// (TestArchAssetsAreLive) for the assets the wizard actually downloads on a
+// fresh deploy. The two must be kept in lockstep on any future repin.
 const wantTollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha10/tollgate-wrt_v0.7.0-alpha10_aarch64_cortex-a53.ipk"
 
-// TestTollgatePkgURLPinsExistingAsset pins the package download URL to the
-// exact asset that exists on the v0.6.1-post-merge release. Any intentional
-// repin (e.g. switching to an upstream OpenTollGate release) must update this
-// test in the same commit — that is what makes the pin auditable.
+// testAssertTollgateAssetMatchesPin pins the aarch64 IPK asset to the exact
+// value that exists on the release. Any intentional repin must update both
+// this constant and tollgateArchAssets in the same commit so the map never
+// drifts from the audited asset.
 func TestTollgatePkgURLPinsExistingAsset(t *testing.T) {
-	if tollgatePkgURL != wantTollgatePkgURL {
-		t.Errorf("tollgatePkgURL =\n  %q\nwant\n  %q", tollgatePkgURL, wantTollgatePkgURL)
+	got := tollgateArchAssets["aarch64_cortex-a53"].IPK
+	if got != wantTollgatePkgURL {
+		t.Errorf("tollgateArchAssets[aarch64_cortex-a53].IPK =\n  %q\nwant\n  %q", got, wantTollgatePkgURL)
 	}
 }
 
@@ -72,9 +86,12 @@ func TestTollgatePkgURLPinsExistingAsset(t *testing.T) {
 // exercises with a real HTTP request. TestDeployGoPinRegistry asserts its key
 // set equals expectedPinnedURLConsts, so a pin cannot be registered without
 // also being live-checked (and vice versa).
+//
+// The tollgate-wrt URLs live in the tollgateArchAssets map and are live-checked
+// by TestArchAssetsAreLive in arch_test.go; only the deploy.go string-literal
+// consts remain here.
 var liveCheckPins = map[string]string{
-	"tollgatePkgURL": tollgatePkgURL,
-	"configwizURL":   configwizURL,
+	"configwizURL": configwizURL,
 }
 
 // parsePinnedURLConsts parses deploy.go (real Go syntax via go/ast, not text
