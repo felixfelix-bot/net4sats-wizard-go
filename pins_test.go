@@ -56,20 +56,19 @@ var forbiddenDeployIdentifiers = []string{
 	"20-nds-enforce.nft",
 }
 
-// wantTollgatePkgURL is the exact release asset pinned by the wizard.
-// The v0.6.1-post-merge release of felixfelix-bot/tollgate-module-basic-go
-// publishes exactly one asset: tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.ipk
-// (verified via the GitHub releases API on 2026-08-16). A previous pin
-// referenced a main.53 asset that does not exist on that release (HTTP 404),
-// which broke every fresh wizard deploy.
+// wantTollgatePkgURL is the exact aarch64_cortex-a53 .ipk asset pinned by the
+// wizard. Phase 3 (feat/feed-per-arch-urls): the PRIMARY source is now the
+// FreedomTechFeed/packages release asset (the feed publishes per-arch tollgate-wrt
+// at stable URLs). The GitHub tollgate-module-basic-go release remains the
+// FALLBACK (tollgateGithubFallback) for arches the feed does not publish yet.
 //
-// NOTE (feat/auto-detect-arch): the per-arch selectable URLs now live in the
+// NOTE (feat/auto-detect-arch): the per-arch selectable URLs live in the
 // tollgateArchAssets map in arch.go. This constant documents the aarch64
-// fallback source and is asserted to match the map by
+// primary source and is asserted to match the map by
 // TestArchAssetsMatchDetectedArch, which also drives the live HTTP 200 check
 // (TestArchAssetsAreLive) for the assets the wizard actually downloads on a
 // fresh deploy. The two must be kept in lockstep on any future repin.
-const wantTollgatePkgURL = "https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha10/tollgate-wrt_v0.7.0-alpha10_aarch64_cortex-a53.ipk"
+const wantTollgatePkgURL = "https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_aarch64_cortex-a53.ipk"
 
 // testAssertTollgateAssetMatchesPin pins the aarch64 IPK asset to the exact
 // value that exists on the release. Any intentional repin must update both

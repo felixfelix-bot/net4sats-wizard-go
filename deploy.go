@@ -251,7 +251,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// PRIMARY: download the package on the LAPTOP and push it over SSH stdin.
 	// This eliminates the router's DNS/TLS stack from the critical path —
 	// a freshly STA-connected router often has no working DNS yet.
-	job.addLog("Downloading tollgate-wrt v0.7.0-alpha10 " + pkgExtension + " (laptop-side)...")
+	job.addLog("Downloading tollgate-wrt " + pkgExtension + " (laptop-side) from " + selectedPkgURL + "...")
 	pkgOnRouter := false
 	if data, err := httpGetFile(selectedPkgURL); err == nil && len(data) > 0 {
 		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt"+pkgExtension+" && echo PUSH_OK")
