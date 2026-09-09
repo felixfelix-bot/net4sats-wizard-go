@@ -6,22 +6,29 @@ import (
 )
 
 // TestDownloadURLsPointToTollgateRepo verifies that the tollgate package
-// download URLs used by the wizard target the tollgate-module-basic-go project
-// (either the upstream OpenTollGate org or its felixfelix-bot fork).
+// download URLs used by the wizard target the tollgate package project.
 //
-// This guards against accidentally reverting to a stale or wrong repo, and
-// documents the Endo-handover fallback strategy: upstream OpenTollGate is the
-// primary source; the felixfelix-bot fork is the fallback for the
-// v0.6.1-post-merge tag until an equivalent upstream release exists.
+// Phase 3 (feat/feed-per-arch-urls): the PRIMARY source for every known arch is
+// now the FreedomTechFeed/packages release assets (the per-arch feed). The
+// GitHub tollgate-module-basic-go release URLs moved into tollgateGithubFallback
+// and remain the FALLBACK for arches the feed does not publish yet (or a feed
+// outage).
+//
+// This test checks that:
+//   - every feed (primary) URL points at FreedomTechFeed/packages and is a
+//     GitHub release download URL;
+//   - every GitHub fallback URL points at the tollgate-module-basic-go repo
+//     (upstream OpenTollGate or felixfelix-bot fork) as a release download.
+//
+// This guards against accidentally reverting to a stale or wrong repo, or
+// pointing the fallback at a non-tollgate repo.
 //
 // (SW4a) The nft-enforce overlay URL is gone — those rules ship inside the
 // ipk — and the full set of pinned URL constants, plus a live HTTP 200 check
 // for each, is enforced in pins_test.go.
 //
-// (feat/auto-detect-arch) The per-arch download URLs now live in the
-// tollgateArchAssets map in arch.go, keyed by OpenWrt tuple. This test checks
-// every declared asset (both .ipk and .apk) across every arch entry so a future
-// repin or new-arch addition can't point at a non-tollgate repo.
+// (feat/auto-detect-arch) The per-arch download URLs live in the
+// tollgateArchAssets map in arch.go, keyed by OpenWrt tuple.
 func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
 	for arch, asset := range tollgateArchAssets {
 		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
@@ -33,18 +40,38 @@ func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
 				if !strings.HasPrefix(url, "https://github.com/") {
 					t.Errorf("[%s] %s = %q: must be an https://github.com URL", arch, name, url)
 				}
-				// 2. Must reference the tollgate-module-basic-go repo, either
-				//    via upstream or the felixfelix-bot fork (fallback).
+				// 2. Primary (feed) URLs must reference the feed repo.
+				if !strings.Contains(url, "FreedomTechFeed/packages") {
+					t.Errorf("[%s] %s = %q: primary source must be FreedomTechFeed/packages", arch, name, url)
+				}
+				// 3. Must be a release download URL, not e.g. a branch archive.
+				if !strings.Contains(url, "/releases/download/") {
+					t.Errorf("[%s] %s = %q: must be a GitHub release download URL", arch, name, url)
+				}
+			})
+		}
+	}
+
+	// The GitHub fallback must point at the tollgate-module-basic-go repo
+	// (upstream or fork) as a release download.
+	for arch, asset := range tollgateGithubFallback {
+		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
+			if url == "" {
+				continue
+			}
+			t.Run("fallback_"+arch+"_"+name, func(t *testing.T) {
+				if !strings.HasPrefix(url, "https://github.com/") {
+					t.Errorf("[%s] %s = %q: must be an https://github.com URL", arch, name, url)
+				}
 				ownerOk := strings.Contains(url, "OpenTollGate/") ||
 					strings.Contains(url, "felixfelix-bot/")
 				repoOk := strings.Contains(url, "tollgate-module-basic-go")
 				if !ownerOk {
-					t.Errorf("[%s] %s = %q: owner must be OpenTollGate (primary) or felixfelix-bot (fallback)", arch, name, url)
+					t.Errorf("[fallback] [%s] %s = %q: owner must be OpenTollGate (primary) or felixfelix-bot (fallback)", arch, name, url)
 				}
 				if !repoOk {
-					t.Errorf("[%s] %s = %q: must reference tollgate-module-basic-go", arch, name, url)
+					t.Errorf("[fallback] [%s] %s = %q: must reference tollgate-module-basic-go", arch, name, url)
 				}
-				// 3. Must be a release download URL, not e.g. a branch archive.
 				if !strings.Contains(url, "/releases/download/") {
 					t.Errorf("[%s] %s = %q: must be a GitHub release download URL", arch, name, url)
 				}
