@@ -30,7 +30,7 @@ The architecture is resolved in this order — first non-empty match wins:
 |---|--------|---------|--------------|-------|
 | 1 | `/etc/openwrt_release` | `grep DISTRIB_ARCH` | exact tuple, e.g. `aarch64_cortex-a53` | Authoritative; shipped by every OpenWrt build. |
 | 2 | `opkg print-architecture` | — | `arch <name> <pri>` lines | Pseudo-archs `all` / `noarch` are skipped; first real tuple wins. |
-| 3 | `ubus call system board` | — | JSON `{"architecture": "..."}` | Fallback for minimal installs. |
+| 3 | `ubus call system board` | — | JSON `{"architecture": "..."}` | Rarely present on stock OpenWrt; value normalized via `normalizeBareArch`. |
 | 4 | `apk --print-arch` | — | bare, e.g. `aarch64` | Normalized via `normalizeBareArch`. |
 | 5 | `uname -m` | — | bare, e.g. `mips`, `x86_64` | Coarse, last resort; always normalized. |
 
@@ -38,7 +38,7 @@ If every source yields nothing, `detectArch` returns `""` and step 4 **fails
 loudly**:
 
 ```
-Could not determine router CPU architecture (DISTRIB_ARCH empty)
+Could not determine router CPU architecture
 ```
 
 There is **no hardcoded default**. A wrong architecture guess is the exact bug

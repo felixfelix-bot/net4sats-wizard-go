@@ -206,10 +206,10 @@ func runDeployment(job *Job, req deployRequest) {
 	if routerArch == "" {
 		// FAIL LOUDLY on an undetectable arch. Never silently default to
 		// aarch64_cortex-a53 — that is the bug being fixed.
-		job.addLog("Could not determine router CPU architecture (DISTRIB_ARCH empty)")
+		job.addLog("Could not determine router CPU architecture")
 		jobFail(job, 4,
-			"Could not determine router CPU architecture (DISTRIB_ARCH empty)",
-			"Could not determine router CPU architecture (DISTRIB_ARCH empty)")
+			"Could not determine router CPU architecture",
+			"Could not determine router CPU architecture")
 		return
 	}
 

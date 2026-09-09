@@ -174,13 +174,18 @@ func detectArchFrom(get func(cmd string) string) string {
 		}
 	}
 
-	// 3. ubus call system board — JSON .architecture field.
+	// 3. ubus call system board — JSON .architecture field. This field is not
+	//    present on stock OpenWrt (the call exposes .system and .release.target
+	//    instead), so this branch rarely fires — but when it does the value is
+	//    a bare CPU name (e.g. "aarch64") that must be normalized to a tuple.
 	if out := get("ubus call system board 2>/dev/null; true"); out != "" {
 		var board struct {
 			Architecture string `json:"architecture"`
 		}
 		if err := json.Unmarshal([]byte(out), &board); err == nil && board.Architecture != "" {
-			return board.Architecture
+			if arch := normalizeBareArch(board.Architecture); arch != "" {
+				return arch
+			}
 		}
 	}
 

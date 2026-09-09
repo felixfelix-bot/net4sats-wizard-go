@@ -151,6 +151,15 @@ func TestDetectArchPrecedence(t *testing.T) {
 			want: "mips_24kc",
 		},
 		{
+			name: "ubus board bare arch normalized",
+			outputs: map[string]string{
+				"grep DISTRIB_ARCH /etc/openwrt_release": "",
+				"opkg print-architecture":                "",
+				"ubus call system board":                 `{"architecture":"aarch64"}`,
+			},
+			want: "aarch64_cortex-a53",
+		},
+		{
 			name: "bare apk arch normalized",
 			outputs: map[string]string{
 				"grep DISTRIB_ARCH /etc/openwrt_release": "",
