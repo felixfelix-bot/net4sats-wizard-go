@@ -65,9 +65,9 @@ var forbiddenDeployIdentifiers = []string{
 // NOTE (feat/auto-detect-arch): the per-arch selectable URLs live in the
 // tollgateArchAssets map in arch.go. This constant documents the aarch64
 // primary source and is asserted to match the map by
-// TestArchAssetsMatchDetectedArch, which also drives the live HTTP 200 check
-// (TestArchAssetsAreLive) for the assets the wizard actually downloads on a
-// fresh deploy. The two must be kept in lockstep on any future repin.
+// TestTollgatePkgURLPinsExistingAsset, while TestArchAssetsAreLive live-checks
+// the feed assets the wizard actually downloads on a fresh deploy. The two must
+// be kept in lockstep on any future repin.
 const wantTollgatePkgURL = "https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_aarch64_cortex-a53.ipk"
 
 // testAssertTollgateAssetMatchesPin pins the aarch64 IPK asset to the exact
