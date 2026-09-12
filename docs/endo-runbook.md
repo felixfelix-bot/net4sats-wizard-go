@@ -88,7 +88,6 @@ Example: `you@walletofsatoshi.com`
 The router supports multiple mints:
 - coinos.io
 - minibits.cash
-- testnut.cashu.exchange
 
 Price is set to **1 sat per 21 MB** by default.
 
