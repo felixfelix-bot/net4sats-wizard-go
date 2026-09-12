@@ -505,7 +505,7 @@ type deployRequest struct {
 	SSID     string `json:"ssid"`     // for sta mode
 	WifiPass string `json:"wifiPass"` // for sta mode
 	LNURL    string `json:"lnurl"`    // Lightning address or raw LNURL
-	DevSplit int    `json:"devSplit"` // advanced: % to dev fund (0-50, default 10)
+	DevSplit int    `json:"devSplit"` // advanced: % to dev fund (0-50, default 0)
 	Margin   int    `json:"margin"`   // advanced: operator markup % (0-100, default 0)
 	Mint     string `json:"mint"`     // advanced: preferred Cashu mint URL
 }

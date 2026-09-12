@@ -123,6 +123,29 @@ func TestDeployRequestDefaults(t *testing.T) {
 	}
 }
 
+// TestDeployRequestJSONOmittedFields pins the de-branded default: a client
+// that never opens the Advanced section (the default wizard UI path) sends
+// no devSplit/margin/mint, and the decoded request must default to
+// dev split 0 — the wizard takes no cut unless the operator opts in
+// (FELIX Q3: upstream default 0; downstream distributions set their own
+// split explicitly in the payload).
+func TestDeployRequestJSONOmittedFields(t *testing.T) {
+	var req deployRequest
+	payload := `{"ip":"192.168.1.1","password":"password","lnurl":"test@wallet.app"}`
+	if err := json.Unmarshal([]byte(payload), &req); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if req.DevSplit != 0 {
+		t.Errorf("omitted devSplit decodes to %d, want 0", req.DevSplit)
+	}
+	if req.Margin != 0 {
+		t.Errorf("omitted margin decodes to %d, want 0", req.Margin)
+	}
+	if req.Mint != "" {
+		t.Errorf("omitted mint decodes to %q, want empty", req.Mint)
+	}
+}
+
 func TestStepInitialization(t *testing.T) {
 	steps := deploySteps()
 

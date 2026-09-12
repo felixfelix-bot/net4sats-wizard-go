@@ -8,6 +8,12 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Dev split defaults to 0.** The advanced-only dev-split slider keeps
+  its 0-50 range but no longer defaults to 10 — the wizard takes no cut
+  unless the operator explicitly opts in (FELIX Q3: upstream default 0;
+  downstream distributions pass their split explicitly in the deploy
+  payload). "Developer fund" marketing copy stripped from the UI.
+
 - **No more testnet mint force-injection.** Plain deploys no longer
   force-inject the two testnut mints (`testnut.cashu.space`,
   `nofee.testnut.cashu.space`) into the router's `accepted_mints`.
