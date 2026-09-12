@@ -112,6 +112,49 @@ func urlFor(addr string) string {
 	return "http://" + net.JoinHostPort(host, port)
 }
 
+// defaultListenAddr binds the wizard to loopback only: the deploy API
+// drives a root SSH session on the router, so a wildcard bind would let
+// any host on the LAN drive deploys against it. Operators who accept
+// that risk can override with WIZARD_BIND (e.g. WIZARD_BIND=0.0.0.0:8099).
+const defaultListenAddr = "127.0.0.1:8099"
+
+// listenAddress returns the address the wizard serves on: WIZARD_BIND if
+// set, else the loopback default.
+func listenAddress() string {
+	if bind := strings.TrimSpace(os.Getenv("WIZARD_BIND")); bind != "" {
+		return bind
+	}
+	return defaultListenAddr
+}
+
+// corsAllowedOrigins is the exact allowlist of Origins that may read
+// wizard responses cross-origin. A wildcard ACAO on this service lets
+// any website the operator visits drive the deploy API from their
+// browser; only the wizard's own loopback origins are trusted.
+var corsAllowedOrigins = map[string]bool{
+	"http://127.0.0.1:8099": true,
+	"http://localhost:8099": true,
+}
+
+// corsMiddleware dispatches to next after setting CORS headers.
+// Access-Control-Allow-Origin is echoed only for allowlisted origins —
+// foreign origins get no ACAO header at all, so browsers block
+// cross-origin reads. Methods/headers advertisement is unchanged.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); corsAllowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(204)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ─── Job tracking ─────────────────────────────────────────────
 
 type Step struct {
@@ -801,30 +844,39 @@ func main() {
 	mux.HandleFunc("/", handleIndex)
 
 	// CORS for local dev
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(204)
-			return
-		}
-		mux.ServeHTTP(w, r)
-	})
+	handler := corsMiddleware(mux)
 
 	// Bind BEFORE printing anything (v0.7.0-alpha16): the URL banner is
 	// only shown once a socket actually listens, so "running on …" always
-	// means a working wizard. PORT overrides the 8099 default; if the
-	// preferred port is busy we walk 8099→8109 before giving up.
-	port, err := listenPort()
+	// means a working wizard. The wizard binds loopback by default — the
+	// deploy API drives a root SSH session on the router, so a wildcard
+	// bind would let any LAN host drive deploys (WIZARD_BIND overrides for
+	// operators who accept that risk). PORT overrides the 8099 default;
+	// if the preferred port is busy we walk the next ten ports
+	// (8099→8109) before giving up.
+	preferred := listenAddress()
+	host, portStr, splitErr := net.SplitHostPort(preferred)
+	if splitErr != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: invalid listen address %q (set WIZARD_BIND=host:port): %v\n", preferred, splitErr)
+		os.Exit(1)
+	}
+	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "ERROR: invalid port in listen address %q: %v\n", preferred, err)
+		os.Exit(1)
+	}
+	if raw := strings.TrimSpace(os.Getenv("PORT")); raw != "" {
+		port, err = listenPort() // validates PORT loudly
+		if err != nil {
+			log.Fatal(err)
+		}
+		preferred = net.JoinHostPort(host, strconv.Itoa(port))
 	}
 	fallbacks := make([]string, 0, len(fallbackPorts(port)))
 	for _, p := range fallbackPorts(port) {
-		fallbacks = append(fallbacks, net.JoinHostPort("", strconv.Itoa(p)))
+		fallbacks = append(fallbacks, net.JoinHostPort(host, strconv.Itoa(p)))
 	}
-	ln, addr, err := pickPort(net.JoinHostPort("", strconv.Itoa(port)), fallbacks)
+	ln, addr, err := pickPort(preferred, fallbacks)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ERROR: "+err.Error())
 		fmt.Fprintf(os.Stderr, "The port is busy — likely another wizard instance.\n")
@@ -835,10 +887,11 @@ func main() {
 	}
 	url := urlFor(addr)
 	fmt.Printf("net4sats wizard running on %s\n", url)
-	if addr != fmt.Sprintf(":%d", port) {
+	if addr != preferred {
 		fmt.Printf("(port %d was busy — using %s instead; PORT=<n> picks explicitly)\n", port, url)
 	}
 	fmt.Println("Open this URL in your browser to set up a router.")
+	fmt.Println("To serve on other interfaces, set WIZARD_BIND (e.g. WIZARD_BIND=0.0.0.0:8099).")
 	log.Fatal(http.Serve(ln, handler))
 	_ = io.Discard // keep import
 }

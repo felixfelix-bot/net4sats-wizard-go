@@ -153,7 +153,15 @@ func TestMainFunctionStructure(t *testing.T) {
 	// The documented fallback order is 8099 → 8109 (next ten ports).
 	fbs := fallbackPorts(defaultPort)
 	if len(fbs) == 0 || fbs[0] != 8100 || fbs[len(fbs)-1] != 8109 {
-		t.Errorf("fallbackPorts(%d) = %v; want 8100..8109", defaultPort, fbs)
+		t.Errorf("fallbackPorts(%d) = %v, want 8100..8109", defaultPort, fbs)
+	}
+
+	// Check that the wizard binds loopback by default — the deploy API
+	// drives a root SSH session on the router, so a wildcard bind would
+	// let any LAN host drive deploys. WIZARD_BIND overrides for operators
+	// who accept that risk (see TestListenAddress).
+	if listenAddress() != "127.0.0.1:8099" {
+		t.Errorf("listenAddress() = %q, want %q", listenAddress(), "127.0.0.1:8099")
 	}
 
 	// Verify the regex patterns are compiled

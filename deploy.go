@@ -2,10 +2,14 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,9 +21,174 @@ const (
 	// net4satsPackage is the apk package name.
 	net4satsPackage = "net4sats"
 	// Admin panel + rpcd plugin from net4sats GitHub releases
-	// v1.0.3-alpha: built from upstream main tip 201968e (PR #24: SW cache bust, NDS/uhttpd fix, supports_ln).
-	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.7-alpha/net4sats-configwiz-1.0.7-alpha.tar.gz"
+	// v1.0.10-alpha: built from upstream main tip 7c18f48 (PR #30: pricing block on Cashu tab).
+	configwizURL = "https://github.com/felixfelix-bot/configurationwizzard/releases/download/v1.0.10-alpha/net4sats-configwiz-1.0.10-alpha.tar.gz"
 )
+
+// artifactPins maps every artifact URL the wizard downloads and installs
+// on the router to the expected sha256 digest (hex) of that artifact
+// (audit S-4). Verification fails closed: a URL without an entry here is
+// refused just like a hash mismatch, so the map must cover every URL
+// selectPkgURL can return on the install path (asserted by
+// TestArtifactPinsCoverDownloadedArchURLs: every entry of
+// tollgateArchAssets and tollgateGithubFallback in arch.go). Release
+// assets are immutable per tag; if an artifact is ever re-uploaded under
+// the same tag, deploys abort until the pin here is refreshed — that is
+// the intended supply-chain posture.
+//
+// Digests are the GitHub release-asset sha256 digests:
+//
+//   - FreedomTechFeed/packages v0.6.0-alpha1 per-arch feed (feed-first
+//     selection since feat/feed-per-arch-urls);
+//   - felixfelix-bot/tollgate-module-basic-go GitHub fallback (aarch64
+//     only; both digests identical to the 2026-08-26 local audit values
+//     from PR #24, cross-validating the API-reported digests).
+var artifactPins = map[string]string{
+	// Feed: https://github.com/FreedomTechFeed/packages v0.6.0-alpha1
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_aarch64_cortex-a53.ipk": "5134f29dd64f9985f9b993ea6a06b76823af221a88a6cb319d59d8448edb3b90",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_aarch64_cortex-a53.apk": "7e1c89fe87977de106258fe432139873f3b960889ccb8bfd7a479fd2c8989ed8",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_mipsel_24kc.ipk":         "cbe097365f9c2cd6a7d6d02618fd8173c6ddf0c43a893aa5c0b6802264bc17a6",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_mipsel_24kc.apk":         "23385c6dcbf089badd2403681270a29fa0d587d84b5151748b1716ae239067ce",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_mips_24kc.ipk":           "7c873f92113e568a518a4ab78c491b32ccd9369e28c98f238f0bd0e179e108f8",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_mips_24kc.apk":           "d9089a4b1d077b1d70189c5bc81d2c10789e3edc79a01c81eb280215c34884ef",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_x86_64.ipk":              "61d693b16c4cfe9e784f5dc6f1a7e3dba17bc1d393d654f95e42d356438b7ac0",
+	"https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-alpha1/tollgate-wrt_0.6.0_alpha1_x86_64.apk":              "ca1d379ee0f08d32d387667efdb78ffb770d66d32c1e98dcebd829521fc944dd",
+	// GitHub fallback: felixfelix-bot/tollgate-module-basic-go (aarch64 only)
+	"https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.7.0-alpha10/tollgate-wrt_v0.7.0-alpha10_aarch64_cortex-a53.ipk": "786565ec18f929c938c53d6b0303115ecaa8c238809a8d7e27fd79bbca100cd6",
+	"https://github.com/felixfelix-bot/tollgate-module-basic-go/releases/download/v0.6.1-post-merge/tollgate-wrt_main.56.b528e1d_aarch64_cortex-a53.apk":  "c9b02855fee2d63c24e1bc927c3762c67d7cc64c116b60c5502e9000138fa205",
+}
+
+// verifyArtifactPin enforces the sha256 pin for a downloaded artifact
+// (bytes form — laptop-side download path). It fails closed on a missing
+// pin as well as on a mismatch; the deploy call path must abort before any
+// SSH push when it returns an error.
+func verifyArtifactPin(url string, data []byte) error {
+	sum := sha256.Sum256(data)
+	return verifyArtifactPinHex(url, hex.EncodeToString(sum[:]))
+}
+
+// verifyArtifactPinHex is the hex form of the gate, used by the
+// router-side wget fallback where the digest comes from the router's
+// sha256sum rather than a local hash of the bytes.
+func verifyArtifactPinHex(url, gotHex string) error {
+	want, ok := artifactPins[url]
+	if !ok {
+		return fmt.Errorf("no sha256 pin for %s — aborting deploy (refusing to install unpinned artifact)", url)
+	}
+	if !strings.EqualFold(gotHex, want) {
+		return fmt.Errorf("checksum mismatch for %s — aborting deploy (expected %s, got %s)", url, want, gotHex)
+	}
+	return nil
+}
+
+// ─── Remote command construction (injection-safe) ──────────────
+//
+// Operator-supplied values (passwords, SSIDs, WiFi keys, Lightning
+// addresses, mint URLs) must NEVER be interpolated into remote shell
+// command strings: the wizard drives a root SSH session, so any quote
+// splice in these fields is root code execution on the router. Two
+// passing mechanisms are used, both BusyBox-ash compatible:
+//
+//   - base64 carrier: the value is base64-encoded host-side (output
+//     alphabet [A-Za-z0-9+/=] contains no shell metacharacters) and
+//     decoded on the router via `echo <b64> | base64 -d` into a shell
+//     variable. BusyBox ships the base64 applet with -d support.
+//   - SSH stdin: the raw bytes are piped into a remote temp file
+//     (sshUploadPipe — same pattern as the package push) and consumed
+//     by jq with --rawfile (jq >= 1.6, which the deploy prerequisites
+//     install), never as an --arg string.
+
+// shellB64 returns s encoded for embedding as a base64 carrier.
+func shellB64(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+// passwdCommand builds the root-password change command. The password
+// crosses as a base64 carrier and is decoded into a shell variable;
+// printf feeds it to passwd twice, newline-separated, without the
+// password ever appearing in the command string.
+func passwdCommand(password string) string {
+	return "pw=$(echo " + shellB64(password) + " | base64 -d) && " +
+		"printf '%s\\n%s\\n' \"$pw\" \"$pw\" | passwd root 2>&1"
+}
+
+// lnJQProgram updates the owner identity's lightning_address in
+// /etc/tollgate/identities.json ($la supplied via --rawfile).
+const lnJQProgram = `(.public_identities[] | select(.name == "owner") | .lightning_address) = $la`
+
+// lnIdentCommand writes the operator's Lightning address into
+// identities.json. The caller pipes the address bytes over SSH stdin
+// into /tmp/lnaddr.val (cat > file); jq consumes them via --rawfile, so
+// the address never appears in the command string.
+func lnIdentCommand() string {
+	return "cat > /tmp/lnaddr.val && " +
+		"jq --rawfile la /tmp/lnaddr.val '" + lnJQProgram + "' " +
+		"/etc/tollgate/identities.json > /tmp/ident.tmp 2>&1 && " +
+		"mv /tmp/ident.tmp /etc/tollgate/identities.json && echo 'identities updated' || echo 'no identities'; " +
+		"rm -f /tmp/lnaddr.val"
+}
+
+// defaultMints is the idempotent mint set pushed into config.json
+// (7 production + 2 testnut zero-fee).
+const defaultMints = `[
+    {"url":"https://mint.coinos.io","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.minibits.cash/Bitcoin","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.lnserver.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.macadamia.cash","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.westernbtc.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://kashu.me","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://nofee.testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
+  ]`
+
+// cfgJQProgram rewrites config.json: margin, owner/developer profit
+// shares, operator mint and default-mint additions ($m/$of/$df/$dm via
+// --argjson from host-computed values; $mu via --rawfile).
+//
+// This is the E2E-verified filter (bench GL-MT6000, feed-per-arch run,
+// 2026-09-09): it survives a config.json without accepted_mints (`// []`
+// fallbacks), appends rather than replaces, never appends an empty
+// operator mint, and is idempotent by URL. Full rationale in the
+// configJqFilter doc comment below.
+const cfgJQProgram = `.margin=$m | ` +
+	`(.profit_share[] | select(.identity == "owner") | .factor) = $of | ` +
+	`(.profit_share[] | select(.identity == "developer") | .factor) = $df | ` +
+	// Add operator's chosen mint if non-empty and not already present.
+	`.accepted_mints = (if (($mu != "") and (((.accepted_mints // []) | map(.url) | index($mu)) == null)) then ` +
+	`(.accepted_mints // []) + [{"url":$mu,"min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}] ` +
+	`else (.accepted_mints // []) end) | ` +
+	// Add any default mints that aren't already present (idempotent by
+	// URL; map+index instead of unique_by for jq <1.7 on OpenWrt).
+	// $have = the CURRENT url list (after the $mu merge above), so a
+	// custom mint equal to a default URL is not appended twice.
+	`((.accepted_mints // []) | map(.url)) as $have | ` +
+	`.accepted_mints = ((.accepted_mints // []) + ($dm | map(.url as $u | select(($have | index($u)) == null))))`
+
+// cfgConfigCommand builds the config.json update command with the
+// production default mints. Kept as the 3-arg form used by the
+// shell-injection test matrix; the deploy path uses cfgConfigCommandMints
+// so the opt-in testnut mints (req.TestMints) flow through too.
+func cfgConfigCommand(margin int, ownerFactor, devFactor string) string {
+	return cfgConfigCommandMints(margin, ownerFactor, devFactor, defaultMintsJSON(false))
+}
+
+// cfgConfigCommandMints builds the config.json update command. margin, the
+// owner/developer factors and the default mints are host-computed
+// (--argjson); the operator's mint URL is piped over SSH stdin by the
+// caller into /tmp/mint.val and consumed via --rawfile — it never enters
+// the command string.
+func cfgConfigCommandMints(margin int, ownerFactor, devFactor, defaultMints string) string {
+	return "cat > /tmp/mint.val && " +
+		"jq --argjson m " + strconv.Itoa(margin) + " " +
+		"--argjson of " + ownerFactor + " " +
+		"--argjson df " + devFactor + " " +
+		"--argjson dm '" + defaultMints + "' " +
+		"--rawfile mu /tmp/mint.val '" + cfgJQProgram + "' " +
+		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
+		"mv /tmp/cfg.tmp /etc/tollgate/config.json && echo 'config updated' || echo 'no config'; " +
+		"rm -f /tmp/mint.val"
+}
 
 // deploySteps returns the ordered deployment step definitions.
 func deploySteps() []Step {
@@ -98,19 +267,7 @@ func defaultMintsJSON(includeTestnut bool) string {
 // This filter is exercised end-to-end against local jq by
 // TestMintConfigJqMerge (merge, dedup, idempotency, // [] fallback).
 func configJqFilter() string {
-	return ".margin=$m | " +
-		"(.profit_share[] | select(.identity == \"owner\") | .factor) = $of | " +
-		"(.profit_share[] | select(.identity == \"developer\") | .factor) = $df | " +
-		// Add operator's chosen mint if non-empty and not already present.
-		".accepted_mints = (if (($mu != \"\") and (((.accepted_mints // []) | map(.url) | index($mu)) == null)) then " +
-		"(.accepted_mints // []) + [{\"url\":$mu,\"min_balance\":64,\"balance_tolerance_percent\":10,\"payout_interval_seconds\":60,\"min_payout_amount\":128,\"price_per_step\":1,\"price_unit\":\"sats\",\"min_purchase_steps\":0}] " +
-		"else (.accepted_mints // []) end) | " +
-		// Add any default mints that aren't already present (idempotent by
-		// URL; map+index instead of unique_by for jq <1.7 on OpenWrt).
-		// $have = the CURRENT url list (after the $mu merge above), so a
-		// custom mint equal to a default URL is not appended twice.
-		"((.accepted_mints // []) | map(.url)) as $have | " +
-		".accepted_mints = ((.accepted_mints // []) + ($dm | map(.url as $u | select(($have | index($u)) == null))))"
+	return cfgJQProgram
 }
 
 // runDeployment executes the full deployment sequence.
@@ -166,8 +323,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// Step 2: Set root password
 	job.setStep(2, "running", "")
 	if req.Password != "" {
-		passwdCmd := "echo -e '" + req.Password + "\\n" + req.Password + "' | passwd root 2>&1"
-		passwdOut := sshRun(client, passwdCmd)
+		passwdOut := sshRun(client, passwdCommand(req.Password))
 		if strings.Contains(passwdOut, "changed") || strings.Contains(passwdOut, "successfully") {
 			job.addLog("Root password set")
 			job.setStep(2, "done", "password updated")
@@ -253,16 +409,27 @@ func runDeployment(job *Job, req deployRequest) {
 	// a freshly STA-connected router often has no working DNS yet.
 	job.addLog("Downloading tollgate-wrt " + pkgExtension + " (laptop-side) from " + selectedPkgURL + "...")
 	pkgOnRouter := false
-	if data, err := httpGetFile(selectedPkgURL); err == nil && len(data) > 0 {
+	data, dlErr := httpGetFile(selectedPkgURL)
+	if dlErr == nil && len(data) > 0 {
+		// S-4: verify the sha256 pin BEFORE pushing anything to the
+		// router. A mismatch (or a URL without a pin — default-deny)
+		// aborts the deploy outright: falling through to the router-side
+		// wget fallback would just re-download the same tampered
+		// artifact from the same source.
+		if verr := verifyArtifactPin(selectedPkgURL, data); verr != nil {
+			job.addLog("ERROR: " + verr.Error())
+			job.setStep(4, "error", "tollgate-wrt artifact failed sha256 verification")
+			return
+		}
 		push := sshUploadPipe(client, data, "cat > /tmp/tollgate-wrt"+pkgExtension+" && echo PUSH_OK")
 		if strings.Contains(push, "PUSH_OK") {
 			pkgOnRouter = true
-			job.addLog(fmt.Sprintf("Package downloaded on laptop (%d KB), pushed to router via SSH", len(data)/1024))
+			job.addLog(fmt.Sprintf("Package downloaded on laptop (%d KB), sha256 verified, pushed to router via SSH", len(data)/1024))
 		} else {
 			job.addLog("SSH push failed: " + truncate(push, 80))
 		}
-	} else if err != nil {
-		job.addLog("Laptop download failed: " + truncate(err.Error(), 80) + " — falling back to router-side wget")
+	} else if dlErr != nil {
+		job.addLog("Laptop download failed: " + truncate(dlErr.Error(), 80) + " — falling back to router-side wget")
 	}
 
 	// FALLBACK: router-side wget, with a real DNS probe and wget's stderr
@@ -271,9 +438,19 @@ func runDeployment(job *Job, req deployRequest) {
 	if !pkgOnRouter {
 		probe := sshRun(client, "nslookup github.com 2>&1 | tail -n2")
 		job.addLog("Router DNS probe: " + truncate(probe, 60))
-		wgetOut := sshRun(client, "wget -O /tmp/tollgate-wrt"+pkgExtension+" '"+selectedPkgURL+"' 2>&1; [ -s /tmp/tollgate-wrt"+pkgExtension+"] ] && echo WGET_OK || echo WGET_FAIL")
+		wgetOut := sshRun(client, "wget -O /tmp/tollgate-wrt"+pkgExtension+" '"+selectedPkgURL+"' 2>&1; [ -s /tmp/tollgate-wrt"+pkgExtension+" ] && echo WGET_OK || echo WGET_FAIL")
 		job.addLog("wget: " + truncate(wgetOut, 120))
 		if strings.Contains(wgetOut, "WGET_OK") {
+			// S-4: the router-side download must clear the same sha256
+			// gate as the laptop-side one; an empty digest (no sha256sum
+			// applet) fails closed as a mismatch.
+			sumHex := strings.TrimSpace(sshRun(client, "sha256sum /tmp/tollgate-wrt"+pkgExtension+" 2>/dev/null | cut -d' ' -f1"))
+			if verr := verifyArtifactPinHex(selectedPkgURL, sumHex); verr != nil {
+				job.addLog("ERROR: " + verr.Error())
+				job.setStep(4, "error", "tollgate-wrt artifact failed sha256 verification")
+				return
+			}
+			job.addLog("Router-side download verified against sha256 pin")
 			pkgOnRouter = true
 		}
 	}
@@ -306,8 +483,14 @@ func runDeployment(job *Job, req deployRequest) {
 				packagesURL := baseURL + "packages/"
 				ndsListHTML := string(httpGetFileOrEmpty(routingURL))
 				jqListHTML := string(httpGetFileOrEmpty(packagesURL))
-				ndsPkg := extractIPKFilename(ndsListHTML, "nodogsplash")
-				jqPkg := extractIPKFilename(jqListHTML, "jq")
+				ndsPkg, ndsErr := extractIPKFilename(ndsListHTML, "nodogsplash")
+				if ndsErr != nil {
+					job.addLog("ERROR: " + ndsErr.Error())
+				}
+				jqPkg, jqErr := extractIPKFilename(jqListHTML, "jq")
+				if jqErr != nil {
+					job.addLog("ERROR: " + jqErr.Error())
+				}
 				if ndsPkg != "" {
 					ndsData, ndsErr := httpGetFile(routingURL + ndsPkg)
 					if ndsErr == nil && len(ndsData) > 1000 {
@@ -494,12 +677,36 @@ func runDeployment(job *Job, req deployRequest) {
 	// 6a: uhttpd portal instance (port 2051) — serves full Preact SPA with JS/CSS.
 	// NDS 5.0.2 built-in HTTP server returns 500 for files >64KB (splash JS is 200KB).
 	// uhttpd handles large files fine. Portal is served from here, NDS redirects to it.
+	//
+	// portalDeployDir is the ACTUAL uhttpd :2051 document root (wired up in
+	// 6e below as uhttpd.portal.home with index_page 'splash.html'). It is
+	// the only directory :2051 reads: portal bundles copied elsewhere (e.g.
+	// /www) never reach splash clients, who keep seeing a stale bundle. That
+	// failure was proven on a physical router — the full-mode Playwright
+	// suite passed only after the fixed bundle was manually copied into
+	// this docroot:
+	// https://github.com/net4sats/configurationwizzard/pull/30#issuecomment-5438262589
 	portalDeployDir := "/etc/tollgate/net4sats-captive-portal-site"
 	portalErr2 := sshDeployFS(client, portalFS, "portal", portalDeployDir)
 	if portalErr2 != nil {
 		job.addLog("Portal upload error (uhttpd 2051): " + truncate(portalErr2.Error(), 80))
 	} else {
 		job.addLog("Portal deployed to " + portalDeployDir + "/ (port 2051)")
+	}
+
+	// 6a2: mirror the same bundle to /www so both docroots stay in sync.
+	// Other net4sats tooling still treats /www as the portal docroot
+	// (configurationwizzard's documented `scp dist/* root@router:/www/`
+	// flow; legacy port-80 NDS splash setups reading /www/splash.html), so
+	// keeping the two trees identical prevents bundle-skew between them.
+	// index.html is excluded: /www/index.html is OpenWrt's LuCI redirect
+	// page (served by the luci uhttpd instance on :8080) and must not be
+	// replaced by the portal SPA — :2051 uses index_page 'splash.html', so
+	// it never needs /www/index.html.
+	if wwwErr := sshDeployFS(client, portalFS, "portal", "/www", "index.html"); wwwErr != nil {
+		job.addLog("Portal /www mirror error: " + truncate(wwwErr.Error(), 80))
+	} else {
+		job.addLog("Portal mirrored to /www (in sync with :2051 docroot; LuCI index preserved)")
 	}
 
 	// 6b: NDS htdocs — replace with redirect stub (NOT the full SPA).
@@ -676,11 +883,9 @@ func runDeployment(job *Job, req deployRequest) {
 	job.setStep(8, "running", "")
 
 	// 8a: Write lightning_address to identities.json (owner identity).
-	lnCmd := "jq --arg la '" + req.LNURL + "' " +
-		"'(.public_identities[] | select(.name == \"owner\") | .lightning_address) = $la' " +
-		"/etc/tollgate/identities.json > /tmp/ident.tmp 2>&1 && " +
-		"mv /tmp/ident.tmp /etc/tollgate/identities.json && echo 'identities updated' || echo 'no identities'"
-	lnOut := sshRun(client, lnCmd)
+	// The address travels over SSH stdin into a remote temp file consumed
+	// by jq --rawfile (see lnIdentCommand).
+	lnOut := sshUploadPipe(client, []byte(req.LNURL), lnIdentCommand())
 
 	// 8b: Write margin + profit_share to config.json.
 	// Also ensure the default mints are present (idempotent):
@@ -688,20 +893,17 @@ func runDeployment(job *Job, req deployRequest) {
 	//   2 testnut zero-fee test mints ONLY when req.TestMints is set
 	//   (E2E purchase testing — opt-in, never a real customer default).
 	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
+	// The operator's mint URL travels over SSH stdin into /tmp/mint.val
+	// (see cfgConfigCommand).
 	devSplit := clamp(req.DevSplit, 0, 50)
 	margin := clamp(req.Margin, 0, 100)
 	ownerFactor := strconv.FormatFloat(1.0-float64(devSplit)/100.0, 'f', 4, 64)
 	devFactor := strconv.FormatFloat(float64(devSplit)/100.0, 'f', 4, 64)
-	defaultMints := defaultMintsJSON(req.TestMints)
-	cfgCmd := "jq --argjson m " + strconv.Itoa(margin) + " " +
-		"--argjson of " + ownerFactor + " " +
-		"--argjson df " + devFactor + " " +
-		"--argjson dm '" + defaultMints + "' " +
-		"--arg mu '" + req.Mint + "' " +
-		"'" + configJqFilter() + "' " +
-		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
-		"mv /tmp/cfg.tmp /etc/tollgate/config.json && echo 'config updated' || echo 'no config'"
-	cfgOut := sshRun(client, cfgCmd)
+	// The operator's mint URL travels over SSH stdin into /tmp/mint.val —
+	// never in the command string (see cfgConfigCommandMints). The default
+	// mints are host-computed JSON: 7 production mints always, +2 testnut
+	// zero-fee test mints ONLY when req.TestMints is set (opt-in).
+	cfgOut := sshUploadPipe(client, []byte(req.Mint), cfgConfigCommandMints(margin, ownerFactor, devFactor, defaultMintsJSON(req.TestMints)))
 
 	if strings.Contains(lnOut, "identities updated") {
 		job.addLog("identities.json: lightning_address=" + req.LNURL + " for owner")
@@ -872,7 +1074,12 @@ func jobFail(job *Job, step int, stepDetail, jobErr string) {
 // rollbackWireless) and performs a single commit pair; the caller applies
 // the whole change set with ONE `wifi reload`.
 func staSetupScript(ssid, wifiKey string) string {
+	// ssid/wifiKey cross as base64 carriers and are decoded into shell
+	// variables before any uci call — they never appear in the script
+	// text itself (injection-safe; see the command-construction section).
 	return `
+sta_ssid=$(echo ` + shellB64(ssid) + ` | base64 -d)
+sta_key=$(echo ` + shellB64(wifiKey) + ` | base64 -d)
 target=radio0
 uci -q get wireless.radio0 >/dev/null 2>&1 || target=$(uci -q show wireless 2>/dev/null | sed -n "s/^wireless\.\([^.]*\)=wifi-device$/\1/p" | head -n1)
 if [ -z "$target" ]; then echo 'NO_RADIO'; exit 0; fi
@@ -884,9 +1091,9 @@ uci set wireless.net4sats_uplink=wifi-iface &&
 uci set wireless.net4sats_uplink.network='wwan' &&
 uci set wireless.net4sats_uplink.device="$target" &&
 uci set wireless.net4sats_uplink.mode='sta' &&
-uci set wireless.net4sats_uplink.ssid='` + ssid + `' &&
+uci set wireless.net4sats_uplink.ssid="$sta_ssid" &&
 uci set wireless.net4sats_uplink.encryption='psk2' &&
-uci set wireless.net4sats_uplink.key='` + wifiKey + `' &&
+uci set wireless.net4sats_uplink.key="$sta_key" &&
 uci set wireless.net4sats_uplink.disabled='0' &&
 uci set network.wwan=interface &&
 uci set network.wwan.proto='dhcp' &&
@@ -1140,14 +1347,26 @@ func httpGetFileOrEmpty(url string) []byte {
 }
 
 // extractIPKFilename scans an OpenWrt package directory listing (HTML) and
-// returns the first .ipk filename that starts with the given package name.
-// e.g. extractIPKFilename(html, "nodogsplash") → "nodogsplash_5.0.2-1_aarch64_cortex-a53.ipk"
-func extractIPKFilename(html string, pkgName string) string {
+// returns the first .ipk filename for the given package, e.g.
+// extractIPKFilename(html, "nodogsplash") → "nodogsplash_5.0.2-1_aarch64_cortex-a53.ipk".
+// A candidate that begins with <pkgName>_ but fails the strict name check
+// ^<pkgName>_[0-9][A-Za-z0-9._-]*\.ipk$ (path traversal, shell
+// metacharacters, non-numeric version — the name is interpolated into SSH
+// command strings, so only a shell-safe charset is accepted) is rejected
+// with an error; a listing containing no candidate at all yields ("", nil).
+func extractIPKFilename(html string, pkgName string) (string, error) {
 	// The listing has entries like: <a href="nodogsplash_5.0.2-1_aarch64_cortex-a53.ipk">
 	prefix := pkgName + "_"
+	strict := regexp.MustCompile(`^` + regexp.QuoteMeta(pkgName) + `_[0-9][A-Za-z0-9._-]*\.ipk$`)
 	for _, line := range strings.Split(html, "\n") {
 		idx := strings.Index(line, prefix)
 		if idx < 0 {
+			continue
+		}
+		// A match starting mid-token (e.g. "libnodogsplash_1.ipk" when
+		// scanning for "nodogsplash") is a different package — not a
+		// candidate.
+		if idx > 0 && isFilenameByte(line[idx-1]) {
 			continue
 		}
 		rest := line[idx:]
@@ -1158,10 +1377,21 @@ func extractIPKFilename(html string, pkgName string) string {
 		// Verify the character after .ipk is a quote or end of attribute
 		afterIPK := rest[end+4:]
 		if len(afterIPK) == 0 || afterIPK[0] == '"' || afterIPK[0] == '\'' || afterIPK[0] == '<' {
-			return rest[:end+4]
+			cand := rest[:end+4]
+			if !strict.MatchString(cand) {
+				return "", fmt.Errorf("rejecting suspicious %s listing entry %q — failed strict filename check", pkgName, cand)
+			}
+			return cand, nil
 		}
 	}
-	return ""
+	return "", nil
+}
+
+// isFilenameByte reports whether b can appear inside a package filename
+// token; used to reject prefix matches that start mid-token.
+func isFilenameByte(b byte) bool {
+	return b == '.' || b == '-' || b == '_' ||
+		(b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
 
 func truncate(s string, maxLen int) string {

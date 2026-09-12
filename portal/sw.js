@@ -1,4 +1,4 @@
-const CACHE_NAME = 'net4sats-v1';
+const CACHE_NAME = 'net4sats-mtblqbop';
 const SHELL_ASSETS = [
   '/net4sats/',
   '/net4sats/index.html',
