@@ -347,8 +347,13 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 		if chosen != 1 {
 			t.Errorf("chosen mint appears %d times, want exactly 1", chosen)
 		}
-		if !hasMint(doc, "https://mint.coinos.io") || !hasMint(doc, "https://testnut.cashu.space") {
-			t.Error("default mints not added")
+		if !hasMint(doc, "https://mint.coinos.io") {
+			t.Error("default production mints not added")
+		}
+		for _, testMint := range []string{"https://testnut.cashu.space", "https://nofee.testnut.cashu.space"} {
+			if hasMint(doc, testMint) {
+				t.Errorf("test mint %s force-injected into accepted_mints — plain deploys must not carry testnut", testMint)
+			}
 		}
 		if !hasMint(doc, "https://existing.example/mint") {
 			t.Error("pre-existing mint dropped")
@@ -371,6 +376,34 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 			t.Error("default mints not added on empty mint")
 		}
 	})
+}
+
+// TestDefaultMintsProductionOnly pins the de-branded default mint set:
+// a plain (non-test-mode) deploy must only ever force-inject production
+// mints — no testnut or other test mints may ride along in accepted_mints.
+func TestDefaultMintsProductionOnly(t *testing.T) {
+	var mints []struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal([]byte(defaultMints), &mints); err != nil {
+		t.Fatalf("defaultMints is not valid JSON: %v", err)
+	}
+	if len(mints) == 0 {
+		t.Fatal("defaultMints is empty")
+	}
+	seen := map[string]bool{}
+	for _, m := range mints {
+		if seen[m.URL] {
+			t.Errorf("duplicate default mint %s", m.URL)
+		}
+		seen[m.URL] = true
+		if strings.Contains(strings.ToLower(m.URL), "testnut") {
+			t.Errorf("defaultMints contains test mint %s — testnut force-injection is removed from production deploys", m.URL)
+		}
+	}
+	if !seen["https://mint.coinos.io"] {
+		t.Error("defaultMints is missing production mint https://mint.coinos.io")
+	}
 }
 
 // TestListenAddress pins the loopback default and the WIZARD_BIND escape

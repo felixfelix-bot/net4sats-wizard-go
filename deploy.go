@@ -140,7 +140,8 @@ func lnIdentCommand() string {
 }
 
 // defaultMints is the idempotent mint set pushed into config.json
-// (7 production + 2 testnut zero-fee).
+// (7 production mints — no testnet/test mints; test mints must never be
+// force-injected into a production router config).
 const defaultMints = `[
     {"url":"https://mint.coinos.io","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.minibits.cash/Bitcoin","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
@@ -148,9 +149,7 @@ const defaultMints = `[
     {"url":"https://mint.macadamia.cash","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.westernbtc.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://kashu.me","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://nofee.testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
+    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
   ]`
 
 // cfgJQProgram rewrites config.json: margin, owner/developer profit
@@ -788,7 +787,7 @@ func runDeployment(job *Job, req deployRequest) {
 	lnOut := sshUploadPipe(client, []byte(req.LNURL), lnIdentCommand())
 
 	// 8b: Write margin + profit_share to config.json.
-	// Also ensure 9 default mints (7 production + 2 testnut zero-fee) are present (idempotent).
+	// Also ensure the 7 default production mints are present (idempotent).
 	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
 	// The operator's mint URL travels over SSH stdin into /tmp/mint.val
 	// (see cfgConfigCommand).
@@ -803,7 +802,7 @@ func runDeployment(job *Job, req deployRequest) {
 	}
 	if strings.Contains(cfgOut, "config updated") {
 		job.addLog("config.json: margin=" + strconv.Itoa(margin) + "%, devSplit=" + strconv.Itoa(devSplit) + "% (profit_share updated)")
-		job.addLog("config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin, testnut x2)")
+		job.addLog("config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin)")
 	}
 
 	// 8c: Default mints already injected in 8b above (accepted_mints array).

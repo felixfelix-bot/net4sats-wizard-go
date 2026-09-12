@@ -6,6 +6,14 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **No more testnet mint force-injection.** Plain deploys no longer
+  force-inject the two testnut mints (`testnut.cashu.space`,
+  `nofee.testnut.cashu.space`) into the router's `accepted_mints`.
+  The default mint set is now the 7 production mints only; test mints
+  can still be added by the operator explicitly (mint preference field).
+
 ### Fixed
 
 - **Root shell-injection sinks closed.** All five deploy-command sinks
