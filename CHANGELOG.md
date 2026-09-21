@@ -14,6 +14,14 @@ and [Semantic Versioning](https://semver.org/).
   downstream distributions pass their split explicitly in the deploy
   payload). "Developer fund" marketing copy stripped from the UI.
 
+- **Minibits DLEQ filter removed from the UI.** Minibits is a selectable
+  mint option again and the stale "temporarily removed (DLEQ keyset
+  rotation bug)" note is gone. The underlying keyset-rotation/DLEQ
+  verification bug belongs to the backend, not the wizard: it is to be
+  tracked upstream on OpenTollGate/tollgate-module-basic-go (issue draft
+  pending Felix review in
+  net4sats-mvp-v2 docs/WZ1.4-minibits-dleq-issue-draft.md).
+
 - **No more testnet mint force-injection.** Plain deploys no longer
   force-inject the two testnut mints (`testnut.cashu.space`,
   `nofee.testnut.cashu.space`) into the router's `accepted_mints`.
