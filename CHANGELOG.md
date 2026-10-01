@@ -4,7 +4,17 @@ All notable changes to the net4sats wizard are documented here.
 This project loosely follows [Keep a Changelog](https://keepachangelog.com/)
 and [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [v0.7.0-alpha24] — 2026-10-01
+
+Security release: PR #24 (Amperstrand audit) merged onto the alpha23
+field-fix lineage of the felixfelix-bot fork. Every alpha14–alpha23 fork
+release predating this one carries the injection sinks described below —
+upgrade before deploying routers.
+
+### Added
+
+- `--version` flag: prints the release tag and exits without binding a
+  port, so `curl | bash` install paths can verify what they downloaded.
 
 ### Fixed
 

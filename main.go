@@ -58,6 +58,20 @@ func validLightningAddress(s string) bool {
 
 const defaultPort = 8099
 
+// wizardVersion is the release tag this binary was cut from. Printed by
+// --version so the curl|bash install path can verify what it downloaded.
+const wizardVersion = "v0.7.0-alpha24"
+
+// handleVersionArg prints the version and reports true when the CLI args
+// ask for it, so main can return before binding any port.
+func handleVersionArg(args []string) bool {
+	if len(args) > 1 && (args[1] == "--version" || args[1] == "version") {
+		fmt.Println("net4sats-wizard " + wizardVersion)
+		return true
+	}
+	return false
+}
+
 // listenPort returns the port to serve on: PORT if set, else 8099.
 // PORT must be a valid TCP port number (1-65535) — anything else is an
 // error. A typo'd PORT must be loud, not silently ignored.
@@ -846,6 +860,9 @@ func allRadiosUp(statusJSON string) bool {
 }
 
 func main() {
+	if handleVersionArg(os.Args) {
+		return
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scan", handleScan)
 	mux.HandleFunc("/api/wifi-scan", handleWifiScan)
