@@ -440,6 +440,8 @@ func TestCORSMiddleware(t *testing.T) {
 	}
 
 	// OPTIONS preflight from an allowlisted origin still short-circuits 204.
+	// (A preflight from a foreign origin is refused by the write-path gate —
+	// see TestWriteGateRejectsCrossOriginWrites — so it is asserted there.)
 	req := httptest.NewRequest("OPTIONS", "/api/deploy", nil)
 	req.Header.Set("Origin", "http://localhost:8099")
 	w := httptest.NewRecorder()

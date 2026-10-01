@@ -32,3 +32,15 @@ and [Semantic Versioning](https://semver.org/).
 - **Router-side wget fallback size-check bracket typo fixed.** A doubled
   bracket `]]` was glued to the filename, making the `WGET_OK` path
   unreachable. The fallback arm of the sha256 gate is now reachable.
+
+- **CORS write-path gap closed.** The origin allowlist introduced by #24 only
+  withheld `Access-Control-Allow-Origin`; it did not refuse the request, so a
+  cross-origin "simple request" `POST` (no preflight, e.g.
+  `Content-Type: text/plain`) still reached `/api/deploy` — the endpoint that
+  drives the root SSH session. The middleware now rejects any request whose
+  `Origin` is present and not allowlisted with `403` before the handler runs,
+  for reads and writes alike. Non-browser clients that send no `Origin`
+  (`curl`, the CLI, E2E harnesses) and same-origin browser callers are
+  unaffected. A concrete (non-wildcard) `WIZARD_BIND` address is added to the
+  allowlist so the UI served from it still writes; a wildcard bind (or a
+  spoofed `Host` header) never widens it.

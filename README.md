@@ -89,6 +89,31 @@ The deployment runs 9 steps over SSH:
 | 8 | Restart services | Restarts `tollgate-wrt` + `nodogsplash` |
 | 9 | Health check | Verifies TollGate API responding on `:2121` |
 
+## Request security (origin gate)
+
+The wizard drives a **root SSH session** on the router, so its HTTP API is
+gated:
+
+- **Loopback bind by default** — it listens on `127.0.0.1:8099`. Opt into LAN
+  exposure with `WIZARD_BIND=0.0.0.0:8099` (accepting that any LAN host can
+  then drive deploys).
+- **Origin allowlist, enforced on every request** — a request carrying an
+  `Origin` header outside the allowlist is refused with `403` *before* any
+  handler runs, reads and writes alike. The default allowlist is
+  `http://localhost:8099` and `http://127.0.0.1:8099`; a concrete
+  (non-wildcard) `WIZARD_BIND` address is added to it, so the browser UI
+  served from that address keeps working.
+- **Non-browser clients keep working** — requests with no `Origin` header
+  (`curl`, the CLI, E2E harnesses) are unaffected.
+
+Why the write path matters: a cross-origin "simple request" (for example a
+`POST` with `Content-Type: text/plain`) needs no preflight, so merely
+withholding `Access-Control-Allow-Origin` hides the *response* while the
+request still reaches the server. Refusing foreign origins outright is what
+stops a malicious page — or a DNS-rebinding host that spoofs the `Host`
+header — from driving `/api/deploy` from the operator's browser. The `Host`
+header is never consulted when building the allowlist.
+
 ## Verify binaries
 
 ```sh

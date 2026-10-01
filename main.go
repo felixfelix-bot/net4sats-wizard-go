@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -56,32 +58,91 @@ func listenAddress() string {
 	return defaultListenAddr
 }
 
-// corsAllowedOrigins is the exact allowlist of Origins that may read
-// wizard responses cross-origin. A wildcard ACAO on this service lets
-// any website the operator visits drive the deploy API from their
-// browser; only the wizard's own loopback origins are trusted.
+// corsAllowedOrigins is the exact allowlist of Origins the wizard trusts.
+// A wildcard ACAO on this service lets any website the operator visits drive
+// the deploy API from their browser; only the wizard's own loopback origins
+// are trusted by default. WIZARD_BIND can add exactly one more origin (the
+// address the operator bound), and never a wildcard.
 var corsAllowedOrigins = map[string]bool{
 	"http://127.0.0.1:8099": true,
 	"http://localhost:8099": true,
 }
 
-// corsMiddleware dispatches to next after setting CORS headers.
-// Access-Control-Allow-Origin is echoed only for allowlisted origins —
-// foreign origins get no ACAO header at all, so browsers block
-// cross-origin reads. Methods/headers advertisement is unchanged.
+// Origin is never trusted from the Host header: a DNS-rebinding page can
+// present any Host, but the browser still sends the attacker's Origin. The
+// allowlist therefore comes only from configuration, never from the request.
+
+// bindOriginFor returns the browser Origin that a WIZARD_BIND listen address
+// contributes to the allowlist, or "" when the bind contributes nothing.
+// Wildcard binds (0.0.0.0, ::) expose every interface but name no origin, and
+// an unparseable value contributes nothing; both return "". Loopback values
+// are returned verbatim — they merely duplicate the static allowlist.
+func bindOriginFor(bind string) string {
+	bind = strings.TrimSpace(bind)
+	if bind == "" {
+		return ""
+	}
+	host, port, err := net.SplitHostPort(bind)
+	if err != nil || port == "" {
+		return ""
+	}
+	if i := strings.IndexByte(host, '%'); i >= 0 {
+		host = host[:i] // strip an IPv6 zone so the origin parses
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsUnspecified() {
+		return "" // wildcard bind: no concrete origin to trust
+	}
+	// Let net/url normalize the origin (bracketed IPv6 literals, etc.).
+	u := url.URL{Scheme: "http", Host: net.JoinHostPort(host, port)}
+	return u.String()
+}
+
+// corsMiddleware is the wizard's single request gate. It both advertises CORS
+// for allowlisted origins and REFUSES every request whose Origin is present
+// and not allowlisted — reads and writes alike.
+//
+// The earlier read-only allowlist (echo ACAO, let the request through) did not
+// stop writes: a cross-origin "simple request" POST with a non-preflighted
+// Content-Type (e.g. text/plain) reaches /api/deploy even though the browser
+// withholds the response, and /api/deploy drives a root SSH session. Refusing
+// the request outright closes that gap; ACAO is then only set for origins that
+// are already permitted. Methods/headers advertisement is unchanged.
+//
+// No Origin header means a non-browser client (curl, the CLI, an E2E harness)
+// or a same-origin GET: same-origin requests are not a cross-site attack, and
+// a browser always sends Origin on the POSTs that matter here.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin := r.Header.Get("Origin"); corsAllowedOrigins[origin] {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(204)
+
+		if origin := r.Header.Get("Origin"); origin != "" {
+			if !originAllowed(origin) {
+				writeError(w, http.StatusForbidden, "cross-origin request refused")
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// originAllowed reports whether origin may talk to this service. The
+// comparison is exact (scheme, host and port), so suffix tricks, scheme
+// downgrades, "null" and arbitrary hosts are all refused.
+func originAllowed(origin string) bool {
+	if corsAllowedOrigins[origin] {
+		return true
+	}
+	if extra := bindOriginFor(listenAddress()); extra != "" && origin == extra {
+		return true
+	}
+	return false
 }
 
 // ─── Job tracking ─────────────────────────────────────────────
