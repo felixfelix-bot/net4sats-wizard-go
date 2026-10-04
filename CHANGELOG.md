@@ -18,9 +18,8 @@ and [Semantic Versioning](https://semver.org/).
   mint option again and the stale "temporarily removed (DLEQ keyset
   rotation bug)" note is gone. The underlying keyset-rotation/DLEQ
   verification bug belongs to the backend, not the wizard: it is to be
-  tracked upstream on OpenTollGate/tollgate-module-basic-go (issue draft
-  pending Felix review in
-  net4sats-mvp-v2 docs/WZ1.4-minibits-dleq-issue-draft.md).
+  tracked upstream on OpenTollGate/tollgate-module-basic-go (upstream
+  issue pending).
 
 - **No more testnet mint force-injection.** Plain deploys no longer
   force-inject the two testnut mints (`testnut.cashu.space`,
