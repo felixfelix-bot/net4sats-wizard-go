@@ -1,5 +1,7 @@
 # net4sats wizard
 
+[![CI](https://github.com/net4sats/net4sats-wizard-go/actions/workflows/ci.yml/badge.svg)](https://github.com/net4sats/net4sats-wizard-go/actions/workflows/ci.yml)
+
 Cross-platform onboarding wizard that turns an OpenWrt router into a Bitcoin
 WiFi access point. Single Go binary — serves a web UI that auto-discovers
 routers on your LAN and deploys net4sats over SSH.
@@ -114,6 +116,20 @@ GOOS=darwin  GOARCH=amd64 go build -o dist/net4sats-wizard-darwin-amd64 .
 GOOS=linux   GOARCH=amd64 go build -o dist/net4sats-wizard-linux-amd64 .
 GOOS=windows GOARCH=amd64 go build -o dist/net4sats-wizard-windows-amd64.exe .
 ```
+
+## Continuous integration
+
+Every pull request (all branches) and every push to `main` runs the
+[CI workflow](.github/workflows/ci.yml). Both jobs run in parallel:
+
+| Job | What it does |
+|-----|--------------|
+| `test` | `go build ./...`, `go vet ./...`, then `go test ./... -race -count=1` |
+| `lint` | [`golangci-lint`](https://github.com/golangci/golangci-lint) pinned to **v1.61.0** (`govet`, `staticcheck`, `ineffassign`, `unused`) |
+
+The Go toolchain is taken from `go-version-file: go.mod`. Runs on the same ref
+are cancelled automatically when a newer commit arrives (`concurrency` +
+`cancel-in-progress`). Any failing step fails the check.
 
 ## Documentation
 

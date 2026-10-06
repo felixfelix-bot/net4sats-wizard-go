@@ -1,0 +1,44 @@
+# golangci-lint configuration.
+#
+# Consumed by .github/workflows/ci.yml (golangci/golangci-lint-action@v6, pinned
+# to v1.61.0 via the action's `version:` input), which expects a v1-schema
+# config at the repo root.
+
+run:
+  # golangci-lint defaults to a 1m deadline, which is too tight for a real Go
+  # module; give the CI lint job a realistic budget.
+  timeout: 5m
+
+linters:
+  # Pin the enabled set explicitly so it cannot drift with upstream defaults.
+  disable-all: true
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+
+issues:
+  # Narrow, file+text-scoped exemptions for findings that already exist on main.
+  # This change adds CI only and must not touch Go sources, so the pre-existing
+  # findings are waived here rather than fixed inline or blanket-excluded. Every
+  # rule pins one linter AND one file AND one message, so it cannot mask a new
+  # finding anywhere else in the module.
+  exclude-rules:
+    # //go:embed asset consumed by the router install path, not by Go code, so
+    # `unused` reports it even though the build depends on it.
+    - linters: [unused]
+      path: \bembed\.go$
+      text: "uhttpdNet4sats"
+    # Retained helper: portal deploy currently runs via sshWriteFile/sshRun.
+    - linters: [unused]
+      path: \bssh\.go$
+      text: "sshDeployPortal"
+    # Best-effort SSH calls deliberately drop the remote exit status; callers
+    # only consume the combined output.
+    - linters: [ineffassign]
+      path: \bssh\.go$
+      text: "ineffectual assignment to"
+    - linters: [staticcheck]
+      path: \bssh\.go$
+      text: "SA4006"

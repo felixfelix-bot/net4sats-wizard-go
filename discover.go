@@ -21,7 +21,9 @@ type RouterInfo struct {
 
 // discoverRouters scans the local subnet for OpenWrt routers.
 func discoverRouters() []RouterInfo {
-	var found []RouterInfo
+	// Non-nil empty slice: callers (handleScan) JSON-encode this directly, and a
+	// nil slice marshals to `null` instead of `[]`, which breaks API consumers.
+	found := []RouterInfo{}
 	seen := make(map[string]bool)
 
 	// 1. Scan ARP table for known router MACs
