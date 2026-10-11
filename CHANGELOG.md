@@ -12,7 +12,7 @@ and [Semantic Versioning](https://semver.org/).
   its 0-50 range but no longer defaults to 10 — the wizard takes no cut
   unless the operator explicitly opts in (FELIX Q3: upstream default 0;
   downstream distributions pass their split explicitly in the deploy
-  payload). "Developer fund" marketing copy stripped from the UI.
+  payload). Any revenue-share marketing copy has been removed from the UI.
 
 - **Minibits DLEQ filter removed from the UI.** Minibits is a selectable
   mint option again and the stale "temporarily removed (DLEQ keyset
