@@ -28,19 +28,19 @@ func discoverRouters() []RouterInfo {
 	arpEntries := readARPTable()
 
 	// 2. Always check common router gateway IPs.
-	// Include 192.168.21.1 (GL.iNet default WiFi-AP subnet seen on Felix's
-	// T14Gen5) so it's tried early, but still AFTER the classic wired subnets.
+	// 192.168.21.1 is the GL.iNet default WiFi-AP subnet address; it is
+	// probed early, but still AFTER the classic wired subnets.
 	commonIPs := []string{
 		"192.168.1.1", "192.168.8.1", "192.168.0.1", "192.168.2.1",
-		"10.47.41.1", "192.168.21.1",
+		"192.168.21.1",
 	}
 
 	// Merge: common router IPs FIRST, then ARP entries.
-	// On some laptops (e.g. Felix's T14Gen5) the router shows up in the ARP
-	// table as 192.168.21.1 (the WiFi AP address) and would be listed before
-	// the wired gateway 192.168.1.1. By checking commonIPs first we ensure
-	// the wired/LAN address — which is what the wizard needs for SSH — is
-	// probed before any WiFi-AP address from the ARP table.
+	// On some laptops the router shows up in the ARP table as 192.168.21.1
+	// (the WiFi AP address) and would be listed before the wired gateway
+	// 192.168.1.1. By checking commonIPs first we ensure the wired/LAN
+	// address — which is what the wizard needs for SSH — is probed before
+	// any WiFi-AP address from the ARP table.
 	var candidates []string
 	for _, ip := range commonIPs {
 		if !seen[ip] {

@@ -22,7 +22,7 @@ const (
 	net4satsPackage = "net4sats"
 	// tollgate-wrt .ipk download URL (OpenWrt <= 24.10 back-compat).
 	//
-	// Fallback strategy (Endo handover):
+	// Fallback strategy:
 	//   Primary  — OpenTollGate/tollgate-module-basic-go upstream releases
 	//              (https://github.com/OpenTollGate/tollgate-module-basic-go/releases)
 	//   Fallback — felixfelix-bot fork releases for the v0.6.1-post-merge tag
@@ -583,8 +583,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// /www) never reach splash clients, who keep seeing a stale bundle. That
 	// failure was proven on a physical router — the full-mode Playwright
 	// suite passed only after the fixed bundle was manually copied into
-	// this docroot:
-	// https://github.com/net4sats/configurationwizzard/pull/30#issuecomment-5438262589
+	// this docroot.
 	portalDeployDir := "/etc/tollgate/net4sats-captive-portal-site"
 	portalErr2 := sshDeployFS(client, portalFS, "portal", portalDeployDir)
 	if portalErr2 != nil {

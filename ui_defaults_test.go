@@ -33,9 +33,17 @@ func TestEmbeddedUIDefaults(t *testing.T) {
 		}
 	})
 
-	t.Run("minibits selectable, no stale DLEQ note", func(t *testing.T) {
-		if !strings.Contains(ui, `value="https://minibits.cash/cashu/api/v1/"`) {
-			t.Error("Minibits must be a selectable mint option (DLEQ filter removed)")
+	t.Run("minibits selectable at the real mint base, no stale DLEQ note", func(t *testing.T) {
+		// The option must point at the working Minibits mint base (the same
+		// URL defaultMints pins, deploy.go). The pre-rebrand value
+		// https://minibits.cash/cashu/api/v1/ is an LNbits-era path that no
+		// longer serves a Cashu API (404) — posting it verbatim as req.Mint
+		// would configure the router against a dead endpoint.
+		if !strings.Contains(ui, `value="https://mint.minibits.cash/Bitcoin"`) {
+			t.Error("Minibits option must point at the real mint base https://mint.minibits.cash/Bitcoin (the defaultMints entry)")
+		}
+		if strings.Contains(ui, "https://minibits.cash/cashu/api/v1/") {
+			t.Error("UI must not ship the dead LNbits-era Minibits path https://minibits.cash/cashu/api/v1/")
 		}
 		if strings.Contains(ui, "DLEQ") {
 			t.Error("UI copy must not carry the stale DLEQ-workaround note (tracked upstream instead)")

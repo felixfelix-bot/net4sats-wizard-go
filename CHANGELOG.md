@@ -10,16 +10,15 @@ and [Semantic Versioning](https://semver.org/).
 
 - **Dev split defaults to 0.** The advanced-only dev-split slider keeps
   its 0-50 range but no longer defaults to 10 — the wizard takes no cut
-  unless the operator explicitly opts in (FELIX Q3: upstream default 0;
+  unless the operator explicitly opts in (upstream default 0;
   downstream distributions pass their split explicitly in the deploy
-  payload). Any revenue-share marketing copy has been removed from the UI.
+  payload). "Developer fund" marketing copy stripped from the UI.
 
 - **Minibits DLEQ filter removed from the UI.** Minibits is a selectable
   mint option again and the stale "temporarily removed (DLEQ keyset
   rotation bug)" note is gone. The underlying keyset-rotation/DLEQ
-  verification bug belongs to the backend, not the wizard: it is to be
-  tracked upstream on OpenTollGate/tollgate-module-basic-go (upstream
-  issue pending).
+  verification bug belongs to the backend, not the wizard: it is tracked
+  as an upstream issue on OpenTollGate/tollgate-module-basic-go.
 
 - **No more testnet mint force-injection.** Plain deploys no longer
   force-inject the two testnut mints (`testnut.cashu.space`,

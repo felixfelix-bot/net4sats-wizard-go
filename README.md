@@ -117,14 +117,11 @@ GOOS=windows GOARCH=amd64 go build -o dist/net4sats-wizard-windows-amd64.exe .
 
 ## Documentation
 
-- **[Setup guide (step by step)](https://github.com/net4sats/net4sats.github.io/pull/1)** —
-  full walkthrough with screenshots, troubleshooting, and advanced settings
-  (dev split, margin, mint selection)
-- **[Admin panel guide](https://github.com/net4sats/net4sats.github.io/pull/1)** —
-  using the configurationwizzard admin dashboard after deployment (dashboard,
-  WiFi, devices, settings, wallet, identity)
-- **[Endo onboarding runbook](docs/endo-runbook.md)** — operator-facing setup
-  guide tested on a live GL-MT6000
+- **[Router setup runbook](docs/router-setup.md)** — operator-facing setup
+  guide (download, router connection, deploy, troubleshooting, advanced
+  settings), tested on a live GL-MT6000
+- **Admin panel guide** — the configurationwizzard admin dashboard used after
+  deployment (dashboard, WiFi, devices, settings, wallet, identity)
 
 ## Prerequisites
 

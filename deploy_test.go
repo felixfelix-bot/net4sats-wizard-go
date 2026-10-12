@@ -10,7 +10,7 @@ import (
 // (either the upstream OpenTollGate org or its felixfelix-bot fork).
 //
 // This guards against accidentally reverting to a stale or wrong repo, and
-// documents the Endo-handover fallback strategy: upstream OpenTollGate is the
+// documents the package fallback strategy: upstream OpenTollGate is the
 // primary source; the felixfelix-bot fork is the fallback for the
 // v0.6.1-post-merge tag until an equivalent upstream release exists.
 //

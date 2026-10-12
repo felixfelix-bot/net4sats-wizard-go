@@ -127,7 +127,7 @@ func TestDeployRequestDefaults(t *testing.T) {
 // that never opens the Advanced section (the default wizard UI path) sends
 // no devSplit/margin/mint, and the decoded request must default to
 // dev split 0 — the wizard takes no cut unless the operator opts in
-// (FELIX Q3: upstream default 0; downstream distributions set their own
+// (upstream default 0; downstream distributions set their own
 // split explicitly in the payload).
 func TestDeployRequestJSONOmittedFields(t *testing.T) {
 	var req deployRequest
