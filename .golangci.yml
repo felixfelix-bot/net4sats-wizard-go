@@ -1,44 +1,31 @@
-# golangci-lint configuration.
+# golangci-lint configuration (v2 schema).
 #
-# Consumed by .github/workflows/ci.yml (golangci/golangci-lint-action@v6, pinned
-# to v1.61.0 via the action's `version:` input), which expects a v1-schema
-# config at the repo root.
+# Schema note: this file uses the golangci-lint *v2* schema (the `version: "2"`
+# key is required by v2 and rejected by v1). Verified locally with
+# golangci-lint v2.14.0 (built with go1.26.0), so the `lint` job in
+# .github/workflows/ci.yml must pin a v2 release for the action's `version:`
+# input; a v1 pin cannot read this file.
+version: "2"
 
 run:
-  # golangci-lint defaults to a 1m deadline, which is too tight for a real Go
-  # module; give the CI lint job a realistic budget.
+  # v2's default deadline is too tight for a module that compiles x/crypto/ssh.
   timeout: 5m
 
 linters:
-  # Pin the enabled set explicitly so it cannot drift with upstream defaults.
-  disable-all: true
+  # default: standard == errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  # Listed explicitly (they are already part of "standard") so the intended set
+  # is visible in the file and cannot silently drift with upstream defaults.
   enable:
     - govet
-    - staticcheck
     - ineffassign
-    - unused
+    - staticcheck
 
 issues:
-  # Narrow, file+text-scoped exemptions for findings that already exist on main.
-  # This change adds CI only and must not touch Go sources, so the pre-existing
-  # findings are waived here rather than fixed inline or blanket-excluded. Every
-  # rule pins one linter AND one file AND one message, so it cannot mask a new
-  # finding anywhere else in the module.
-  exclude-rules:
-    # //go:embed asset consumed by the router install path, not by Go code, so
-    # `unused` reports it even though the build depends on it.
-    - linters: [unused]
-      path: \bembed\.go$
-      text: "uhttpdNet4sats"
-    # Retained helper: portal deploy currently runs via sshWriteFile/sshRun.
-    - linters: [unused]
-      path: \bssh\.go$
-      text: "sshDeployPortal"
-    # Best-effort SSH calls deliberately drop the remote exit status; callers
-    # only consume the combined output.
-    - linters: [ineffassign]
-      path: \bssh\.go$
-      text: "ineffectual assignment to"
-    - linters: [staticcheck]
-      path: \bssh\.go$
-      text: "SA4006"
+  # Report every occurrence. v2 otherwise hides repeats of the same message
+  # after 3 occurrences (`max-same-issues: 3`) and stops at 50 per linter,
+  # which silently masks further identical findings (e.g. unchecked
+  # json.Encoder.Encode calls in the HTTP handlers) — a green run under those
+  # caps would not mean the module is clean. 0 = no limit.
+  max-issues-per-linter: 0
+  max-same-issues: 0
