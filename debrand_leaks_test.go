@@ -29,20 +29,20 @@ func TestNoInternalBrandLeaks(t *testing.T) {
 	// legitimate public fork org used in release-asset URLs and must not
 	// trigger. The leak form is the uppercase internal gate label.
 	tokens := map[string]string{
-		"FELIX":             "internal individual/gate label",
-		"T14Gen5":           "personal laptop model",
-		"10.47.41.1":        "personal subnet probe target",
-		"kanban.db":         "internal kanban board database",
-		"kanban/boards":     "internal kanban board path",
-		"net4sats-mvp-v2":   "internal kanban board name",
-		".hermes":           "internal agent-tooling path",
-		"c03rad0r":          "personal host/user name",
-		"dq05":              "internal host name",
-		"tailscale":         "internal network tooling",
-		"endo-runbook":      "internal codename in doc paths",
-		"github.io/pull/":   "internal PR links used as user documentation",
-		"issuecomment-":     "internal PR-comment deep links",
-		"#issuecomment":     "internal PR-comment deep links",
+		"FELIX":           "internal individual/gate label",
+		"T14Gen5":         "personal laptop model",
+		"10.47.41.1":      "personal subnet probe target",
+		"kanban.db":       "internal kanban board database",
+		"kanban/boards":   "internal kanban board path",
+		"net4sats-mvp-v2": "internal kanban board name",
+		".hermes":         "internal agent-tooling path",
+		"c03rad0r":        "personal host/user name",
+		"dq05":            "internal host name",
+		"tailscale":       "internal network tooling",
+		"endo-runbook":    "internal codename in doc paths",
+		"github.io/pull/": "internal PR links used as user documentation",
+		"issuecomment-":   "internal PR-comment deep links",
+		"#issuecomment":   "internal PR-comment deep links",
 	}
 	caseSensitive := map[string]bool{"FELIX": true}
 
@@ -60,7 +60,7 @@ func TestNoInternalBrandLeaks(t *testing.T) {
 			for _, vd := range vendoredDirs {
 				if strings.HasPrefix(path+"/", vd) {
 					return filepath.SkipDir
-			}
+				}
 			}
 			return nil
 		}
