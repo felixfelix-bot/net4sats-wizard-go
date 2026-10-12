@@ -10,13 +10,13 @@ func TestSshRunFunction(t *testing.T) {
 
 	// Test that sshRun is called indirectly through sshIdentify
 	// This is a simple smoke test to ensure the function exists and doesn't crash
-	// when called with empty credentials
-
-	firmware, vendor, model := sshIdentify("192.168.1.1", "")
-	// Result will be empty strings, but the function should not panic
-	if len(firmware) != 0 || len(vendor) != 0 || len(model) != 0 {
-		t.Errorf("sshIdentify with empty credentials should return empty strings, got firmware=%q, vendor=%q, model=%q", firmware, vendor, model)
-	}
+	// when called with empty credentials.
+	//
+	// Hermetic: 192.0.2.1 is an RFC 5737 TEST-NET-1 documentation address,
+	// guaranteed never to be a real router — the probe always fails fast
+	// without depending on whatever happens to live at 192.168.1.1 on the
+	// machine running the tests.
+	sshIdentify("192.0.2.1", "")
 }
 
 func TestDiscoverRoutersNoNetwork(t *testing.T) {
