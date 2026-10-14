@@ -1,0 +1,31 @@
+# golangci-lint configuration.
+#
+# Consumed by .github/workflows/ci.yml (golangci/golangci-lint-action@v6, pinned
+# to golangci-lint v1.61.0 through the action's `version:` input), which expects
+# a v1-schema config at the repo root.
+#
+# The enabled set is exactly the v1 default set, written out so the intended
+# coverage is visible in the file and cannot drift silently with upstream
+# defaults. There are no exclude-rules and no `disable-all`: every finding the
+# standard linters report on this module has been fixed in the source.
+
+run:
+  # golangci-lint's 1m default deadline is too tight for a module that
+  # compiles golang.org/x/crypto/ssh.
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+  # Report every occurrence. The defaults (3 identical messages, 50 per linter)
+  # silently hide further findings, so a green run under those caps would not
+  # mean the module is clean.
+  max-issues-per-linter: 0
+  max-same-issues: 0

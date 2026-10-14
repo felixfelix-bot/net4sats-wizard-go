@@ -69,8 +69,10 @@ func sshRun(client *ssh.Client, cmd string) string {
 	if err != nil {
 		return ""
 	}
-	defer session.Close()
-	output, err := session.CombinedOutput(cmd)
+	defer func() { _ = session.Close() }()
+	// Best effort: callers consume the combined output only, so a non-zero
+	// remote exit status is deliberately not surfaced.
+	output, _ := session.CombinedOutput(cmd)
 	return string(output)
 }
 
@@ -80,9 +82,11 @@ func sshUploadPipe(client *ssh.Client, data []byte, extractCmd string) string {
 	if err != nil {
 		return ""
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 	session.Stdin = bytes.NewReader(data)
-	output, err := session.CombinedOutput(extractCmd)
+	// Best effort, as in sshRun: the caller inspects the command's own
+	// sentinel output (e.g. "PUSH_OK"), not the exit status.
+	output, _ := session.CombinedOutput(extractCmd)
 	return string(output)
 }
 
@@ -92,7 +96,7 @@ func sshWriteFile(client *ssh.Client, remotePath string, content []byte) error {
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	stdin, err := session.StdinPipe()
 	if err != nil {
@@ -107,12 +111,20 @@ func sshWriteFile(client *ssh.Client, remotePath string, content []byte) error {
 	if err != nil {
 		return err
 	}
-	stdin.Close()
+	// Best effort: session.Wait() below is the authoritative result of
+	// this write.
+	_ = stdin.Close()
 
 	return session.Wait()
 }
 
 // sshDeployPortal writes the embedded portal files to the router.
+//
+// Retained helper: the live deploy path uploads the portal with sshDeployFS
+// (deploy.go step 6a). Kept because the two branches that still carry this
+// symbol must not diverge further; see worker-heavy/t_d6e354a6-lint notes.
+//
+//nolint:unused // dead helper retained on purpose; deprecation is an owner decision, not a lint fix
 func sshDeployPortal(client *ssh.Client, fs embed.FS, rootDir string) error {
 	sshRun(client, "mkdir -p "+rootDir+"/assets "+rootDir+"/locales")
 

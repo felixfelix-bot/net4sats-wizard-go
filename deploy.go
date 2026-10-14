@@ -221,7 +221,7 @@ func runDeployment(job *Job, req deployRequest) {
 	// Closure (not `defer client.Close()`): client can be re-assigned when
 	// the STA step re-establishes the session after a wifi reload — the
 	// deferred call must close whichever client is live at the end.
-	defer func() { client.Close() }()
+	defer func() { _ = client.Close() }()
 
 	// Step 0: Verify SSH
 	job.setStep(0, "running", "")
@@ -617,7 +617,7 @@ func runDeployment(job *Job, req deployRequest) {
 		"<meta http-equiv=\"refresh\" content=\"0; url=http://" + routerIP + ":2051/splash.html\">" +
 		"<script>location.replace(\"http://" + routerIP + ":2051/splash.html\");</script>" +
 		"<title>net4sats Portal</title></head><body>Redirecting...</body></html>"
-	sshWriteFile(client, "/etc/nodogsplash/htdocs/splash.html", []byte(redirectHTML))
+	_ = sshWriteFile(client, "/etc/nodogsplash/htdocs/splash.html", []byte(redirectHTML))
 	sshRun(client, "cp /etc/nodogsplash/htdocs/splash.html /etc/nodogsplash/htdocs/index.html")
 	job.addLog("NDS htdocs: redirect stub installed (port 2050 → 2051)")
 
@@ -633,7 +633,7 @@ func runDeployment(job *Job, req deployRequest) {
 		"# NDS preauth: redirect intercepted clients to uhttpd-served portal\n" +
 		"# NDS provides $clientip, $clientmac, $gatewayaddress as env vars\n" +
 		"cat << EOF\n" + preauthHTML + "\nEOF\nexit 0\n"
-	sshWriteFile(client, "/etc/nodogsplash/preauth.sh", []byte(preauthScript))
+	_ = sshWriteFile(client, "/etc/nodogsplash/preauth.sh", []byte(preauthScript))
 	sshRun(client, "chmod +x /etc/nodogsplash/preauth.sh")
 
 	// 6d: Configure NDS to use preauth + allow port 2051
@@ -678,9 +678,9 @@ func runDeployment(job *Job, req deployRequest) {
 
 	// 7b: rpcd plugin
 	sshRun(client, "mkdir -p /usr/libexec/rpcd /usr/share/rpcd/acl.d")
-	sshWriteFile(client, "/usr/libexec/rpcd/tollgate", rpcdTollgate)
+	_ = sshWriteFile(client, "/usr/libexec/rpcd/tollgate", rpcdTollgate)
 	sshRun(client, "chmod +x /usr/libexec/rpcd/tollgate")
-	sshWriteFile(client, "/usr/share/rpcd/acl.d/tollgate.json", rpcdACL)
+	_ = sshWriteFile(client, "/usr/share/rpcd/acl.d/tollgate.json", rpcdACL)
 	job.addLog("rpcd tollgate plugin installed")
 
 	// 7b2: Patch admin JS — replace broken dhcp/ipv4leases with tollgate/clients
@@ -709,7 +709,7 @@ func runDeployment(job *Job, req deployRequest) {
 			fixed := strings.ReplaceAll(string(balanceHTML), "/assets/", "./assets/")
 			fixed = strings.ReplaceAll(fixed, "/favicon.ico", "./favicon.ico")
 			fixed = strings.ReplaceAll(fixed, "/manifest.json", "./manifest.json")
-			sshWriteFile(client, "/www/net4sats/balance.html", []byte(fixed))
+			_ = sshWriteFile(client, "/www/net4sats/balance.html", []byte(fixed))
 			job.addLog("Balance page deployed to admin panel (fallback)")
 		} else {
 			job.addLog("WARNING: balance.html not found in any embed FS")
@@ -1023,7 +1023,7 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 
 	// The SSH session can drop while radios restart — close it and
 	// re-establish (LAN stays up; only the old session may be wedged).
-	client.Close()
+	_ = client.Close()
 	newClient := reconnectSSH(ip, password, 3, 5*time.Second)
 	if newClient == nil {
 		job.addLog("Could not re-establish SSH after wifi reload — attempting rollback")
@@ -1031,7 +1031,7 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 		// with a longer budget.
 		if retry := reconnectSSH(ip, password, 2, 10*time.Second); retry != nil {
 			rollbackWireless(retry)
-			retry.Close()
+			_ = retry.Close()
 		}
 		jobFail(job, 3, "SSH lost after wifi reload",
 			"SSH connection lost after wifi reload and could not be re-established — wireless config rolled back if the router was reachable")
@@ -1075,7 +1075,14 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 			if lanPrefix == gwPrefix {
 				// CONFLICT — change LAN to a random 10.x.y.1/24
 				randBytes := make([]byte, 2)
-				cryptorand.Read(randBytes)
+				if _, err := cryptorand.Read(randBytes); err != nil {
+					// Fallback: time-seeded (same policy as the SSID suffix
+					// above) — a broken system RNG must not abort a deploy
+					// that is otherwise healthy.
+					for i := range randBytes {
+						randBytes[i] = byte(time.Now().UnixNano() >> uint(i*8))
+					}
+				}
 				newSecond := int(randBytes[0])%200 + 10 // 10-210
 				newThird := int(randBytes[1])%200 + 2   // 2-202
 				newLanIP := fmt.Sprintf("10.%d.%d.1", newSecond, newThird)
@@ -1091,7 +1098,7 @@ func configureSTA(job *Job, pclient **ssh.Client, ip, password, ssid, wifiPass s
 
 				// Network restart drops the SSH session — reconnect.
 				// Try the new LAN IP first, then fall back to the original IP.
-				client.Close()
+				_ = client.Close()
 				newClient := reconnectSSH(newLanIP, password, 5, 3*time.Second)
 				if newClient == nil {
 					job.addLog(fmt.Sprintf("Could not reconnect on new LAN IP %s, trying original IP %s...", newLanIP, ip))
@@ -1124,7 +1131,7 @@ func httpGetFile(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %s", resp.Status)
 	}

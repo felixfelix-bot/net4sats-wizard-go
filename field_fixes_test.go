@@ -35,6 +35,7 @@ func TestScanFailedHeuristic(t *testing.T) {
 		})
 	}
 }
+
 // TestAllRadiosUp covers the `ubus call network.wireless status` parser used
 // by enableWifiAndWait (WiFi scan pre-flight): every radio must report up.
 func TestAllRadiosUp(t *testing.T) {

@@ -41,7 +41,7 @@ func TestVerifyArtifactPinBenignDownload(t *testing.T) {
 	pin := hex.EncodeToString(sum[:])
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(artifact)
+		_, _ = w.Write(artifact)
 	}))
 	defer srv.Close()
 
@@ -76,7 +76,7 @@ func TestVerifyArtifactPinTamperedDownload(t *testing.T) {
 
 	var serve = artifact
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(serve)
+		_, _ = w.Write(serve)
 	}))
 	defer srv.Close()
 

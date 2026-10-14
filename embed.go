@@ -21,7 +21,7 @@ var rpcdTollgate []byte
 var rpcdACL []byte
 
 //go:embed uhttpd_net4sats
-var uhttpdNet4sats []byte
+var uhttpdNet4sats []byte //nolint:unused // packaged uhttpd UCI asset, embedded for the router install path; no Go code reads it yet
 
 // readFromEmbedFS reads a single file from an embed.FS. Returns nil if not found.
 func readFromEmbedFS(fsys embed.FS, path string) []byte {
