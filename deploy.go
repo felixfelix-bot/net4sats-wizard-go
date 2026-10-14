@@ -788,7 +788,6 @@ func runDeployment(job *Job, req deployRequest) {
 
 	// 8b: Write margin + profit_share to config.json.
 	// Also ensure the 7 default production mints are present (idempotent).
-	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
 	// The operator's mint URL travels over SSH stdin into /tmp/mint.val
 	// (see cfgConfigCommand).
 	devSplit := clamp(req.DevSplit, 0, 50)
