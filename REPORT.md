@@ -270,10 +270,34 @@ $ git ls-remote origin refs/heads/worker-heavy/t_10a913ec
 a242f4b90d3bc8a87fe73bed92ebdc65d55adfcc	refs/heads/worker-heavy/t_10a913ec
 ```
 
-(The task commit for this report is the docs commit that carries it; `PROGRESS.md` was pushed
-first at `a242f4b`, and `REPORT.md` is pushed in the immediate follow-up docs commit on the same
-branch. Build artifacts — `net4sats-wizard`, `dist/`, `coverage*.out` — are all `.gitignore`d, so
-"clean" is genuine and not an artifact of ignoring new files.)
+The block above was captured right after the `PROGRESS.md` push. This report rides the next docs
+commit on the same branch, and the final state was re-captured after that push
+(`09-final-git-status.txt`, overwritten by the re-run):
+
+```
+$ git status
+On branch worker-heavy/t_10a913ec
+Your branch is up to date with 'origin/worker-heavy/t_10a913ec'.
+
+nothing to commit, working tree clean
+
+$ git log --oneline -3
+a645c56 docs(t_10a913ec): full verification REPORT (build + 123/123 suite green at 0b5322a)
+a242f4b docs(t_10a913ec): wizard build + full-suite verification PROGRESS at 0b5322a
+0b5322a feat(release): link-time version injection, --version, goreleaser config and release docs
+
+$ git rev-list --left-right --count HEAD...origin/worker-heavy/t_10a913ec
+0	0
+$ git ls-remote origin refs/heads/worker-heavy/t_10a913ec
+a645c56595d0ea6356f95f0928cb7c4326efebf7	refs/heads/worker-heavy/t_10a913ec
+```
+
+Both docs commits are pushed: `PROGRESS.md` at `a242f4b`, `REPORT.md` at `a645c56` (remote
+`ls-remote` confirms the same SHA). This final-state paragraph itself lands in the trailing
+`docs(t_10a913ec): final-state capture` commit on the same branch — the head is therefore that
+docs commit, with the branch still clean and ahead/behind 0/0 against origin (checked after the
+push). Build artifacts — `net4sats-wizard`, `dist/`, `coverage*.out` — are all `.gitignore`d, so
+"clean" is genuine and not an artifact of ignoring new files.
 
 ## Reproduce
 
