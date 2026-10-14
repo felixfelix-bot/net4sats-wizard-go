@@ -1,5 +1,7 @@
 # net4sats wizard
 
+[![CI](https://github.com/net4sats/net4sats-wizard-go/actions/workflows/ci.yml/badge.svg)](https://github.com/net4sats/net4sats-wizard-go/actions/workflows/ci.yml)
+
 Cross-platform onboarding wizard that turns an OpenWrt router into a Bitcoin
 WiFi access point. Single Go binary — serves a web UI that auto-discovers
 routers on your LAN and deploys net4sats over SSH.
@@ -91,28 +93,85 @@ The deployment runs 9 steps over SSH:
 
 ## Verify binaries
 
+Every release asset is covered by a `SHA256SUMS` file published with the
+[release](https://github.com/net4sats/net4sats-wizard-go/releases).
+
 ```sh
-sha256sum -c SHA256SUMS
+# from the directory holding SHA256SUMS and the archive you downloaded
+sha256sum -c --ignore-missing SHA256SUMS
 ```
 
-Checksums are published with each [release](https://github.com/net4sats/net4sats-wizard-go/releases).
+On Windows, `Get-FileHash` is the equivalent check:
 
-## Build from source
+```powershell
+Get-FileHash .\net4sats-wizard_<version>_windows_amd64.zip -Algorithm SHA256
+# the printed hash must match that file's line in SHA256SUMS
+```
+
+## Building
 
 ```sh
 git clone https://github.com/net4sats/net4sats-wizard-go.git
 cd net4sats-wizard-go
 go build -o net4sats-wizard .
-./net4sats-wizard
+./net4sats-wizard --version
 ```
 
-Cross-compile for all platforms:
+`--version` prints `tollgate-wizard <version>` and exits 0 without starting the
+server. A plain `go build` leaves the version at `dev`; inject a local one with
+the same ldflags symbol the release config uses (`.goreleaser.yaml`):
+
+```sh
+go build -ldflags "-X main.version=v0.4.0" -o net4sats-wizard .
+./net4sats-wizard --version   # tollgate-wizard v0.4.0
+```
+
+Cross-compile for all platforms (no cgo — the release build sets
+`CGO_ENABLED=0`):
 
 ```sh
 GOOS=darwin  GOARCH=arm64 go build -o dist/net4sats-wizard-darwin-arm64 .
 GOOS=darwin  GOARCH=amd64 go build -o dist/net4sats-wizard-darwin-amd64 .
 GOOS=linux   GOARCH=amd64 go build -o dist/net4sats-wizard-linux-amd64 .
 GOOS=windows GOARCH=amd64 go build -o dist/net4sats-wizard-windows-amd64.exe .
+```
+
+## Testing
+
+These are the exact commands CI runs on every pull request and on every push to
+`main` (`.github/workflows/ci.yml`, two parallel jobs):
+
+```sh
+go build ./...
+go vet ./...
+go test ./... -race -count=1
+golangci-lint run
+```
+
+`golangci-lint` is pinned to **v1.61.0** in the workflow; its configuration is
+[`.golangci.yml`](.golangci.yml) at the repo root.
+
+## Releases
+
+Releases are cut from a tag. `.github/workflows/release.yml` then runs
+[goreleaser](https://goreleaser.com) with [`.goreleaser.yaml`](.goreleaser.yaml):
+
+```sh
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Each release publishes six archives — linux, windows and darwin, each on amd64
+and arm64 — named `net4sats-wizard_<version>_<os>_<arch>.tar.gz` (`.zip` on
+Windows), plus the `SHA256SUMS` checksum file that covers all six. The binary
+inside is `net4sats-wizard` (`net4sats-wizard.exe` on Windows) and reports
+itself as `tollgate-wizard <version>` from `--version`.
+
+To reproduce a release build locally, without tagging or publishing:
+
+```sh
+goreleaser check
+goreleaser release --snapshot --clean   # artifacts land in dist/
 ```
 
 ## Documentation

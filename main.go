@@ -41,6 +41,25 @@ func validLightningAddress(s string) bool {
 	return lnAddrRe.MatchString(s) || lnurlRe.MatchString(s)
 }
 
+// version is the wizard build version. Release builds inject it at link time:
+//
+//	go build -ldflags "-X main.version=v0.4.0" .
+//
+// A plain `go build` (and `go test`) leaves the "dev" default. The symbol name
+// here must match the -X argument in .goreleaser.yaml:
+// TestVersionFlagInjectedViaLdflags builds a real binary with that ldflags
+// value and fails if the two drift apart.
+var version = "dev"
+
+// programName is the CLI identity reported by --version.
+const programName = "tollgate-wizard"
+
+// versionString is the single line --version prints: the program name followed
+// by the (possibly injected) build version.
+func versionString() string {
+	return programName + " " + version
+}
+
 // defaultListenAddr binds the wizard to loopback only: the deploy API
 // drives a root SSH session on the router, so a wildcard bind would let
 // any host on the LAN drive deploys against it. Operators who accept
@@ -615,6 +634,16 @@ func allRadiosUp(statusJSON string) bool {
 }
 
 func main() {
+	// --version is answered before the server binds a port, so release
+	// automation can smoke-test the binary without opening a listener.
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-version":
+			fmt.Println(versionString())
+			return
+		}
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scan", handleScan)
 	mux.HandleFunc("/api/wifi-scan", handleWifiScan)

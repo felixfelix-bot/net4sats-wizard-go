@@ -1,0 +1,55 @@
+# goreleaser configuration (v2 schema — requires goreleaser >= 2.0).
+#
+# Dry run (no tag, no publish):
+#   goreleaser check && goreleaser release --snapshot --clean
+# Real release (see .github/workflows/release.yml):
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+version: 2
+
+project_name: net4sats-wizard
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: net4sats-wizard
+    main: .
+    binary: net4sats-wizard
+    # Single static binary, no cgo: the wizard ships to routers and to
+    # operator laptops, neither of which has a C toolchain in the loop.
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    # -s -w strip the symbol table. -X injects the release version into the
+    # `version` var declared in main.go; TestVersionFlagInjectedViaLdflags
+    # builds a binary with this exact ldflags value and fails if the symbol
+    # path here drifts from the one in the source.
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: net4sats-wizard
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  # README documents `sha256sum -c SHA256SUMS`, so the emitted file name is
+  # part of the public interface and is pinned here.
+  name_template: SHA256SUMS
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot.{{ .ShortCommit }}"
