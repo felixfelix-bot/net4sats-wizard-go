@@ -187,10 +187,10 @@
     <details class="advanced">
       <summary>Advanced settings (optional)</summary>
       <div class="field">
-        <label>Dev split <span class="range-val" id="devsplit-val">10%</span></label>
-        <input type="range" id="devsplit" min="0" max="50" value="10"
+        <label>Dev split <span class="range-val" id="devsplit-val">0%</span></label>
+        <input type="range" id="devsplit" min="0" max="50" value="0"
                oninput="document.getElementById('devsplit-val').textContent=this.value+'%'">
-        <div class="hint">Share of payments routed to the net4sats developer fund. Default 10%.</div>
+        <div class="hint">Optional share of payments routed to the developer payout address (config.json profit_share). Default 0%.</div>
       </div>
       <div class="field">
         <label>Margin <span class="range-val" id="margin-val">0%</span></label>
