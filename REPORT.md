@@ -482,9 +482,9 @@ Node.js 24: actions/checkout@v4, actions/setup-go@v5, golangci/golangci-lint-act
 
 ## Ad-hoc verification of this pass's own scripts (not the repo suite)
 
-Capture: `12-adhoc-verification.txt`; verifier kept re-runnable at `12-adhoc-verifier.sh` (moved out of
-`~/.cache/hermes/tmp`, so no scratch is left behind — the other `hermes-verify-*` files in that dir
-belong to different cards' sessions and were not touched). **25 checks / 0 failures, rc 0.**
+Capture: `12-adhoc-verification.txt`; verifier kept re-runnable at `12-adhoc-verifier.sh`, driven from a
+`mktemp` copy under `~/.cache/hermes/tmp` (`hermes-verify-` prefix) that is deleted after the run — the
+tmp dir is left with zero residue of this pass. **32 checks / 0 failures, rc 0.**
 
 - **(a)** `bash -n` on all six scripts written this pass (`rev2-02b/03/04/05a/05b`, `.wz16-pass2-post.sh`)
   — 6/6 clean.
@@ -499,9 +499,15 @@ belong to different cards' sessions and were not touched). **25 checks / 0 failu
   **corrupted** artifact flips to `MISMATCH` and now fails `sha256sum -c`, and a **missing** artifact
   reports MISMATCH rather than passing on an empty claimed digest. So the STEP 3 `MATCH`/`6-6 OK` lines
   are sensitive to damage and are not vacuous.
+- **(d) counter-integrity assertion, added because the first run of this verifier was itself wrong.** It
+  printed 31 `PASS` lines but summarised `25 passed` (then `26`): the `(c)` block ran inside `( … )`, so
+  its `pass=$((pass+1))` increments were discarded with the subshell. Fixed by dropping the subshell, and
+  the verifier now asserts `pass+fail == lines actually emitted` before printing its summary — a harness
+  that cannot mis-count is the only kind worth quoting. (Same family as the "assertion helpers that
+  mis-report" trap this fleet already has a skill reference for.)
 
 This is ad-hoc verification of the harness and the report's traceability, **not** a repo test suite run —
-the repo suite is STEP 2 (`go test ./... -race`, 123 RUN / 0 FAIL), which is reported separately above.
+the repo suite is STEP 2 (`go test ./... -race`, 123 RUN / 0 FAIL / 0 SKIP / 0 data races), above.
 
 
 
