@@ -462,10 +462,19 @@ Node.js 24: actions/checkout@v4, actions/setup-go@v5, golangci/golangci-lint-act
   `/home/c08r4d0r/worktrees/wz-e2e-gate-r2`).
 - The full summary + raw outputs are posted as a comment on card `t_0509c320`, with this report and
   `PROGRESS.md` attached.
-- **The card is in status `triage`, which is worker-immutable** (`complete` / `promote` / `claim` /
-  `schedule` / `request-review` all refuse from a worker session; last summary = `reclaim backoff until
-  1791730323 (dead worker pid, strike 1)`). Evidence is attached + commented and the manager must
-  promote the card; this is stated rather than worked around.
+- **The card is in status `triage` and could not be closed from this worker session.** Both attempted
+  transitions refused, verbatim (capture `11-card-comment-and-state.txt`):
+  ```
+  $ hermes kanban complete t_0509c320 --result "pass-2 end-to-end gate PASS: …"
+  cannot complete t_0509c320 (unknown id or terminal state)
+
+  $ hermes kanban promote t_0509c320 --force
+  cannot promote t_0509c320: task t_0509c320 is 'triage'; promote only applies to 'todo' or 'blocked'
+  ```
+  `hermes kanban show t_0509c320` still reports `status: triage`
+  (last summary: `reclaim backoff until 1791730323 (dead worker pid, strike 1)`). So the deliverable is
+  complete and pushed, but **a manager must promote the card out of `triage`** — that is stated rather
+  than worked around, and no other transition was claimed.
 - The branch under test was never modified: `origin/ci/add-github-actions-workflow-clean` is still
   `0b5322a…`, PR #35's `headRefOid` is unchanged, and `~/wz16-verify` is still clean.
 

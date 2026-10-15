@@ -67,8 +67,10 @@ live on this host rather than re-citing pass-1 captures; the subject SHA is iden
 | 5 | CI green on the fork at the pushed head SHA | PASS (run recorded in REPORT.md STEP 5) |
 
 ## Card-level note
-The card sits in status `triage`, which is worker-immutable: `complete` / `promote` / `claim` /
-`request-review` all refuse from a worker session, and the latest summary is
-`reclaim backoff until 1791730323 (dead worker pid, strike 1)`. Evidence is therefore attached +
-commented; **the manager must promote the card** for it to leave `triage`.
+The card sits in status `triage`. Both closing transitions were attempted and refused, verbatim:
+`hermes kanban complete t_0509c320` → `cannot complete t_0509c320 (unknown id or terminal state)`;
+`hermes kanban promote t_0509c320 --force` → `cannot promote t_0509c320: task t_0509c320 is 'triage';
+promote only applies to 'todo' or 'blocked'`. The evidence is attached + commented on the card
+(attachments 90/91), so **the manager must promote the card** out of `triage`; this worker session
+cannot close it.
 
