@@ -1075,3 +1075,79 @@ consolidated, secrets_clean, pr_branch_naming, no_live_drift`. `secrets_clean` i
 verification pass, and the card still needs a manager promotion out of `triage`.
 
 Capture: `13-secrets-attestation.txt`. Posted as a second comment on t_0509c320.
+
+---
+
+## FINAL — all four ends re-checked after every commit of this pass
+
+### FINAL state   host: x280 c08r4d0r 2026-10-15T17:49:02+02:00
+
+=== END 1: docs branch on the fork (this pass) ===
+$ git -C /home/c08r4d0r/worktrees/wz-e2e-gate-r3 log --oneline -4
+f992c9d docs(t_0509c320): pass 3 — append §10 gate-evidence supplement (secrets attestation + ci_evidence gap)
+abc5bab docs(t_0509c320): pass 3 — record the measured gate verdicts in PROGRESS.md
+ae49ed0 docs(t_0509c320): pass 3 — append §9 post-push final state (observed SHAs)
+141d57f verify(t_0509c320): pass 3 — integration gate re-executed at 0b5322a (all gates green)
+$ local HEAD vs origin/worker-heavy/t_0509c320-r3
+f992c9d9eeb129b8397435dad884ea4ae806de1a
+f992c9d9eeb129b8397435dad884ea4ae806de1a
+0	0
+$ git -C /home/c08r4d0r/worktrees/wz-e2e-gate-r3 status --porcelain   # want empty
+porcelain_rc=0
+
+=== END 2: lane repo main (this pass's evidence) ===
+$ git -C /home/c08r4d0r/repos/net4sats-mvp-v2 log --oneline -3 origin/main
+623fc3ec docs(t_0509c320): pass 3 — append §10 gate-evidence supplement (secrets attestation + ci_evidence gap)
+2553cd76 docs(t_0509c320): pass 3 — record the measured gate verdicts in PROGRESS.md
+d2f6159e docs(t_0509c320): pass 3 — append §9 post-push final state (observed SHAs)
+  IN origin/main: 9acadc59
+  IN origin/main: d2f6159e
+  IN origin/main: 2553cd76
+  IN origin/main: 623fc3ec
+$ evidence files on origin/main: 38
+
+=== END 3: branch UNDER TEST (must be unchanged) ===
+$ git -C /home/c08r4d0r/wz16-verify status --porcelain
+porcelain_rc=0
+$ git -C /home/c08r4d0r/wz16-verify rev-parse HEAD
+0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff
+$ remote ref
+0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff
+$ gh pr view 35 ... --json state,headRefOid
+{"headRefOid":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","state":"OPEN"}
+
+=== END 4: CI for that exact SHA + the card ===
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 2
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38761913548	1m54s	2026-10-15T15:37:06Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38738030458	2m3s	2026-10-15T12:52:40Z
+$ gh run view 38761913548 --json conclusion,headSha,status
+{"conclusion":"success","headSha":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","status":"completed"}
+$ hermes kanban show t_0509c320 | head -3
+Task t_0509c320: End-to-end verify: snapshot build, --version smoke, full suite, push
+  status:    triage
+  assignee:  worker-heavy
+$ hermes kanban show t_0509c320 | grep -c 'pass 3'   # pass-3 comments on the card
+1
+$ gate_engine evaluate
+net4sats-mvp-v2/t_0509c320: tier=code verdict=block missing=['ci_evidence', 'cold_cross_family_review', 'review_published', 'consolidated', 'pr_branch_naming', 'no_live_drift']
+
+### SHA ledger for this pass (final, observed)
+
+| End | Content | SHA | Read-back |
+|---|---|---|---|
+| Fork branch `worker-heavy/t_0509c320-r3` | `PROGRESS.md` (docs) | `141d57f` | pushed |
+| | `REPORT.md` §9 post-push state | `ae49ed0` | pushed |
+| | `PROGRESS.md` measured verdicts | `abc5bab` | pushed |
+| | `REPORT.md` §10 gate supplement | `f992c9d` | **local HEAD == remote, ahead/behind `0 0`** |
+| Lane repo `main` | evidence + reports + captures | `9acadc59` → `d2f6159e` → `2553cd76` → `623fc3ec` | all four verified ancestors of `origin/main`; 38 files under `verify/t_0509c320-pass3/` |
+| Branch under test (UNCHANGED) | `ci/add-github-actions-workflow-clean` | `0b5322a` | checkout clean; PR #35 `OPEN`, `headRefOid` identical |
+| CI for that SHA | run `38761913548` | — | `conclusion=success`, `headSha=0b5322a`, `status=completed` |
+
+**The one gate item that moved:** `gate_engine evaluate` now reports
+`missing=['ci_evidence', 'cold_cross_family_review', 'review_published', 'consolidated', 'pr_branch_naming', 'no_live_drift']`
+— **`secrets_clean` is no longer missing**, i.e. the engine independently re-scanned this pass's evidence
+and accepted the attestation in §10a. The remaining items are the review pipeline's (`cold_cross_family_review`,
+`review_published`, `consolidated`), the PR's branch naming, live-drift, and the ngit-only `ci_evidence`
+predicate explained in §10b. The card is still `triage` and needs a manager promotion.
+
+Capture: `14-final-state-after-commits.txt`.
