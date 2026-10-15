@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,7 +21,9 @@ type RouterInfo struct {
 
 // discoverRouters scans the local subnet for OpenWrt routers.
 func discoverRouters() []RouterInfo {
-	var found []RouterInfo
+	// Non-nil empty slice: callers (handleScan) JSON-encode this directly, and a
+	// nil slice marshals to `null` instead of `[]`, which breaks API consumers.
+	found := []RouterInfo{}
 	seen := make(map[string]bool)
 
 	// 1. Scan ARP table for known router MACs
@@ -125,23 +127,17 @@ func probeRouter(ip string) RouterInfo {
 }
 
 func tcpProbe(ip string, port int, timeout time.Duration) bool {
-	// Handle IPv6 addresses by wrapping them in brackets
-	if strings.Contains(ip, ":") {
-		addr := fmt.Sprintf("[%s]:%d", ip, port)
-		conn, err := net.DialTimeout("tcp", addr, timeout)
-		if err != nil {
-			return false
-		}
-		conn.Close()
-		return true
-	}
-	// IPv4 addresses
-	addr := fmt.Sprintf("%s:%d", ip, port)
-	conn, err := net.DialTimeout("tcp", addr, timeout)
+	// net.JoinHostPort brackets IPv6 literals and leaves IPv4 addresses
+	// untouched, so one call site covers both families. The previous
+	// hand-rolled "%s:%d" form produced an address that only worked for
+	// IPv4 (go vet's hostport analyzer flags it).
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(port)), timeout)
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	// The probe only needs to know whether the port accepted a connection;
+	// the close error carries no actionable information.
+	_ = conn.Close()
 	return true
 }
 
@@ -151,7 +147,7 @@ func sshIdentify(ip, password string) (firmware, vendor, model string) {
 	if client == nil {
 		return
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	out := sshRun(client, "cat /etc/openwrt_release 2>/dev/null")
 	if strings.Contains(out, "OpenWrt") || strings.Contains(out, "openwrt") {

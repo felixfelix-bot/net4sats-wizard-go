@@ -146,7 +146,7 @@ func (j *Job) setStep(i int, status, detail string) {
 func handleScan(w http.ResponseWriter, r *http.Request) {
 	routers := discoverRouters()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"routers": routers})
+	_ = json.NewEncoder(w).Encode(map[string]any{"routers": routers})
 }
 
 // wifiScanRequest is the JSON body for /api/wifi-scan.
@@ -315,7 +315,7 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 502, "cannot connect to router via SSH")
 		return
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// A fresh-reset OpenWrt router ships with radios DISABLED in UCI —
 	// `iwinfo scan` would return nothing and the UI would show an empty
@@ -347,12 +347,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		ssids := parseIwinfoScan(scanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
 				"debug": truncate(scanOut, 200),
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
@@ -404,12 +404,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 			ssids := parseIwinfoScan(scanOut)
 			w.Header().Set("Content-Type", "application/json")
 			if len(ssids) == 0 {
-				json.NewEncoder(w).Encode(map[string]any{
+				_ = json.NewEncoder(w).Encode(map[string]any{
 					"ssids": ssids,
 					"debug": truncate(scanOut, 200),
 				})
 			} else {
-				json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+				_ = json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 			}
 			return
 		}
@@ -431,12 +431,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		ssids := parseIwScan(phyScanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
 				"debug": truncate(phyScanOut, 200),
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
@@ -450,12 +450,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		ssids := parseIwinfoScan(scanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
 				"debug": truncate(scanOut, 200),
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
@@ -467,12 +467,12 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 		ssids := parseIwScan(scanOut)
 		w.Header().Set("Content-Type", "application/json")
 		if len(ssids) == 0 {
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ssids": ssids,
 				"debug": truncate(scanOut, 200),
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ssids": ssids})
 		}
 		return
 	}
@@ -485,14 +485,14 @@ func handleWifiScan(w http.ResponseWriter, r *http.Request) {
 	// This catches format mismatches (new iwinfo output) and error text that
 	// slipped past the checks above.
 	if strings.TrimSpace(scanOut) != "" {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ssids": []string{},
 			"debug": truncate(scanOut, 200),
 		})
 		return
 	}
 	w.WriteHeader(500)
-	json.NewEncoder(w).Encode(map[string]any{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"error": "WiFi scan failed — no wireless interfaces found or iwinfo/iw not available. The router may have been left in a partially-configured state by a previous deployment. Try factory resetting the router.",
 		"debug": truncate(debugLog.String(), 500),
 	})
@@ -537,7 +537,7 @@ func handleDeploy(w http.ResponseWriter, r *http.Request) {
 	go runDeployment(job, req)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"job_id": jobID})
+	_ = json.NewEncoder(w).Encode(map[string]string{"job_id": jobID})
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -562,18 +562,18 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	job.mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(snapshot)
+	_ = json.NewEncoder(w).Encode(snapshot)
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(indexHTML)
+	_, _ = w.Write(indexHTML)
 }
 
 func writeError(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
 // enableWifiAndWait enables all UCI wifi-devices, starts wifi, and polls

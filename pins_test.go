@@ -210,7 +210,7 @@ func TestPinnedURLsAreLive(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s = %q: request failed: %v", name, url, err)
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1))
 
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
