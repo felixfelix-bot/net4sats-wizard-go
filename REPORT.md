@@ -8,7 +8,10 @@ Subject under test: **`0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff`**
 = `origin/ci/add-github-actions-workflow-clean` = head of **PR #35** (`net4sats/net4sats-wizard-go`)
 Toolchains: go1.24.4 (`~/wz19-audit/go/bin/go`) for builds; **go1.22.12** (CI-matching, `GOTOOLCHAIN`) for lint
 goreleaser 2.18.3 · golangci-lint 1.61.0 · gh 2.45.0
-Raw captures: **`/home/c08r4d0r/wz-captures-t_0509c320/`**
+Raw captures: **`/home/c08r4d0r/wz-captures-t_0509c320/`** (`01`…`09`, plus `10-acceptance-verification.txt` = the
+live re-verification pass, and the gate scripts)
+Copies of this report and PROGRESS for the lane: `/home/c08r4d0r/repos/net4sats-mvp-v2/REPORT.t_0509c320.md`,
+`…/PROGRESS.t_0509c320.md` (untracked, matching the sibling convention)
 
 ## VERDICT: PASS — every gate green, CI green at the pushed head SHA
 
