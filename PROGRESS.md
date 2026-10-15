@@ -53,21 +53,52 @@ evidence. The subject SHA is unchanged since pass 1.
 - Tree hygiene: `git status --porcelain` empty after the full suite (`dist/` is gitignored).
 - Status: DONE. Files touched: `PROGRESS.md`, `REPORT.md` (this worktree root, this task's branch only).
 
-## Gate status (pass 3)
+## Gate status (pass 3) — measured
 
 | # | Gate | Result |
 |---|------|--------|
-| 1 | clean tree + pushed, ahead/behind 0/0 | see REPORT.md §1 |
-| 2a | `go vet ./...` (go1.22.12) | see REPORT.md §2a |
-| 2b | `CGO_ENABLED=1 go test ./... -race -count=1` | see REPORT.md §2b |
-| 2c | `golangci-lint run` v1.61.0 | see REPORT.md §2c |
-| 2d | `goreleaser check` (v2.18.3) | see REPORT.md §2d |
-| 3 | `goreleaser release --snapshot --clean` | see REPORT.md §3 |
-| 3b | `sha256sum -c` + independent recomputes + negative controls | see REPORT.md §3 |
-| 4 | binary `--version` + manual injection | see REPORT.md §4 |
-| 5 | CI green on the fork at the pushed head SHA | see REPORT.md §5 |
+| 1 | clean tree + pushed, ahead/behind 0/0 | PASS — porcelain empty; `git push` = `Everything up-to-date`; `0	0`; remote ref == HEAD |
+| 2a | `go vet ./...` (go1.22.12) | PASS — rc 0; `gofmt -l .` no output; single module, so `./...` covers the suite |
+| 2b | `CGO_ENABLED=1 go test ./... -race -count=1` | PASS — `ok net4sats-wizard 92.390s`; 123 RUN / 0 FAIL / 0 SKIP / 0 data races |
+| 2c | `golangci-lint run` v1.61.0 | PASS — rc 0, no findings |
+| 2d | `goreleaser check` (v2.18.3) | PASS — rc 0, 1 config validated |
+| 3 | `goreleaser release --snapshot --clean` | PASS — `0.5.1-snapshot.0b5322a`, 6 archives (l/w/d × amd64/arm64) |
+| 3b | `sha256sum -c` + independent recomputes + controls | PASS — SHA256SUMS 6 lines == 6 artifacts, 6/6 OK rc 0, 3 recomputes MATCH, 1 positive + 2 negative controls |
+| 4 | binary `--version` + manual injection | PASS — `tollgate-wizard 0.5.1-snapshot.0b5322a` rc 0 (not `dev`); two manual values changed it; control = `dev` |
+| 5 | CI green on the fork at the pushed head SHA | PASS — run `38761913548` `conclusion=success`, `headSha=0b5322a…`, jobs `test` + `lint` |
+| 6 | report + card comment | PASS — comment on the card at 2026-10-15 17:45; attachments 92 (REPORT) and 93 (PROGRESS) |
+
+## Ad-hoc verification of this pass's own harness
+`rev3-90-adhoc-verify.py` re-derives every claim in REPORT.md from the capture files: **62 checks /
+0 failures / `ADHOC_VERDICT=PASS`**. Its control (`rev3-91-adhoc-control.sh`) tampers a COPY of the
+captures (flip a gate rc, rename a MATCH, flip the corrupted-artifact control, change the run conclusion,
+flip the card-refusal rc) and the same verifier then reports **5 failures** — so the checks are not
+vacuous. `bash -n` is clean on every `rev3-*.sh`. This is harness/report verification, NOT the repo suite;
+the repo suite is gate 2b. Capture: `11-adhoc-verifier-run.txt`.
+
+## Self-corrections made during this pass (both caught by the verifier above)
+1. The first checksum negative control was **vacuous**: `dd of=<glob>` did not expand the glob (it wrote
+   a literal `net4sats-wizard_*_linux_amd64.tar.gz` file), so the "corrupted" copy was intact and the
+   control printed OK. Fixed with the explicit path; the flawed attempt is preserved as
+   `05b-FIRST-ATTEMPT-broken-controls.txt` and the corrected controls are `08-checksum-controls.txt`.
+   The checksum run itself was never affected.
+2. Two status labels reported a **pipe's** exit code instead of the command's (`sha256sum -c | grep`,
+   `gh repo view | head`). Fixed by capturing the real codes (`SHA256SUM_C_REAL_RC=0`, `REPOVIEW_RC=1`,
+   `LSREMOTE_RC=128`); corrected values are in `09-gh-run-detail-and-real-rc.txt`.
+
+## Files touched by this pass
+- Worktree (branch `worker-heavy/t_0509c320-r3`, pushed to the fork): `PROGRESS.md`, `REPORT.md` —
+  commits `141d57f` then `ae49ed0`; remote read-back `0 0`.
+- Lane repo `main`: `PROGRESS.t_0509c320-pass3.md`, `REPORT.t_0509c320-pass3.md`,
+  `verify/t_0509c320-pass3/` (35 files) — commits `9acadc59` then `d2f6159e`, both in `origin/main`.
+- **No source, test, or workflow file was changed**: the branch is green at `0b5322a` as received.
 
 ## Card-level note
-The card sits in status `triage`. `complete`/`promote` are refused for a triage card from a worker
-session (verbatim output in REPORT.md §6), so evidence is attached + commented and **the manager must
-promote the card** out of `triage`.
+The card sits in status `triage`, so this worker session cannot close it — both transitions refused
+verbatim (capture `10-card-transition-attempts.txt`):
+`hermes kanban complete t_0509c320` → `cannot complete t_0509c320 (unknown id or terminal state)`;
+`hermes kanban promote t_0509c320 --force` → `cannot promote t_0509c320: task t_0509c320 is 'triage';
+promote only applies to 'todo' or 'blocked'`. Evidence is attached (92, 93) and commented, so **the
+manager must promote the card** out of `triage`. Every acceptance criterion in the card is green on the
+pushed SHA; there is no residual worker action.
+
