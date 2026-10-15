@@ -915,3 +915,68 @@ Both were caught by this pass's own verifier and fixed in the artifacts, not pap
 
 No source, test, workflow, or release-config file was touched: every gate is green at `0b5322a` as
 received. The commits on this pass's branch are documentation only (`PROGRESS.md`, `REPORT.md`).
+
+---
+
+## STEP 9 — post-push final state (all ends), observed SHAs
+
+### post-push final state   host: x280 2026-10-15T17:46:07+02:00
+
+=== A) the docs branch on the fork ===
+$ git -C /home/c08r4d0r/worktrees/wz-e2e-gate-r3 status --porcelain
+porcelain_rc=0   # empty = nothing uncommitted
+$ git -C /home/c08r4d0r/worktrees/wz-e2e-gate-r3 rev-parse HEAD  /  rev-parse origin/worker-heavy/t_0509c320-r3
+141d57fafdf884c64ce23923bb541dd181918312
+141d57fafdf884c64ce23923bb541dd181918312
+$ git -C /home/c08r4d0r/worktrees/wz-e2e-gate-r3 rev-list --left-right --count HEAD...origin/worker-heavy/t_0509c320-r3
+0	0
+
+=== B) the branch UNDER TEST is unchanged ===
+$ git -C /home/c08r4d0r/wz16-verify status --porcelain
+porcelain_rc=0
+$ git -C /home/c08r4d0r/wz16-verify rev-parse HEAD
+0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff
+$ git -C /home/c08r4d0r/wz16-verify ls-remote origin refs/heads/ci/add-github-actions-workflow-clean | cut -f1
+0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff
+$ gh pr view 35 --repo net4sats/net4sats-wizard-go --json state,headRefOid
+{"headRefOid":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","state":"OPEN"}
+
+=== C) lane repo: is this pass's commit on the remote main? ===
+$ git -C /home/c08r4d0r/repos/net4sats-mvp-v2 merge-base --is-ancestor 9acadc59 origin/main
+ancestor_rc=0   # 0 = my commit is in origin/main
+$ git -C /home/c08r4d0r/repos/net4sats-mvp-v2 ls-tree -r --name-only origin/main | grep -c verify/t_0509c320-pass3/
+32
+$ git -C /home/c08r4d0r/repos/net4sats-mvp-v2 log --oneline -3 origin/main
+22ab6da9 docs(demo-meta): record run-3 git outcome (push verified both ends; shared-tree sibling lanes noted)
+9acadc59 verify(t_0509c320): pass 3 — full integration gate re-executed; evidence + reports landed
+f9b752bd docs(demo-meta): run-3 intro_card_meta assemble+validate - both validators pass, parent-gate null reconciled, renderer consumes artifact
+
+=== D) CI at the pushed head SHA, re-read now ===
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38761913548	1m54s	2026-10-15T15:37:06Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38738030458	2m3s	2026-10-15T12:52:40Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38677575488	1m50s	2026-10-15T03:41:31Z
+
+=== E) the card comment, read back from the board ===
+27:Comments (5):
+29:  [2026-10-15 05:49] worker-heavy: ## t_0509c320 — End-to-end verify: VERDICT **PASS** (all gates green, CI green at the pushed head SHA)
+65:  [2026-10-15 14:57] worker-heavy: ## t_0509c320 — pass 2: end-to-end verify — VERDICT **PASS** (every gate re-executed live; CI green at the pushed head SHA)
+140:  [2026-10-15 17:45] worker-heavy: ## t_0509c320 — End-to-end verify (pass 3): VERDICT **PASS** — all gates re-executed live, CI green at the pushed head SHA
+$ hermes kanban show t_0509c320 | grep -c 'pass 3'
+1
+
+### Observed push SHAs (quote these, do not re-derive)
+
+| What | SHA | Remote read-back |
+|---|---|---|
+| Docs branch for this pass (`PROGRESS.md` + `REPORT.md`) | `141d57fafdf884c64ce23923bb541dd181918312` | `origin/worker-heavy/t_0509c320-r3` = `141d57f…`, ahead/behind `0 0` |
+| Lane board repo evidence commit | `9acadc59` (`verify(t_0509c320): pass 3 — …`) | ancestor of `origin/main` (rc 0); 32 files of `verify/t_0509c320-pass3/` present |
+| Branch under test (UNCHANGED) | `0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff` | `origin/ci/add-github-actions-workflow-clean` = same; PR #35 `state=OPEN`, `headRefOid` = same |
+| CI run for that SHA | `38761913548` | `conclusion=success`, `headSha=0b5322a…` |
+
+A peer session on this shared lane tree committed `22ab6da9` on top of `9acadc59` immediately after the
+push; `9acadc59` is an ancestor of `origin/main`, so this pass's evidence is intact. Card comment for
+this pass read back from the board at `2026-10-15 17:45` (5 comments total on the card). Attachments 92
+(`REPORT-t_0509c320-pass3.md`, 47708 bytes) and 93 (`PROGRESS-t_0509c320-pass3.md`).
+
+Capture: `12-final-state.txt`.
