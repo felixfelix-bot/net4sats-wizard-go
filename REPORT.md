@@ -478,5 +478,30 @@ Node.js 24: actions/checkout@v4, actions/setup-go@v5, golangci/golangci-lint-act
 - The branch under test was never modified: `origin/ci/add-github-actions-workflow-clean` is still
   `0b5322a…`, PR #35's `headRefOid` is unchanged, and `~/wz16-verify` is still clean.
 
+---
+
+## Ad-hoc verification of this pass's own scripts (not the repo suite)
+
+Capture: `12-adhoc-verification.txt`; verifier kept re-runnable at `12-adhoc-verifier.sh` (moved out of
+`~/.cache/hermes/tmp`, so no scratch is left behind — the other `hermes-verify-*` files in that dir
+belong to different cards' sessions and were not touched). **25 checks / 0 failures, rc 0.**
+
+- **(a)** `bash -n` on all six scripts written this pass (`rev2-02b/03/04/05a/05b`, `.wz16-pass2-post.sh`)
+  — 6/6 clean.
+- **(b)** every quantitative claim in this report was re-asserted against its capture file by fixed-string
+  grep: `VET_RC=0`, `LINT_RC=0`, `TEST_RC=0`, `1 configuration file(s) validated`,
+  `data races : 0`, `archives : 6`, `SHA256SUMS lines : 6`, `SHA256SUM_C_RC=0`, `=> MATCH`,
+  `tollgate-wizard 0.5.1-snapshot.0b5322a`, `tollgate-wizard dev`, `HTTP 404: Not Found`,
+  `poll 9: completed success`, `ok  net4sats-wizard 82.644s`, the head SHA, and the card comment line —
+  18/18 present. (Quotes in this report are therefore traceable to raw captures, not retyped.)
+- **(c)** negative control for the checksum-comparison logic used in STEP 3, on a synthetic fixture of
+  two random 4 KiB "artifacts": the intact fixture reads `MATCH` and passes `sha256sum -c` (rc 0), a
+  **corrupted** artifact flips to `MISMATCH` and now fails `sha256sum -c`, and a **missing** artifact
+  reports MISMATCH rather than passing on an empty claimed digest. So the STEP 3 `MATCH`/`6-6 OK` lines
+  are sensitive to damage and are not vacuous.
+
+This is ad-hoc verification of the harness and the report's traceability, **not** a repo test suite run —
+the repo suite is STEP 2 (`go test ./... -race`, 123 RUN / 0 FAIL), which is reported separately above.
+
 
 

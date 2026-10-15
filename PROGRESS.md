@@ -66,6 +66,12 @@ live on this host rather than re-citing pass-1 captures; the subject SHA is iden
 | 4 | binary `--version` + manual injection | PASS (`tollgate-wizard 0.5.1-snapshot.0b5322a` rc 0) |
 | 5 | CI green on the fork at the pushed head SHA | PASS (run recorded in REPORT.md STEP 5) |
 
+## Ad-hoc self-verification (this pass's own harness)
+`12-adhoc-verifier.sh` (kept in the captures dir) → **25 checks / 0 failures, rc 0**: `bash -n` clean on
+all six scripts; 18/18 report claims re-grepped against their capture files; and a negative control on
+the checksum-comparison logic (corrupted + missing artifacts flip to MISMATCH) proving STEP 3's `MATCH`
+lines are not vacuous. This is harness/report verification, NOT the repo suite — the repo suite is gate 2b.
+
 ## Card-level note
 The card sits in status `triage`. Both closing transitions were attempted and refused, verbatim:
 `hermes kanban complete t_0509c320` → `cannot complete t_0509c320 (unknown id or terminal state)`;
