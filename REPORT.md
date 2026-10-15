@@ -510,22 +510,53 @@ and the per-step JSON, which shows the CI jobs really ran the mandated commands:
 
 ## Final state — pushed, clean
 
+Capture: `09-final-state.txt` (re-run after the REPORT push).
+
 ```
+### worktree: /home/c08r4d0r/worktrees/wz-e2e-gate  (branch worker-heavy/t_0509c320)
+
 $ git status
 On branch worker-heavy/t_0509c320
 Your branch is up to date with 'origin/worker-heavy/t_0509c320'.
 
 nothing to commit, working tree clean
 
-$ git status --porcelain          # no output = clean
+$ git status --porcelain
+porcelain_rc=0      # no output = clean
+
+$ git log --oneline -3
+418a260 docs(t_0509c320): full e2e verification REPORT (suite 123/123, snapshot 6/6, checksums, --version, CI green)
+05902b2 docs(t_0509c320): PROGRESS — e2e gate findings (repo alias, fork-only CI, lint toolchain) at 0b5322a
+0b5322a feat(release): link-time version injection, --version, goreleaser config and release docs
+
+$ git push
+Everything up-to-date
+push_rc=0
+
 $ git rev-list --left-right --count HEAD...origin/worker-heavy/t_0509c320
 0	0
+
 $ git ls-remote origin refs/heads/worker-heavy/t_0509c320
-<tip-sha>	refs/heads/worker-heavy/t_0509c320
+418a2602394a7645b40c4183b68da5c3cfc9dc02	refs/heads/worker-heavy/t_0509c320
+
+$ git rev-parse HEAD
+418a2602394a7645b40c4183b68da5c3cfc9dc02
+
+### the branch under test must still be byte-identical to 0b5322a:
+$ git ls-remote origin refs/heads/ci/add-github-actions-workflow-clean
+0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff	refs/heads/ci/add-github-actions-workflow-clean
+
+$ git -C /home/c08r4d0r/wz16-verify status --porcelain   (clone of the branch under test)
+clone_porcelain_rc=0   # no output = the PR head tree was never touched
+
+$ gh pr view 35 --repo net4sats/net4sats-wizard-go --json state,headRefOid
+{"headRefOid":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","state":"OPEN"}
 ```
 
 Both docs commits are pushed to the fork (`felixfelix-bot/net4sats-wizard-go`):
-`PROGRESS.md` at `05902b2`, `REPORT.md` in the following commit on the same branch.
+`PROGRESS.md` at `05902b2`, `REPORT.md` at `418a260` (remote `ls-remote` confirms the same sha, ahead/behind `0 0`).
+This final-state paragraph itself lands in a trailing `docs(t_0509c320): final-state capture` commit on the
+same branch.
 
 The branch under test was **not** modified: `origin/ci/add-github-actions-workflow-clean` is still
 `0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff`, so PR #35's head is byte-identical to the reviewed sha.
