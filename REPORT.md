@@ -980,3 +980,98 @@ this pass read back from the board at `2026-10-15 17:45` (5 comments total on th
 (`REPORT-t_0509c320-pass3.md`, 47708 bytes) and 93 (`PROGRESS-t_0509c320-pass3.md`).
 
 Capture: `12-final-state.txt`.
+
+---
+
+## STEP 10 — gate-evidence supplement for the fleet gate engine
+
+### 10a — `secrets_clean`: attested with the gate's own scanner
+
+### scan_secrets from /home/c08r4d0r/.hermes/scripts/gate_engine.py
+### targets: 40 files (this pass's evidence only; not the whole repo)
+  clean lane-evidence:00-worktree-registration.txt
+  clean lane-evidence:01-clean-tree-and-push.txt
+  clean lane-evidence:02a-vet-gofmt-module-shape.txt
+  clean lane-evidence:02c-golangci-lint.txt
+  clean lane-evidence:02d-goreleaser-check.txt
+  clean lane-evidence:03-test-race.txt
+  clean lane-evidence:04-test-race-summary.txt
+  clean lane-evidence:04-test-race-verbose.log
+  clean lane-evidence:05-goreleaser-snapshot.txt
+  clean lane-evidence:05b-FIRST-ATTEMPT-broken-controls.txt
+  clean lane-evidence:05b-artifacts-and-checksums.txt
+  clean lane-evidence:06-version-smoke.txt
+  clean lane-evidence:06b-version-injection-change.txt
+  clean lane-evidence:06c-plain-build-no-flag.txt
+  clean lane-evidence:07-gh-run-list-and-detail.txt
+  clean lane-evidence:08-checksum-controls.txt
+  clean lane-evidence:09-gh-run-detail-and-real-rc.txt
+  clean lane-evidence:09b-run-log-gate-lines.txt
+  clean lane-evidence:10-card-transition-attempts.txt
+  clean lane-evidence:11-adhoc-verifier-run.txt
+  clean lane-evidence:12-final-state.txt
+  clean lane-evidence:rev3-01-clean-tree-and-push.sh
+  clean lane-evidence:rev3-02-vet-lint-check.sh
+  clean lane-evidence:rev3-02b-test-race.sh
+  clean lane-evidence:rev3-03-snapshot.sh
+  clean lane-evidence:rev3-03b-negative-controls.sh
+  clean lane-evidence:rev3-03c-inventory-and-checksums.sh
+  clean lane-evidence:rev3-04-binary-smoke.sh
+  clean lane-evidence:rev3-05-gha-proof.sh
+  clean lane-evidence:rev3-05b-gha-detail.sh
+  clean lane-evidence:rev3-12-final-state.sh
+  clean lane-evidence:rev3-90-adhoc-verify.py
+  clean lane-evidence:rev3-91-adhoc-control.sh
+  clean lane-evidence:rev3-92-make-report.py
+  clean lane-evidence:rev3-card-comment.md
+  clean lane:PROGRESS.t_0509c320-pass3.md
+  clean lane:REPORT.t_0509c320-pass3.md
+  clean worktree docs (this pass):PROGRESS.md
+  clean worktree docs (this pass):REPORT.md
+  clean card-comment:rev3-card-comment.md
+
+files_scanned=40  total_hits=0
+secret-scan: clean (regex fallback)
+
+gitleaks is not installed on x280 (`which gitleaks` → `command not found`), so the attestation uses the
+`(regex fallback)` spelling, which `gate_engine.RE_SECRET_TOOL` accepts. The scanner is
+`gate_engine.scan_secrets` **imported from the engine itself** (not a re-implementation), so the gate's
+independent re-scan runs the same detectors. 40 evidence files, 0 hits, `ATTEST_RC=0`.
+
+### 10b — `ci_evidence`: the engine's verifier reads ngit CI, not GitHub Actions
+
+```
+$ python3 ~/.hermes/scripts/ngit_ci_evidence.py felixfelix-bot/net4sats-wizard-go \
+    --commit 0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff --json --require-conclusion --timeout 60
+warning: nak req exited 2 but returned events; continuing
+no kind-9842 CI results found for repo=felixfelix-bot/net4sats-wizard-go commit=0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff (408 event(s) scanned from wss://relay.ngit.dev, wss://gitnostr.com)
+[]
+CI_EVIDENCE_RC=0
+
+$ python3 ~/.hermes/scripts/gate_engine.py evaluate --board net4sats-mvp-v2 --task t_0509c320
+net4sats-mvp-v2/t_0509c320: tier=code verdict=block missing=['ci_evidence', 'cold_cross_family_review', 'review_published', 'consolidated', 'secrets_clean', 'pr_branch_naming', 'no_live_drift']
+gate_engine_rc=0
+```
+
+`ngit_ci_evidence.py` reads **kind-9842 CI-result events from Nostr relays** ("no kind-9842 CI results
+found … 408 event(s) scanned"); this repository's CI runs on **GitHub Actions**, which publishes no such
+events. The gate's `ci_evidence` predicate is therefore unsatisfiable for this card as configured — that
+is a **predicate/tooling gap, not missing CI**, since the GitHub run is green at the exact head SHA (see
+§5 and the run re-read in §9). I deliberately did **not** post the canonical
+`ci_evidence repo=… head=… ref=…` line as satisfied: the engine parses that line and then invokes the
+verifier, which returns `no_results`, so claiming it would assert something the tool cannot confirm.
+
+**Decision for the manager** (not a worker action): either apply an audited scope override / GitHub-CI
+evidence form for this card, or require CI results to be published as kind-9842 events (ngit CI) before
+`ci_evidence` can pass here.
+
+### 10c — what remains genuinely outside a verification pass
+
+From the engine's own evaluation, `missing` = `ci_evidence, cold_cross_family_review, review_published,
+consolidated, secrets_clean, pr_branch_naming, no_live_drift`. `secrets_clean` is now attested (§10a);
+`cold_cross_family_review` / `review_published` / `consolidated` belong to the review pipeline;
+`no_live_drift` and `pr_branch_naming` are properties of the reviewed PR (its branch is
+`ci/add-github-actions-workflow-clean`, not a `pr/<slug>` name). None of these is producible by a
+verification pass, and the card still needs a manager promotion out of `triage`.
+
+Capture: `13-secrets-attestation.txt`. Posted as a second comment on t_0509c320.
