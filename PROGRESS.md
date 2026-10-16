@@ -1,3 +1,46 @@
+# PROGRESS — wz16 e2e integration gate (pass 5, independent re-run)
+
+Worktree root: `/home/c08r4d0r/wz16-verify` · branch `ci/add-github-actions-workflow-clean`
+Pass start: 2026-10-16T06:27:34+02:00 · host x280 · **STATUS: COMPLETE (all gates green, pushed, CI green)**
+Verified + pushed tip: **`c2af939bfe52068ab48d2eaefc550391f6cd0bb8`** (pass-4 tip was `64008dc2`; code tree identical)
+
+Supersedes the pass-4 section below. Every step was re-executed live this pass; raw captures in
+`verify/wz16-e2e-gate/pass5/`. Full report: `verify/wz16-e2e-gate/REPORT.wz16-e2e-gate-pass5.md`.
+
+## Findings (pass 5)
+
+- **F1 — the card's repo does not exist.** `gh run list --repo net4sats/tollgate-wizard-go` → `HTTP 404`;
+  `gh repo view` → "Could not resolve to a Repository". Real target: `felixfelix-bot/net4sats-wizard-go`
+  (public fork; upstream `net4sats/net4sats-wizard-go`). Reported verbatim, not substituted silently.
+- **F2 — the card's `--version` expectation is CORRECT.** `main.go:55 const programName = "tollgate-wizard"`,
+  so the required line is `tollgate-wizard <version>`. My first smoke script wrongly asserted the
+  repo-derived name and mis-reported FAIL — my bug, corrected and re-run.
+- **F3 — CI green at the exact tip.** run `38844256545` headSha == HEAD == remote SHA; lint + test success.
+- **F4 — no source change needed.** Zero `*.go`/`.goreleaser.yaml`/`.github/**` diffs across the CI range;
+  this pass's commits are docs/evidence only. No check was weakened.
+
+## Steps (all executed; captures: `/home/c08r4d0r/wz16-captures-v2/` and `verify/wz16-e2e-gate/pass5/`)
+
+| # | Gate | Result | Capture |
+|---|---|---|---|
+| 1 | clean tree + push + 0/0 | PASS (porcelain 0 lines; `0	0`; ls-remote == HEAD) | `pass5/01-clean-tree-and-push.txt` |
+| 2 | `go vet ./...` | PASS (rc 0) | `pass5/02-vet-lint-check.txt` |
+| 2 | `golangci-lint run` | PASS (rc 0, v1.61.0) | `pass5/02-vet-lint-check.txt` |
+| 2 | `goreleaser check` | PASS (config validated) | `pass5/02-vet-lint-check.txt` |
+| 2 | `go test ./... -race` | PASS (52 pass / 0 fail / 0 data race, rc 0) | `pass5/03`,`04*` |
+| 3 | `goreleaser release --snapshot --clean` | PASS (6 targets, 6 archives) | `pass5/05-goreleaser-snapshot.txt` |
+| 3 | checksum parity + `sha256sum -c` | PASS (6==6; 6/6 OK, rc 0) | `pass5/05b-artifacts-and-checksums.txt` |
+| 4 | linux/amd64 `--version` | PASS (`tollgate-wizard 0.5.1-snapshot.64008dc`, exit 0) | `pass5/06-version-smoke.txt` |
+| 4 | injection control + negative control | PASS (ldflag changes value; uninjected → `dev`) | `pass5/06-version-smoke.txt` |
+| 5 | `gh run list` CI green at tip | PASS (run 38844256545 @ `64008dc2`, lint+test success) | `pass5/07*` |
+| 5 | code-tree identity across CI range | PASS (0 code diffs) | `pass5/08-code-tree-identity.txt` |
+
+Caveat recorded: PR #29 is OPEN at `64008dc2` but `statusCheckRollup` is empty and `mergeable: CONFLICTING`,
+so CI green is proven from the workflow runs (`workflow_dispatch`), not PR check-rollup. No Windows host,
+so `Get-FileHash` was not literally run; `sha256sum -c` is the equivalent SHA-256 comparison.
+
+---
+
 # PROGRESS — wz16 e2e integration gate (t_0509c320, pass 4)
 
 Worktree root: `/home/c08r4d0r/wz16-verify` · branch `ci/add-github-actions-workflow-clean`

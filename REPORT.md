@@ -1,3 +1,25 @@
+# REPORT — wz16 e2e integration gate (pass 5, independent re-run)
+
+**Verdict: PASS — all 6 steps re-executed live; pushed; tree clean; CI green at the exact pushed tip.**
+
+- Author: worker-heavy (fleet offload) · host **x280** · 2026-10-16T06:27:34+02:00
+- Branch `ci/add-github-actions-workflow-clean` on fork `felixfelix-bot/net4sats-wizard-go`
+- Verified code tip `64008dc2cfa83f9e3679f1f40d21f186c765642d`; pushed evidence tip **`c2af939bfe52068ab48d2eaefc550391f6cd0bb8`**
+- Toolchain: go1.22.12, golangci-lint v1.61.0, goreleaser 2.x, gh authenticated as `felixfelix-bot`
+- Raw captures: `verify/wz16-e2e-gate/pass5/` (12 files) — full report `verify/wz16-e2e-gate/REPORT.wz16-e2e-gate-pass5.md`
+
+Summary of the 6 steps: (1) porcelain 0 lines, push up-to-date, ahead/behind `0	0`, ls-remote == HEAD;
+(2) `go vet` rc 0, `golangci-lint` rc 0, `goreleaser check` validated, `go test ./... -race` 52 pass/0 fail/0 race;
+(3) snapshot 6 archives (linux|windows|darwin × amd64|arm64), checksum parity 6==6, `sha256sum -c` 6/6 OK;
+(4) `--version` → `tollgate-wizard 0.5.1-snapshot.64008dc` exit 0, ldflag control changes value, uninjected → `dev`;
+(5) `gh run list` run `38844256545` headSha == HEAD, lint + test success; code tree identical across CI range.
+
+Two card-string discrepancies recorded, not silently substituted: repo `net4sats/tollgate-wizard-go` is a 404
+(real: `felixfelix-bot/net4sats-wizard-go`); the card's `--version` expectation `tollgate-wizard <version>`
+is CORRECT (`main.go:55`). No source or workflow file was changed and no check was weakened.
+
+---
+
 # REPORT — End-to-end integration gate (t_0509c320, pass 4)
 
 **Verdict: PASS — every gate re-executed live; branch pushed; CI green at the pushed head SHA.**
