@@ -47,6 +47,24 @@ Brief said "Repo: net4sats-mvp-v2"; this worktree's origin is
 `felixfelix-bot/net4sats-wizard-go`. Predecessor cards t_00ee52a3/t_53879c67 found the same
 and reported it. Loaded prior FE2b reports before working, per that finding.
 
+## FINDING 6 — a pre-existing comment on this card corrects the ASK itself. STATUS: reconciled + extended
+Comment id 29860 (author worker-tollgate, from FE2b RED baseline `t_877ad4ef`, 2026-10-12)
+reached the same verdict from the other direction and adds a fact I had not tested:
+- It probed the feed HOST namespace (feed/feeds/download.tollgate.me, blossom.net4sats.com) → all
+  NO-DNS; releases.tollgate.me resolves but index paths 404. My Finding 1 probed the RELEASE LANE
+  (FreedomTechFeed/packages) → flat assets, no index. Non-overlapping: together, no index exists
+  in either namespace.
+- It corrects the FORM: the device is apk (`apk-tools 3.0.5`), where the repositories line is a
+  full URL to `<base>/<channel>/<arch>/packages.adb`, NOT `src/gz <name> <dir>` (opkg 24.10/23.05
+  form). I verified the apk-side corollary from the release lane: packages.adb 404s at all three
+  path shapes. So the card's src/gz template is doubly wrong — wrong form AND no index of any form.
+- UNRESOLVED CONFLICT I am recording, not resolving: TARGETS.md says the MT6000 was validated as
+  **opkg/24.10.2**, while t_877ad4ef says the FE2b device is **apk/25.12.5** — but t_877ad4ef's own
+  caveat states the device it inspected was an **MT3000**, since no MT6000 was on the bench. I
+  cannot settle it (no MT6000 present; root@192.168.1.1 denies all credentials per t_53879c67).
+  Verified supporting fact: rc6 ships BOTH .apk and .ipk for this arch/target, so the release does
+  not decide the question.
+
 ## Files touched by this run
 - This worktree: `PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md` (task-scoped; root
   PROGRESS.md/REPORT.md belong to other cards and were NOT touched).

@@ -388,5 +388,88 @@ has its task records tracked and pushed to its own `worker-tollgate/<task>` bran
 that proven precedent: `git add -f`, **no `--no-verify`**, pushed to this card's own
 `worker-tollgate/t_1b1cf42f` branch. Flagged for the manager: if these reports are genuinely
 meant to be local-only, the stale exclude rule from `t_0f285464` is the thing to fix — not this
-commit, which matches the two most recent pushes on this branch family.
+Fail, which matches the two most recent pushes on this branch family.
+
+---
+
+## 10. Reconciliation with the prior finding on this card — and a correction to the ASK itself
+
+After I committed §1–§9 I found a **pre-existing comment on this same card** (`t_1b1cf42f`,
+comment id 29860, author `worker-tollgate`) referencing an earlier FE2b RED baseline
+(`t_877ad4ef`, 2026-10-12). It reached the *same* verdict by a *different* route and adds a
+fact I had not tested. Both are recorded here.
+
+### 10.1 Agreement — two independent negative proofs, from two different directions
+
+| route | examined | result |
+|---|---|---|
+| the prior card `t_877ad4ef` | feed **host namespace**: `feed.tollgate.me`, `feeds.tollgate.me`, `download.tollgate.me`, `blossom.net4sats.com` | all **NO-DNS**; `releases.tollgate.me` resolves but `/feed/.../packages.adb` and `/alpha/...` return **404** |
+| **this run** | the **release-artifact lane** `FreedomTechFeed/packages` (a different publisher, examined directly) | 26 flat assets, **no index**; every candidate index path 404 (§3.3) |
+
+These do not overlap, so together they are a stronger result than either alone: **no feed index
+exists in the host namespace or in the release-asset lane.** The prior comment's closing line —
+*"This card's own acceptance criteria ('curl -sI <url> must return 2xx') cannot be satisfied
+until one is hosted"* — is exactly what §3.3 measures from the release side.
+
+### 10.2 Correction I am adopting: `src/gz` is the wrong FORM for this device
+
+The prior card's live device evidence:
+
+- The tollgate device on the bench runs **OpenWrt 25.12.5, `apk-tools 3.0.5`**, and declares
+  `opkg: not found`.
+- Its `/etc/apk/repositories.d/distfeeds.list` contains only **full `.../packages.adb` URLs** —
+  never a bare directory base.
+- Its packages line is therefore `<base>/<channel>/<arch>/packages.adb` in
+  `/etc/apk/repositories.d/<name>.list`, **not** `src/gz <name> <dir>` (which is the
+  opkg 24.10/23.05 form in `/etc/opkg/customfeeds.conf`).
+
+I verified the apk-side corollary **from the release lane myself**, which the prior card could
+not (it had no index to look for at that publisher):
+
+```
+$ for f in packages.adb aarch64_cortex-a53/packages.adb aarch64_cortex-a53-mediatek-filogic/packages.adb; do
+    curl -s -o /dev/null -w "%{http_code}  $f\n" -L ".../releases/download/v0.6.0-rc6/$f"; done
+404  packages.adb
+404  aarch64_cortex-a53/packages.adb
+404  aarch64_cortex-a53-mediatek-filogic/packages.adb
+```
+
+So **neither** index form exists — not the opkg `Packages`/`Packages.gz` (§3.3) and not the apk
+`packages.adb` (above). The card's `src/gz` template is doubly wrong here: the form is opkg-only,
+*and* no index of either form is published.
+
+### 10.3 Unresolved conflict — which package manager does the GL-MT6000 actually use?
+
+This matters because it decides which of the two forms FE2b would eventually use, and the two
+sources disagree:
+
+- **`TARGETS.md`** (validated-by table, dated 2026-10-15, validator `c03rad0r`) says:
+  *"MT3000 (apk/25.12.5) + MT6000 (**opkg/24.10.2**) upgraded in place to `0.6.0_rc6-r1`"*.
+- **The prior card `t_877ad4ef`** says the FE2b target device is **apk** (25.12.5,
+  `apk-tools 3.0.5`) — but its own honest caveat states the device it actually inspected was a
+  **GL-MT3000** (`BOARD=glinet,gl-mt3000`, hostname `tollgate-FDE7`), because **no MT6000 was on
+  the bench** (`192.168.1.1` ping-dead, 22/80 closed). It then generalizes from the MT3000 to
+  "the FE2b target device".
+
+So the apk finding is real but was measured on the **MT3000**, not the MT6000. `TARGETS.md`
+independently claims the MT6000 is **opkg/24.10.2**. **I cannot resolve this from here** — the
+MT6000 is not on the bench and `root@192.168.1.1` denies every available credential
+(predecessor `t_53879c67`). I am recording the conflict rather than picking a side.
+
+Relevant supporting fact I did verify: **rc6 ships BOTH package formats** for this exact
+arch/target, so the release itself does not decide the question and FE2b must:
+
+```
+tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk    <- apk lane (25.12+)
+tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk    <- opkg lane (24.10)
+```
+
+### 10.4 Net effect on this card's ask
+
+Both §3 and §10 agree on the deliverable: **there is no `src/gz` line to capture**, and no
+`packages.adb` line either. The ask is unanswerable for two compounding reasons — the form is
+wrong for an apk device (§10.2), and no index is published under any form (§3.3, §10.1). The
+manager decision in §8 stands, now with a fourth option: settle the MT6000's package manager
+first (§10.3), since that determines the form a resolved feed line would take.
+
 
