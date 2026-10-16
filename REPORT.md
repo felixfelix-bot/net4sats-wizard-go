@@ -1,3 +1,253 @@
+# REPORT — t_10a913ec (re-dispatch pass 4)
+
+## Build wizard and run full go test suite green
+
+**Goal:** Prove the vendored/version-bumped wizard builds and its full test suite passes.
+**Verdict: PASS — all four card steps complete, zero test failures, zero wizard source changes required.**
+
+| | |
+|---|---|
+| Host | x280 (home `/home/c08r4d0r`) |
+| Worktree | `/home/c08r4d0r/worktrees/wizard-fix` |
+| Branch | `worker-heavy/t_10a913ec` (tip at start `188df08`, up to date with origin) |
+| Source head under test | `0b5322a` — *feat(release): link-time version injection, --version, goreleaser config and release docs* |
+| Repo | fork `felixfelix-bot/net4sats-wizard-go` (clone `/home/c08r4d0r/wz16-verify`) |
+| Toolchain | go1.24.4 linux/amd64 (`/home/c08r4d0r/wz19-audit/go/bin/go`); go.mod requires 1.22 |
+| Raw captures | `/home/c08r4d0r/wz-captures-t_10a913ec-pass4/` |
+| Date | 2026-10-16 |
+
+Pass 4 of an identical dispatch; pass-1/2/3 reports are preserved in this branch's git history
+(`a242f4b`, `a645c56`, `cb1db08`, `3ff9ae4`, `188df08`). **Every figure below was re-observed live
+in this pass**; nothing is carried forward from an earlier pass.
+
+### Which commit is under test
+
+The branch tip is `188df08`, which is docs-only. The last commit touching Go source is `0b5322a`:
+
+```
+$ git log --oneline 0b5322a..HEAD
+188df08 docs(t_10a913ec) pass-3: re-verify build + 123/123 suite green at 0b5322a
+3ff9ae4 docs(t_10a913ec) pass-2: independent re-verification — build + 123/123 suite green at 0b5322a
+cb1db08 docs(t_10a913ec): final-state capture in REPORT
+a645c56 docs(t_10a913ec): full verification REPORT (build + 123/123 suite green at 0b5322a)
+a242f4b docs(t_10a913ec): wizard build + full-suite verification PROGRESS at 0b5322a
+```
+
+---
+
+## STEP 1 — Server hygiene (port :8099)
+
+**Card premise to check first:** "there is NO `--version` flag — ANY invocation starts a server."
+This premise is **stale at this head**. `main.go:637-644` answers `--version`/`-version` *before*
+`ListenAndServe` is reached:
+
+```go
+func main() {
+	// --version is answered before the server binds a port, so release
+	// automation can smoke-test the binary without opening a listener.
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-version":
+			fmt.Println(versionString())
+			return
+		}
+	}
+```
+
+Observed first-hand:
+
+```
+$ ./net4sats-wizard --version
+tollgate-wizard dev
+rc=0
+$ ss -ltnp | grep ':8099'      # no listener opened by --version
+(no output)
+```
+
+The full port-8099 hygiene was performed anyway, as the card requires.
+
+### :8099 BEFORE
+
+`pkill -x net4sats-wizard` returned **rc=0 on the first call** — i.e. a stale wizard process *was*
+live on this host and was killed by this pass (pass 3 found none; this is a genuine difference, not
+a carried-over claim). A second `pkill` returned rc=1 (nothing left), and `pgrep -ax net4sats-wizard`
+returned rc=1 (gone).
+
+```
+$ ss -ltnp        # BEFORE (no :8099 entry; grep -c ':8099' == 0)
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                      
+LISTEN 0      5                 0.0.0.0:9100       0.0.0.0:*    users:(("python3",pid=1243,fd=3))           
+LISTEN 0      4096              0.0.0.0:631        0.0.0.0:*                                                
+LISTEN 0      5                 0.0.0.0:8899       0.0.0.0:*    users:(("python3",pid=807504,fd=3))         
+LISTEN 0      4096              0.0.0.0:22         0.0.0.0:*                                                
+LISTEN 0      128               0.0.0.0:8443       0.0.0.0:*                                                
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*                                                
+LISTEN 0      4096              0.0.0.0:18081      0.0.0.0:*                                                
+LISTEN 0      511             127.0.0.1:8898       0.0.0.0:*    users:(("node-MainThread",pid=820004,fd=21))
+LISTEN 0      1024            127.0.0.1:8388       0.0.0.0:*                                                
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*                                                
+LISTEN 0      5                       *:9099             *:*    users:(("socat",pid=1244,fd=5))             
+LISTEN 0      4096                 [::]:631           [::]:*                                                
+LISTEN 0      1024                [::1]:8388          [::]:*                                                
+LISTEN 0      4096                 [::]:22            [::]:*                                                
+LISTEN 0      50     [::ffff:127.0.0.1]:8080             *:*    users:(("java",pid=1245,fd=66))             
+```
+
+### :8099 DURING (one-shot server)
+
+The built binary was launched as a tracked background process (no `nohup`/`&` wrapper):
+
+```
+$ ./net4sats-wizard
+net4sats wizard running on http://127.0.0.1:8099
+Open this URL in your browser to set up a router.
+To serve on other interfaces, set WIZARD_BIND (e.g. WIZARD_BIND=0.0.0.0:8099).
+```
+
+```
+$ ss -ltnp | grep ':8099'
+LISTEN 0      4096            127.0.0.1:8099       0.0.0.0:*    users:(("net4sats-wizard",pid=3020475,fd=3))
+```
+
+```
+$ curl -s -o /dev/null -w 'GET / -> %{http_code}\n' http://127.0.0.1:8099/
+GET / -> 200
+```
+
+Note: the server binds **127.0.0.1** (loopback), the hardening from `cc9f94c` — confirmed by the
+`Local Address:Port` column above, not `0.0.0.0`.
+
+### :8099 AFTER
+
+```
+$ pkill -x net4sats-wizard    # rc=0
+$ pgrep -ax net4sats-wizard   # rc=1 (gone)
+$ ss -ltnp        # AFTER (grep -c ':8099' == 0)
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                      
+LISTEN 0      5                 0.0.0.0:9100       0.0.0.0:*    users:(("python3",pid=1243,fd=3))           
+LISTEN 0      4096              0.0.0.0:631        0.0.0.0:*                                                
+LISTEN 0      5                 0.0.0.0:8899       0.0.0.0:*    users:(("python3",pid=807504,fd=3))         
+LISTEN 0      4096              0.0.0.0:22         0.0.0.0:*                                                
+LISTEN 0      128               0.0.0.0:8443       0.0.0.0:*                                                
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*                                                
+LISTEN 0      4096              0.0.0.0:18081      0.0.0.0:*                                                
+LISTEN 0      511             127.0.0.1:8898       0.0.0.0:*    users:(("node-MainThread",pid=820004,fd=21))
+LISTEN 0      1024            127.0.0.1:8388       0.0.0.0:*                                                
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*                                                
+LISTEN 0      5                       *:9099             *:*    users:(("socat",pid=1244,fd=5))             
+LISTEN 0      4096                 [::]:631           [::]:*                                                
+LISTEN 0      1024                [::1]:8388          [::]:*                                                
+LISTEN 0      4096                 [::]:22            [::]:*                                                
+LISTEN 0      50     [::ffff:127.0.0.1]:8080             *:*    users:(("java",pid=1245,fd=66))             
+```
+
+**Port :8099 is free before and after; no listener survives this pass.**
+
+---
+
+## STEP 2 — `go build -buildvcs=false`
+
+```
+$ go build -buildvcs=false
+$ echo $?
+0
+```
+
+rc=0 with **no compiler output** (the captured `build.txt` is empty). Artifact:
+
+```
+$ ls -l net4sats-wizard
+-rwxrwxr-x 1 c08r4d0r c08r4d0r 15690826 Oct 16 08:07 net4sats-wizard
+$ sha256sum net4sats-wizard
+28ef640cd7ad74d0a7cd9497b7f3739261e473abe6fb5e450494f1c481da4bdc  net4sats-wizard
+```
+
+This sha256 is **byte-identical to pass 2's** binary — the build is reproducible across passes.
+
+---
+
+## STEP 3 — Full `go test ./...`
+
+```
+$ go test ./...
+ok  	net4sats-wizard	91.866s
+$ echo $?
+0
+```
+
+Verbose run for per-test evidence:
+
+```
+$ go test -v ./...
+...
+PASS
+ok  	net4sats-wizard	57.727s
+```
+
+Counts parsed from the verbose capture:
+
+| metric | count |
+|---|---|
+| `=== RUN` (incl. subtests) | **123** |
+| `--- PASS` (top-level) | **52** |
+| `--- FAIL` | **0** |
+| `--- SKIP` | **0** |
+
+**Zero failures.** No test failure was caused by the vendored asset / version bump, so no wizard
+fix was required and none was made. The hardening (`cc9f94c`) was neither reverted nor touched.
+
+---
+
+## STEP 4 — Leave the pre-existing vet/gofmt state untouched
+
+At this head there is nothing to leave untouched — the lint commit `7ceade3` already cleaned both:
+
+```
+$ go vet ./...
+$ echo $?
+0                      # empty output, no IPv6 warning present at this head
+$ gofmt -l .
+$ echo $?              # zero lines listed, no drift present at this head
+0
+```
+
+Verified clean; **nothing was "fixed"**, and no file was reformatted. This is an observation about
+this head, not a claim that the card's warning was ever fixed by this pass.
+
+---
+
+## GOAL evidence — the vendored portal is really inside the binary
+
+The wizard embeds the vendored bundle with `//go:embed all:portal` and `//go:embed all:admin`
+(`embed.go`). Byte-for-byte presence of every embedded file inside the built 15,690,826-byte
+binary was re-checked first-hand this pass:
+
+| tree | files | bytes | present in binary |
+|---|---|---|---|
+| `portal/` | 25 | 4,250,775 | **25/25, none missing** |
+| `admin/` | 27 | — | **27/27, none missing** |
+| `index.html` | 1 | 19,976 | embedded (and served live for `GET /` → 200) |
+
+Specific vendored artifacts confirmed embedded: `portal/assets/splash-Be2Pt9NX.js` (208,725 B) and
+`portal/assets/splash-D7WaP2L-.css` (14,045 B).
+
+One correction to a naive probe: `GET /assets/<bundle>.js` returns **index.html** (sha256
+`e83a518a...406f`, identical to on-disk `index.html`), because the wizard's only route is the `/`
+catch-all (`main.go:648-652`) — the portal bundle is deployed to the *router's* uhttpd docroot, not
+served by this Go server. The embed proof is therefore the in-binary byte comparison above, not an
+HTTP fetch of `/assets/...`.
+
+---
+
+## Conclusion
+
+**PASS.** The vendored/version-bumped wizard (`0b5322a`) builds clean with `-buildvcs=false`, its
+full `go test ./...` suite passes with 123 tests run and 0 failures / 0 skips, port :8099 is free
+before and after, and the embedded vendored portal is present byte-for-byte in the binary.
+**No wizard source change was necessary.** Tree clean at the end.
+
+---
+
 # REPORT — t_10a913ec (re-dispatch pass 3)
 
 ## Build wizard and run full go test suite green
