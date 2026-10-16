@@ -1,0 +1,88 @@
+### host: CobradorWave  date: 2026-10-16T15:38:11Z
+
+### TCP reachability (cobrador -> 192.168.1.1)
+OPEN   192.168.1.1:22
+OPEN   192.168.1.1:80
+OPEN   192.168.1.1:2121
+OPEN   192.168.1.1:2050
+OPEN   192.168.1.1:8080
+
+### SSH banner
+SSH-2.0-dropbear
+
+### stored known_hosts key for 192.168.1.1
+
+### LIVE host key
+192.168.1.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHVQW4eljQFAE6fvIU/fzFZxX+JDz6xW9Pad5y2X8+hl
+256 SHA256:323HdkO6Ys6FKMLRb53HHDpXR36ZhJWR2ANA3V5mdWU 192.168.1.1 (ED25519)
+
+### AUTH METHOD 1 — key, BatchMode (strict host key)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+
+### AUTH METHOD 2 — key, BatchMode, host key checking disabled
+Warning: Permanently added '192.168.1.1' (ED25519) to the list of known hosts.
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+
+### AUTH METHOD 3 — empty password, key auth disabled
+Warning: Permanently added '192.168.1.1' (ED25519) to the list of known hosts.
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+
+### AUTH METHOD 4 — lab default password 'tollgate', key auth disabled
+Warning: Permanently added '192.168.1.1' (ED25519) to the list of known hosts.
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+
+### keys available to cobrador
+total 276
+drwx------ 2 c03rad0r c03rad0r  4096 Oct  8 06:06 agent
+-rw------- 1 c03rad0r c03rad0r  1971 Oct 11 22:44 authorized_keys
+drwxrwxr-x 2 c03rad0r c03rad0r  4096 Sep 11 11:07 cm
+-rw------- 1 c03rad0r c03rad0r  3193 Oct 15 12:17 config
+-rw------- 1 c03rad0r c03rad0r  1144 Sep 30 10:08 config.bak-20261007T110532
+-rw------- 1 c03rad0r c03rad0r  1142 Oct  7 11:05 config.bak-20261008-205420
+-rw------- 1 c03rad0r c03rad0r  1322 Oct  8 20:54 config.bak-20261008-lan
+-rw------- 1 c03rad0r c03rad0r   419 Sep 20 16:32 geniux_ed25519
+-rw-r--r-- 1 c03rad0r c03rad0r   107 Sep 20 16:32 geniux_ed25519.pub
+-rw------- 1 c03rad0r c03rad0r   411 Jul  3 10:05 id_dq05
+-rw-r--r-- 1 c03rad0r c03rad0r   103 Jul  3 10:05 id_dq05.pub
+-rw------- 1 c03rad0r c03rad0r   419 Feb 15  2026 id_ed25519
+-rw-r--r-- 1 c03rad0r c03rad0r   110 Feb 15  2026 id_ed25519.pub
+-rw------- 1 c03rad0r c03rad0r   419 Oct 15 22:13 id_ephemeral_buildbox
+-rw-r--r-- 1 c03rad0r c03rad0r   106 Oct 15 22:13 id_ephemeral_buildbox.pub
+-rw------- 1 c03rad0r c03rad0r   411 Sep 28 00:13 id_fleet
+-rw-r--r-- 1 c03rad0r c03rad0r    96 Sep 28 00:13 id_fleet.pub
+-rw------- 1 c03rad0r c03rad0r   419 Oct 14 20:23 id_fleet_admin
+-rw-r--r-- 1 c03rad0r c03rad0r   109 Oct 14 20:23 id_fleet_admin.pub
+-rw------- 1 c03rad0r c03rad0r   411 Sep 18 00:39 id_hermes_vps
+-rw-r--r-- 1 c03rad0r c03rad0r    98 Sep 18 00:39 id_hermes_vps.pub
+-rw------- 1 c03rad0r c03rad0r   444 Aug 11 12:41 id_preview_deploy
+-rw-r--r-- 1 c03rad0r c03rad0r   127 Aug 11 12:41 id_preview_deploy.pub
+-rw------- 1 c03rad0r c03rad0r  3389 Jul  6 14:53 id_rsa
+-rw-r--r-- 1 c03rad0r c03rad0r   747 Jul  6 14:53 id_rsa.pub
+-rw------- 1 c03rad0r c03rad0r   444 Sep 23 16:36 id_tollgate_router
+-rw-r--r-- 1 c03rad0r c03rad0r   127 Sep 23 16:36 id_tollgate_router.pub
+-rw------- 1 c03rad0r c03rad0r 38028 Oct 15 23:18 known_hosts
+-rw-r--r-- 1 c03rad0r c03rad0r 35006 Oct  9 23:19 known_hosts.bak-20261010-dq05fips
+-rw-r--r-- 1 c03rad0r c03rad0r 37192 Oct 15 22:23 known_hosts.old
+-rw-r--r-- 1 c03rad0r c03rad0r   142 Sep 28 08:55 known_hosts.tgbench
+-rw------- 1 c03rad0r c03rad0r  5310 Apr 10  2026 known_hosts~
+-rw-rw-r-- 1 c03rad0r c03rad0r   812 Sep 30 11:59 ks21
+lrwxrwxrwx 1 c03rad0r c03rad0r    30 Sep 23 11:13 laptop_sync -> /home/c03rad0r/.ssh/id_ed25519
+-rw------- 1 c03rad0r c03rad0r   411 Sep  7 11:31 preview_deploy_ed25519
+-rw-r--r-- 1 c03rad0r c03rad0r   102 Sep  7 11:31 preview_deploy_ed25519.pub
+-rw------- 1 c03rad0r c03rad0r   444 Sep 11 17:21 preview_vps_deploy
+-rw-r--r-- 1 c03rad0r c03rad0r   127 Sep 11 17:21 preview_vps_deploy.pub
+-rw------- 1 c03rad0r c03rad0r   411 Jun 28 21:56 remote_worker
+-rw-r--r-- 1 c03rad0r c03rad0r   103 Jun 28 21:56 remote_worker.pub
+drwxr-xr-x 2 c03rad0r c03rad0r  4096 Dec 22  2025 ssh-copy-id.UAsnWWWJw4
+-rw------- 1 c03rad0r c03rad0r   411 Feb 16  2026 tollgate
+-rw-r--r-- 1 c03rad0r c03rad0r   103 Feb 16  2026 tollgate.pub
+### PROBE_DONE

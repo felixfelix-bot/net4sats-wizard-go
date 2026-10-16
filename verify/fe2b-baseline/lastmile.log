@@ -1,0 +1,45 @@
+### running ssh processes (may include a live root@192.168.1.1 session)
+c03rad0r 1150195       1  0 16:55 ?        00:00:00 sshpass -p  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o PreferredAuthentications=password root@192.168.1.1  cd /tmp FILE=tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk apk update 2>&1 | tail -2 echo === installing === apk add --allow-untrusted --force-overwrite /tmp/$FILE 2>&1 | tail -8 echo === installed? ===; apk list -I 2>/dev/null | grep tollgate-wrt 
+c03rad0r 1150196 1150195  0 16:55 pts/0    00:00:00 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o PreferredAuthentications=password root@192.168.1.1  cd /tmp FILE=tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk apk update 2>&1 | tail -2 echo === installing === apk add --allow-untrusted --force-overwrite /tmp/$FILE 2>&1 | tail -8 echo === installed? ===; apk list -I 2>/dev/null | grep tollgate-wrt 
+
+### control sockets present
+/home/c03rad0r/.ssh/cm:
+total 8
+drwxrwxr-x 2 c03rad0r c03rad0r 4096 Sep 11 11:07 .
+drwx------ 5 c03rad0r c03rad0r 4096 Oct 15 23:18 ..
+(none)
+
+### tmux / screen sessions that may hold a router shell (read-only listing)
+error connecting to /tmp/tmux-1001/default (No such file or directory)
+No Sockets found in /run/screen/S-c03rad0r.
+
+
+### established TCP connections to the router
+ESTAB      0      0                                   192.168.1.106:49798                               192.168.1.1:22    users:(("ssh",pid=1150196,fd=3))        
+
+### router :2121 API reachable WITHOUT ssh? (that would be independent evidence)
+HTTP/1.1 200 OK
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Expose-Headers: X-TollGate-Client-MAC, X-TollGate-Mac-Claim-Ignored, Retry-After
+Content-Type: application/json
+Date: Fri, 16 Oct 2026 15:39:25 GMT
+Content-Length: 815
+
+{"kind":10021,"id":"7551ca8554a8c536eeaaf7b2b00203b1675d1a7ff5edc4611713fcb92d90a39a","pubkey":"6a8f7e6cbf0f47a207a6b9e8f9f109b44396aab10c522516d2c3a49cc9beaf82","created_at":0,"tags":[["metric","bytes"],["step_size","22020096"],["tips","1","2"],["price_per_step","cashu","1","sat","https://mint.coinos.io","1"],["price_per_step","cashu","1","sat","https://mint.minibits.cash/Bitcoin","1"],["price_per_step","cashu","1","sat","https://mint.macadamia.cash","1"],["price_per_step","cashu","1","sat","https://mint.westernbtc.com","1"],["price_per_step","cashu","1","sat","https://kashu.me","1"],["price_per_step","cashu","1","sat","https://mint.cubabitcoin.org","1"]],"content":"","sig":"c0f528be99ea20e391935a0d64051e557ef6817adab929318f4e34611ff9252a7dd9199b9b707b9ff092c720c05e7bfcc67ed15cb47c69f6e87ee7ac626c3510"}
+### router :2050 captive portal
+HTTP/1.1 200 OK
+Date: Fri, 16 Oct 2026 15:39:25 GMT
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 871
+
+<!DOCTYPE html>
+<html>
+
+### router :8080 (admin UI / wizard?)
+HTTP/1.1 307 Temporary Redirect
+Connection: close
+Location: https://192.168.1.1/
+
+### PROBE_DONE
