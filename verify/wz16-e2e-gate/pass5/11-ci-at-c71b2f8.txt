@@ -1,0 +1,13 @@
+### host: x280 2026-10-16T06:42:25+02:00
+### FINAL tip = HEAD = remote = c71b2f860bb51c951c4cd243586ec6cda8dcc947
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851802391	1m56s	2026-10-16T04:40:12Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851577790	1m59s	2026-10-16T04:37:28Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851358337	1m58s	2026-10-16T04:34:52Z
+
+$ gh run view 38851802391 --json conclusion,headSha,status
+{"conclusion":"success","headBranch":"ci/add-github-actions-workflow-clean","headSha":"c71b2f860bb51c951c4cd243586ec6cda8dcc947","status":"completed"}
+
+porcelain=[]
+ahead/behind=0	0

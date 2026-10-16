@@ -417,3 +417,35 @@ reviewed *code* tree is unchanged across all of these — `git diff 9c37d2e <tip
 Final state: `git status --porcelain` → 0 lines; `git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean` → `0	0`.
 
 
+
+---
+
+## Pass-5 close-out: CI green at the final pushed tip
+
+Per-tip confirmation loop (each line = a `workflow_dispatch` CI run whose `headSha` equals that tip):
+
+| tip | CI run | conclusion |
+|---|---|---|
+| `64008dc2` (pass-4 tip, code tree) | 38844256545 | success |
+| `95743c3` (pass-5 evidence) | 38851358337 | success |
+| `21ba636` | 38851577790 | success |
+| `c71b2f8` (**FINAL tip = HEAD = remote**) | 38851802391 | success |
+
+Final state, verbatim:
+
+```
+### FINAL tip = HEAD = remote = c71b2f860bb51c951c4cd243586ec6cda8dcc947
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851802391	1m56s	2026-10-16T04:40:12Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851577790	1m59s	2026-10-16T04:37:28Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851358337	1m58s	2026-10-16T04:34:52Z
+
+$ gh run view 38851802391 --json conclusion,headSha,status
+{"conclusion":"success","headBranch":"ci/add-github-actions-workflow-clean","headSha":"c71b2f860bb51c951c4cd243586ec6cda8dcc947","status":"completed"}
+
+porcelain=[]
+ahead/behind=0	0
+```
+
+Capture on disk: `verify/wz16-e2e-gate/pass5/11-ci-at-c71b2f8.txt`.
+**All six card steps pass on a pushed, clean, CI-green tip.**
