@@ -390,6 +390,44 @@ consolidation PR, is `CONFLICTING`; it is not this gate.)
 /home/c08r4d0r/wz16-verify/dist/   (snapshot artifacts, 6 archives + SHA256SUMS)
 ```
 
+## STEP 6 — ship: pushed, and CI re-confirmed at the SHIPPED tip  **PASS**
+
+The two lane-doc commits pushed the branch tip from `0b5322a` to `11c661b`, so a
+fresh CI run was dispatched and watched at the actual shipped SHA:
+
+```
+$ git push
+To https://github.com/felixfelix-bot/net4sats-wizard-go.git
+   0b5322a..11c661b  ci/add-github-actions-workflow-clean -> ci/add-github-actions-workflow-clean
+PUSH_RC=0
+$ git rev-list --left-right --count origin/ci/add-github-actions-workflow-clean...HEAD
+0	0
+$ git ls-remote origin ci/add-github-actions-workflow-clean
+11c661b253ea29cfc051ae801d6bd99238c5201f	refs/heads/ci/add-github-actions-workflow-clean
+$ git status --porcelain
+(empty)                                  <-- clean; nothing uncommitted
+
+$ gh workflow run ci.yml --ref ci/add-github-actions-workflow-clean   (DISPATCH_RC=0)
+$ gh run watch 38834487839 --exit-status
+✓ Complete job            WATCH_RC=0
+
+$ gh run view 38834487839 --repo felixfelix-bot/net4sats-wizard-go
+✓ ci/add-github-actions-workflow-clean CI #29 · 38834487839
+JOBS
+✓ lint in 14s (ID 116760430198)
+✓ test in 1m52s (ID 116760430452)
+
+# --json: conclusion=success  event=workflow_dispatch
+#   headSha=11c661b253ea29cfc051ae801d6bd99238c5201f  == local HEAD  ✓
+# test steps all success: checkout@v4 / setup-go@v5 / go build ./... /
+#                         go vet ./... / go test ./... -race -count=1
+# lint steps all success: checkout@v4 / setup-go@v5 / golangci-lint-action@v6
+```
+
+Final local HEAD == remote tip == the shipped run's `headSha` == `11c661b…`.
+
+---
+
 ## Summary
 
 | Step | Requirement | Result |
@@ -398,5 +436,8 @@ consolidation PR, is `CONFLICTING`; it is not this gate.)
 | 2 | vet, test -race, lint, goreleaser check | PASS (123 tests, 0 fail/race; all RC=0) |
 | 3 | 6 artifacts, checksums verify (2 checked) | PASS (6/6 archives, sha256sum -c all OK) |
 | 4 | `--version` = `tollgate-wizard <ver>`, not dev, RC 0 | PASS (+controls change it) |
-| 5 | CI green at pushed SHA | PASS (run 38761913548, jobs test+lint success) |
-| 6 | report with raw output, pushed | this file; committed and pushed |
+| 5 | CI green at pushed SHA | PASS (run 38761913548 @ 0b5322a, jobs test+lint success) |
+| 6 | report with raw output, pushed, CI green at shipped tip | PASS (pushed to 11c661b; run 38834487839 green) |
+
+**Gate result: PASS. Everything is pushed and CI is green — at both the commit
+under test (`0b5322a`) and the shipped tip (`11c661b`).**

@@ -24,7 +24,15 @@ Branch under test: ci/add-github-actions-workflow-clean
 Toolchain (not on default PATH): /home/c08r4d0r/wz16-tools/
   go122/bin/go = go1.22.12 ; goreleaser = 2.18.3 ; golangci-lint = 1.61.0
 
-STATUS: IN PROGRESS — steps 1-4 complete and green; 5-6 pending.
+STATUS: COMPLETE — all 6 steps executed and green; branch pushed; CI green at the
+shipped tip 11c661b253ea29cfc051ae801d6bd99238c5201f (run 38834487839, jobs
+lint+test success). No workflow change was needed (CI was never red) and none
+was made.
+
+SHIPPED TIP: 11c661b253ea29cfc051ae801d6bd99238c5201f
+  0b5322a (the CI/goreleaser/docs commit under test)
+  + 2f77f91 (lane PROGRESS)
+  + 11c661b (lane REPORT)   <- pushed, remote tip == local HEAD
 
 ## Findings -> status -> files touched
 
