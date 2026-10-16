@@ -1,0 +1,26 @@
+test: stop ambient WIZARD_BIND from deciding the loopback-default assertions
+
+TestListenAddress and TestMainFunctionStructure assert that listenAddress()
+returns the loopback default 127.0.0.1:8099. Both read the ambient environment
+first, so a caller that exports WIZARD_BIND (the documented dev-run override
+used by verification recipes that boot the wizard on another port) replaced
+"default" with the caller's bind and failed the suite:
+
+  handlers_test.go:154: listenAddress() = "127.0.0.1:8000", want "127.0.0.1:8099"
+  security_hardening_test.go:380: listenAddress() default = "127.0.0.1:8000", want 127.0.0.1:8099
+
+Pin WIZARD_BIND to unset at the top of each test (Setenv("") unsets) so the
+assertion is about listenAddress() rather than about whatever the caller
+exported. Two lines of setup per test, additive only.
+
+The tests keep their teeth: with defaultListenAddr flipped to 127.0.0.1:8000
+as a negative control, TestListenAddress still fails, and the WIZARD_BIND
+override/unset assertions below are untouched. No production behaviour changes
+— main.go is not touched, the shipped bind stays 127.0.0.1:8099.
+
+Verified:
+- WIZARD_BIND=127.0.0.1:8000 go test -run TestListenAddress|TestMainFunctionStructure -> PASS
+- CGO_ENABLED=1 go test ./... -race -count=1 -> ok net4sats-wizard 60.814s, 52 PASS, 0 FAIL, 0 DATA RACE
+- go vet ./... rc 0, gofmt -l . clean (also under the ambient WIZARD_BIND)
+- hermes verify -> ok:true (build rc 0, test rc 0, readiness 200)
+- git diff --numstat vs cb38ad3: 7 insertions, 0 deletions, test files only

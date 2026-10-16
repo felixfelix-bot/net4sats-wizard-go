@@ -376,6 +376,11 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 // TestListenAddress pins the loopback default and the WIZARD_BIND escape
 // hatch for operators who deliberately expose the wizard on the LAN.
 func TestListenAddress(t *testing.T) {
+	// This test is about listenAddress itself, not the ambient environment:
+	// pin WIZARD_BIND to unset (Setenv("") unsets) so a caller exporting it —
+	// the dev-run overrides in README/verification recipes — cannot decide
+	// what "default" means here.
+	t.Setenv("WIZARD_BIND", "")
 	if got := listenAddress(); got != "127.0.0.1:8099" {
 		t.Errorf("listenAddress() default = %q, want 127.0.0.1:8099 (loopback-only)", got)
 	}

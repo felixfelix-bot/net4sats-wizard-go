@@ -150,6 +150,8 @@ func TestMainFunctionStructure(t *testing.T) {
 	// drives a root SSH session on the router, so a wildcard bind would
 	// let any LAN host drive deploys. WIZARD_BIND overrides for operators
 	// who accept that risk (see TestListenAddress).
+	// Pin WIZARD_BIND to unset so an ambient export cannot change the default.
+	t.Setenv("WIZARD_BIND", "")
 	if listenAddress() != "127.0.0.1:8099" {
 		t.Errorf("listenAddress() = %q, want %q", listenAddress(), "127.0.0.1:8099")
 	}
