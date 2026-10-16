@@ -330,3 +330,63 @@ Three coherent paths, in the manager's court:
 
 Whichever is chosen, the feed BASE URL cannot be resolved today because no index exists to
 resolve it from.
+
+---
+
+## 9. Delivery — commit, push, and a convention conflict
+
+**Commit:** `a24779226c347fa115dec58fc230b929f10009b4` — exactly 2 files
+(`PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md`), 392 insertions, rc=0.
+Committed with an explicit pathspec (`git commit -F <msg> -- <paths>`) so the shared tree's
+sibling-card files could not be swept; the untracked `verify/wz16-e2e-gate/` belongs to another
+card and was left untouched.
+
+**Push:** `git push origin HEAD:refs/heads/worker-tollgate/t_1b1cf42f` → `* [new branch]`, rc=0.
+
+**Server-side verification** (the exit code alone is not treated as proof):
+
+```
+$ git rev-parse HEAD
+a24779226c347fa115dec58fc230b929f10009b4
+$ git ls-remote origin refs/heads/worker-tollgate/t_1b1cf42f
+a24779226c347fa115dec58fc230b929f10009b4	refs/heads/worker-tollgate/t_1b1cf42f
+$ git ls-tree --name-only origin/worker-tollgate/t_1b1cf42f -- PROGRESS-t_1b1cf42f.md REPORT-t_1b1cf42f.md
+PROGRESS-t_1b1cf42f.md
+REPORT-t_1b1cf42f.md
+```
+
+Remote tip equals local HEAD and the tree on the server-side ref contains both records.
+
+### The conflict I had to resolve to deliver at all
+
+`git add` was initially **refused** — both files are ignored by the linked worktree's
+`.git/info/exclude` (`/home/c08r4d0r/wz16-verify/.git/info/exclude`):
+
+```
+# t_0f285464 offload reports (local-only, never committed)
+/PROGRESS.md
+/REPORT.md
+/PROGRESS-t_*.md
+/REPORT-t_*.md
+```
+
+Taken at face value that rule forbids exactly the artifact the brief requires
+("write your FULL report to REPORT.md … commit AND push after each verified milestone").
+I did not resolve it by assumption. I checked the precedent on **this** worktree:
+
+```
+$ git ls-files | grep -E "PROGRESS-t_|REPORT-t_"
+PROGRESS-t_53879c67.md
+REPORT-t_53879c67.md
+$ git log --all --oneline --source -- 'REPORT-t_53879c67.md'
+24020f9  refs/remotes/origin/worker-tollgate/t_53879c67  docs(fe2b): record GL-MT6000 pre-baseline capture as BLOCKED
+5dd47e3  refs/remotes/origin/worker-tollgate/t_53879c67  docs(fe2b): record markdown-table secret-gate false positive
+```
+
+The **immediately adjacent card on this exact chain** (the GL-MT6000 FE2b card `t_53879c67`)
+has its task records tracked and pushed to its own `worker-tollgate/<task>` branch. I followed
+that proven precedent: `git add -f`, **no `--no-verify`**, pushed to this card's own
+`worker-tollgate/t_1b1cf42f` branch. Flagged for the manager: if these reports are genuinely
+meant to be local-only, the stale exclude rule from `t_0f285464` is the thing to fix — not this
+commit, which matches the two most recent pushes on this branch family.
+
