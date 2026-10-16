@@ -23,3 +23,16 @@ $ final: git status --porcelain
 PORCELAIN_LINES=0
 $ git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean
 0	0
+
+### APPENDED 2026-10-16T05:08:40+02:00: per-tip CI ledger (all green), final tip 4cee1d2
+$ gh run view 38843855025 --json conclusion,headSha,url
+{"conclusion":"success","headSha":"4cee1d2c4a9beb2bd9d77c8c644e5c8d8624a5cc","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38843855025"}
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 6
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843855025	1m58s	2026-10-16T03:06:32Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843632861	1m48s	2026-10-16T03:04:03Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843393341	1m52s	2026-10-16T03:01:14Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843145298	2m0s	2026-10-16T02:58:21Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38842920848	2m1s	2026-10-16T02:55:37Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838430526	2m1s	2026-10-16T02:03:24Z
+$ git diff --stat 9c37d2e HEAD -- ":(exclude)*.md" ":(exclude)verify/"   # empty == reviewed code unchanged
+[empty above = reviewed code tree identical to 9c37d2e]
