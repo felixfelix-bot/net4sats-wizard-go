@@ -449,3 +449,24 @@ ahead/behind=0	0
 
 Capture on disk: `verify/wz16-e2e-gate/pass5/11-ci-at-c71b2f8.txt`.
 **All six card steps pass on a pushed, clean, CI-green tip.**
+
+---
+
+## Hand-off note on the evidence-tip offset
+
+The ledger above ends at `c71b2f8`; the next pushed tip `db00314b4cde3b4f939fea653e1f50212955ceed`
+was also confirmed CI-green (`gh run list` run `38852038477`, `conclusion: success`,
+`headSha == db00314b…` == HEAD == remote).
+
+Each further evidence/docs commit necessarily shifts the tip by one commit. That does not weaken the
+result, because the **code tree is unchanged** across every one of these tips:
+
+```
+git diff --name-only <code-tip> <any-later-tip> -- '*.go' '.goreleaser.yaml' '.github/**'   # -> empty
+```
+
+So the CI-green verdict transfers: the tip is green, and the tip contains the identical `.go`,
+`.goreleaser.yaml`, and `.github/**` blobs that produced the snapshot, checksum, and `--version`
+evidence. The definitive per-tip check is always
+`gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 1 --json headSha,conclusion`
+against `git rev-parse HEAD`.
