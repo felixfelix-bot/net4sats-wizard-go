@@ -157,22 +157,31 @@ func sshDeployPortal(client *ssh.Client, fs embed.FS, rootDir string) error {
 	return nil
 }
 
-// sshDeployFS recursively deploys an embedded FS to a remote directory.
-// Works with arbitrary nesting depth (e.g. assets/icon/colour/).
+// fsDeployEntry is one planned operation in an embedded-FS deployment: the
+// absolute remote path plus, for files, the bytes to write. Directories carry
+// IsDir and no bytes (created with mkdir -p).
+type fsDeployEntry struct {
+	RemotePath string
+	IsDir      bool
+	Data       []byte
+}
+
+// planFSDeploy walks fsys under embedRoot and returns the ordered list of
+// remote operations for remoteDir, honouring the embed-relative exclude
+// list. It is pure (no SSH): this is the part of sshDeployFS that decides
+// WHAT lands on the router, so it can be regression-tested without a router
+// (see TestPortalDeployTargets).
 //
-// exclude lists embed-relative paths (e.g. "index.html") that are skipped.
-// Used when mirroring a bundle into a shared docroot so files owned by
-// another service are left alone — e.g. OpenWrt's /www/index.html is the
-// LuCI redirect page served on :8080 and must not be clobbered by a
-// portal mirror landing in /www.
-func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir string, exclude ...string) error {
+// An embed-relative path in exclude is skipped entirely (file or directory).
+// Embed paths always use "/", so remote paths are built with path.Join.
+func planFSDeploy(fsys fs.FS, embedRoot string, remoteDir string, exclude ...string) ([]fsDeployEntry, error) {
 	skip := make(map[string]bool, len(exclude))
 	for _, e := range exclude {
 		skip[e] = true
 	}
-	sshRun(client, "mkdir -p "+remoteDir)
+	var plan []fsDeployEntry
 
-	return fs.WalkDir(fsys, embedRoot, func(fullPath string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, embedRoot, func(fullPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip errors
 		}
@@ -189,16 +198,49 @@ func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir 
 			return nil
 		}
 		if d.IsDir() {
-			sshRun(client, "mkdir -p "+path.Join(remoteDir, relPath))
+			plan = append(plan, fsDeployEntry{RemotePath: path.Join(remoteDir, relPath), IsDir: true})
 			return nil
 		}
-		data, err := fsys.ReadFile(fullPath)
+		data, err := fs.ReadFile(fsys, fullPath)
 		if err != nil {
 			return nil
 		}
-		remotePath := path.Join(remoteDir, relPath)
-		return sshWriteFile(client, remotePath, data)
+		plan = append(plan, fsDeployEntry{RemotePath: path.Join(remoteDir, relPath), Data: data})
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return plan, nil
+}
+
+// sshDeployFS recursively deploys an embedded FS to a remote directory.
+// Works with arbitrary nesting depth (e.g. assets/icon/colour/).
+//
+// exclude lists embed-relative paths (e.g. "index.html") that are skipped.
+// Used when mirroring a bundle into a shared docroot so files owned by
+// another service are left alone — e.g. OpenWrt's /www/index.html is the
+// LuCI redirect page served on :8080 and must not be clobbered by a
+// portal mirror landing in /www.
+func sshDeployFS(client *ssh.Client, fsys embed.FS, embedRoot string, remoteDir string, exclude ...string) error {
+	plan, err := planFSDeploy(fsys, embedRoot, remoteDir, exclude...)
+	if err != nil {
+		return err
+	}
+
+	sshRun(client, "mkdir -p "+remoteDir)
+
+	for _, entry := range plan {
+		if entry.IsDir {
+			sshRun(client, "mkdir -p "+entry.RemotePath)
+			continue
+		}
+		if err := sshWriteFile(client, entry.RemotePath, entry.Data); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // tryDefaultKeys attempts to load the default SSH key.
