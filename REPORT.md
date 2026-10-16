@@ -375,7 +375,23 @@ $ gh run view 38842920848 --json jobs --jq '[.jobs[] | "\(.name) \(.status) \(.c
 ```
 
 So CI is green at **both** the reviewed code tip `9c37d2e` (run 38838430526) and the documentation tip
-`649d90f` (run 38842920848). Each further documentation commit is treated the same way: pushed, CI
-re-dispatched, and its own run id recorded on the card. The reviewed *code* tree is unchanged across all
-of these — `git diff 9c37d2e <tip> -- ':(exclude)*.md' -- ':(exclude)verify/'` is empty.
+`649d90f` (run 38842920848). The addendum commit moved the tip once more to `5efd948`; CI was dispatched
+again and is green there too:
+
+```
+$ gh run view 38843145298 --json conclusion,headSha,status,url
+{"conclusion":"success","headSha":"5efd9483cc11286639b132f3e0264364902097b7","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38843145298"}
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 4
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843145298	2m0s	2026-10-16T02:58:21Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38842920848	2m1s	2026-10-16T02:55:37Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838430526	2m1s	2026-10-16T02:03:24Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838000347	2m1s	2026-10-16T01:58:39Z
+```
+
+Every documentation commit is treated the same way: pushed, CI re-dispatched, its own run id recorded. The
+reviewed *code* tree is unchanged across all of these — `git diff 9c37d2e <tip> -- ':(exclude)*.md' -- ':(exclude)verify/'` is empty.
+
+Final state: `git status --porcelain` → 0 lines; `git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean` → `0	0`.
+
 
