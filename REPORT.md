@@ -1,3 +1,40 @@
+## Pass-6 — FINAL STATE (supersedes the mid-pass ledgers above)
+
+The three commits after `427e476` are evidence/ledger-only, so the ledger grew one tip at a time. This is the
+closing record; nothing later than it can exist within this pass.
+
+```
+FINAL tip = HEAD = remote = 0f0b64684c4a8abd492b52a458a230acf68e371c
+$ git status --porcelain        -> (empty)   PORCELAIN_LINES=0
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38925610942	1m52s	2026-10-16T15:38:44Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38925010980	1m57s	2026-10-16T15:34:13Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38924622381	2m0s	2026-10-16T15:31:22Z
+
+$ gh run view 38925610942 --json …
+{"id":38925610942,"sha":"0f0b64684c4a8abd492b52a458a230acf68e371c","event":"workflow_dispatch","status":"completed",
+ "conclusion":"success","jobs":[{"name":"test","conclusion":"success"},{"name":"lint","conclusion":"success"}]}
+CODE_DIFF_LINES = 0   (0f0b646 vs code tip e85720c: docs/evidence only)
+```
+
+So: **CI is green at the exact final pushed tip**, with the identical buildable source that produced the local
+suite, snapshot, checksum and `--version` evidence. Capture: `15-final-tip-ci-0f0b646.txt`.
+
+Commits this pass (all pushed):
+
+```
+0f0b646  docs(t_0509c320): pass-6 final ledger — CI 38925010980 success at 427e476
+427e476  docs(t_0509c320): pass-6 final CI ledger — run 38924533944 success at c7f4524
+c7f4524  docs(t_0509c320): pass-6 — record the CI lint flake (schema-fetch timeout) and its re-run to green
+e46f58f  docs(t_0509c320): pass-6 close-out — CI run 38923652846 success at ec84984, code tree unchanged
+ec84984  docs(t_0509c320): pass-6 e2e integration gate — steps 1-5 green at e85720c, 6/6 artifacts, CI run 38852530642
+```
+
+Card `t_0509c320`: report attached (`pass6-report.md`), comment posted. The card is in status `triage`, which worker
+sessions cannot transition — **the manager must promote it.**
+
+---
+
 ## Pass-6 FINAL LEDGER — CI green at every pushed tip of this pass
 
 | tip | CI run | conclusion |
