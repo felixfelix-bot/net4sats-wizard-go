@@ -1,324 +1,277 @@
-# REPORT — UNIT-2 / WG-3: E2E integration gate (snapshot build · --version smoke · full suite · push)
+# REPORT — t_10a913ec pass-7 (fleet offload: heavy/deepseek-v4-flash)
 
-**Verdict: ALL 6 STEPS EXECUTED WITH VERBATIM OUTPUT. Every gate PASSED. Docs committed and pushed.
-One material discrepancy against the brief (wrong repo identity in the brief) and one real repo
-defect (PR CI lane never triggers) are reported below rather than papered over.**
+## Build wizard and run full go test suite green
 
-Artifact under test: the tree holding the committed CI workflow, `.goreleaser.yaml` and docs, at
-HEAD `a6805a421e07a9c6512036a34ca1add29b1fc8ad`.
+**Goal:** Prove the vendored/version-bumped wizard builds and its full test suite passes.
+
+**Verdict: PASS — all four card steps executed and re-verified live in THIS pass.
+Zero test failures. Zero wizard source changes required. Build succeeds.**
+
+| | |
+|---|---|
+| Host | x280 (home `/home/c08r4d0r`, `whoami` = `c08r4d0r`) |
+| Worktree (actual) | `/home/c08r4d0r/worktrees/wizard-fix` |
+| Branch | `worker-heavy/t_10a913ec` |
+| Branch tip at start | `a6805a4` (a sibling session advanced it to `b939329` mid-pass; tree stayed clean) |
+| Source head under test | `0b5322a` — *feat(release): link-time version injection, --version, goreleaser config and release docs* |
+| Repo | fork `felixfelix-bot/net4sats-wizard-go` (module `net4sats-wizard`, PUBLIC) |
+| Toolchain | go1.22.12 linux/amd64 (`/usr/local/go/bin/go`); go.mod requires 1.22 |
+| Raw captures | `/home/c08r4d0r/wz-captures-heavypass/` |
+| Date | 2026-10-16 |
+
+Every figure below was re-observed live in THIS pass. Prior passes' reports are preserved in this
+branch's git history; nothing is carried forward unverified.
+
+### Which commit is under test
+
+The branch tip at start was `a6805a4`, docs-only. No Go source changed above `0b5322a`:
+
+```
+$ git log -1 --format='%h %s' -- '*.go'
+0b5322a feat(release): link-time version injection, --version, goreleaser config and release docs
+
+$ git log --oneline 0b5322a..HEAD -- '*.go'
+(empty)
+```
+
+So the source under test is byte-identical to `0b5322a` — the vendored/version-bumped head with the
+hardening intact.
+
+### Card premises that are stale on this host (disclosed, not silently worked around)
+
+1. **`WORKTREE: /home/c03rad0r/worktrees/wizard-fix` does not exist.** This host's home is
+   `/home/c08r4d0r`; `/home/c03rad0r` is the *other* fleet node's home. The worktree is registered
+   at `/home/c08r4d0r/worktrees/wizard-fix` (`git worktree list` confirms). That is where this ran.
+
+2. **"there is NO `--version` flag — ANY invocation starts a server" is stale at this head.**
+   `--version`/`-version` exists (`main.go:637-641`) and is answered *before* the listener binds;
+   `TestVersionFlagInjectedViaLdflags` in the suite asserts it. Port-8099 hygiene was performed
+   regardless, and the smoke test used a **bare (no-arg) invocation** so the real server path was
+   exercised — exactly what the card asks for.
+
+3. **STEP 4's "pre-existing `go vet` IPv6 warning + gofmt drift" do not exist at this head.**
+   `go vet ./...` exits 0 with empty output; `gofmt -l .` prints zero lines. Nothing was "fixed" —
+   and there was nothing pre-existing to leave untouched.
 
 ---
 
-## 0. Repo identity discrepancy — RESOLVED (do not skip)
-
-The brief names repo **`net4sats/tollgate-wizard-go`**. That repo **does not exist**, and no local
-tree matches it:
+## STEP 1 — Server hygiene (`ss :8099` BEFORE)
 
 ```
-$ find /home/c08r4d0r -maxdepth 4 -type d -name "*tollgate-wizard*"   → (nothing)
-$ gh repo view net4sats/tollgate-wizard-go --json nameWithOwner
-GraphQL: Could not resolve to a Repository with the name 'net4sats/tollgate-wizard-go'. (repository)
-$ gh run list --repo net4sats/tollgate-wizard-go --limit 5
-failed to get runs: HTTP 404: Not Found
+### STEP1: pkill -x net4sats-wizard
+pkill rc=1
+--- pgrep -a -x net4sats-wizard ---
+pgrep rc=1
+--- ss -ltnp (all) ---
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess
+LISTEN 0      5                 0.0.0.0:9100       0.0.0.0:*    users:(("python3",pid=1243,fd=3))
+LISTEN 0      4096              0.0.0.0:631        0.0.0.0:*
+LISTEN 0      5                 0.0.0.0:8899       0.0.0.0:*    users:(("python3",pid=807504,fd=3))
+LISTEN 0      4096              0.0.0.0:22         0.0.0.0:*
+LISTEN 0      128               0.0.0.0:8443       0.0.0.0:*
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*
+LISTEN 0      4096              0.0.0.0:18081      0.0.0.0:*
+LISTEN 0      511             127.0.0.1:8898       0.0.0.0:*    users:(("node-MainThread",pid=820004,fd=21))
+LISTEN 0      1024            127.0.0.1:8388       0.0.0.0:*
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*
+LISTEN 0      5                       *:9099             *:*    users:(("socat",pid=1244,fd=5))
+LISTEN 0      4096                 [::]:631           [::]:*
+LISTEN 0      1024                [::1]:8388          [::]:*
+LISTEN 0      4096                 [::]:22            [::]:*
+LISTEN 0      50     [::ffff:127.0.0.1]:8080             *:*    users:(("java",pid=1245,fd=66))
+--- ss -ltnp | grep 8099 ---
+grep8099 rc=1
 ```
 
-The real repository is **`felixfelix-bot/net4sats-wizard-go`** (module `net4sats-wizard`, PUBLIC,
-fork). It is the only tree carrying the brief's post-conditions (CI workflow + goreleaser config +
-docs committed), so it is the correct object of this gate. Full command evidence:
-`/home/c08r4d0r/wz19-audit/ev/UNIT2-WG3-evidence.md`.
-
-Two further notes on the identity, both mine to flag before a cold reviewer finds them:
-
-- The task title says `--version` prints `tollgate-wizard <version>` while the *project* is
-  `net4sats-wizard`. This is **correct and intended**, not a rename slip: `main.go:55` declares
-  `const programName = "tollgate-wizard"` as the CLI identity, and `.goreleaser.yaml:9` sets
-  `project_name: net4sats-wizard` for the artifact/dist naming. The binary's `--version` line and
-  the archive names are therefore *deliberately* different strings.
-- The sibling worktree `~/worktrees/wizard-pr-prep` shares the same `origin` but sits on an older
-  branch (`wz14-debrand`, b64555a) with **no** `.github/workflows/` or `.goreleaser.yaml` at HEAD.
-  It was checked and rejected as the target; it was **not** modified.
-
-**Environment / toolchain**
-
-```
-go version go1.22.12 linux/amd64          # == go.mod `go 1.22`
-goreleaser 2.18.3 (go 1.27.1)             # ~/wz16-tools/goreleaser
-golangci-lint 1.61.0 (go1.23.1)           # == .github/workflows/ci.yml pinned v1.61.0
-gh 2.45.0, authenticated as felixfelix-bot
-find . -name go.mod -not -path './.git/*' | wc -l   → 1
-```
-
-**Module count = 1.** `./...` expansion therefore covers the *entire* repo — the multi-module
-vacuity trap (a green `./...` covering one package of sixteen) does **not** apply here, and no
-per-module matrix is required.
+`pkill -x net4sats-wizard` rc=1 and `pgrep -a -x` rc=1 — no wizard process existed to kill.
+`:8099` had **no listener** (grep rc=1 = FREE). Raw: `wz-captures-heavypass/01-server-hygiene-before.txt`.
 
 ---
 
-## STEP 1 — Clean tree check + push state  →  PASS
+## STEP 2 — `go build -buildvcs=false`
 
 ```
-$ git status --porcelain
-(empty, 0 lines)                                   exit=0
+### go version
+go version go1.22.12 linux/amd64
+### go.mod
+module net4sats-wizard
 
-$ git branch -vv
-* worker-heavy/t_10a913ec a6805a4 [origin/worker-heavy/t_10a913ec] docs(t_10a913ec): independent re-verification — build + 123/123 suite green at 0b5322a
+go 1.22
 
-$ git fetch origin && git rev-list --left-right --count origin/worker-heavy/t_10a913ec...HEAD
-0	0
+require golang.org/x/crypto v0.24.0
+
+require golang.org/x/sys v0.21.0 // indirect
+### STEP2: go build -buildvcs=false
+BUILD rc=0
+### artifact
+-rwxrwxr-x 1 c08r4d0r c08r4d0r 14257829 Oct 16 14:22 net4sats-wizard
+445934e6ec8ef5ed69b6d0e419eb948c822aaf127ad78dee7e59d1c962b891a9  net4sats-wizard
+### git status --porcelain after build
+ M PROGRESS.md
 ```
 
-`0 ahead / 0 behind` ⇒ the branch is pushed and in sync with the remote. No `git push` was needed
-for this step (there was nothing unpushed); the docs commit produced later in this task was pushed
-and re-verified — see "Push evidence" at the end.
+**rc=0, no compiler output.** Binary `net4sats-wizard`, 14,257,829 bytes, sha256
+`445934e6ec8ef5ed69b6d0e419eb948c822aaf127ad78dee7e59d1c962b891a9`.
 
-## STEP 2 — Full suite  →  PASS (4/4)
+Raw: `wz-captures-heavypass/02-build.txt`.
 
-```
-$ go vet ./...
-(no output)                                        VET_EXIT=0
-
-$ CGO_ENABLED=1 go test ./... -race -count=1
-ok  	net4sats-wizard	85.773s                     TEST_RACE_EXIT=0
-
-$ golangci-lint run
-(no output)                                        LINT_EXIT=0
-
-$ goreleaser check
-  • checking                                  path=.goreleaser.yaml
-  • 1 configuration file(s) validated
-  • thanks for using GoReleaser!                   GRCHECK_EXIT=0
-```
-
-`-race` requires cgo, so `CGO_ENABLED=1` was exported explicitly — without it `go test -race` exits
-**2** before running anything, which reads as a false red. The race build is real here (85.773s,
-`ok`), not a skipped gate.
-
-## STEP 3 — Snapshot release  →  PASS
-
-```
-$ goreleaser release --snapshot --clean
-    • using tags                       previous=v0.3.5 current=v0.5.0
-    • building snapshot...             version=0.5.1-snapshot.a6805a4
-    • building targets: darwin_arm64_v8.0 · darwin_amd64_v1 · linux_arm64_v8.0
-                        linux_amd64_v1  · windows_amd64_v1 · windows_arm64_v8.0
-    • archives: 6 emitted
-    • calculating checksums
-    • release succeeded after 6s                   SNAPSHOT_EXIT=0
-```
-
-**6 artifacts (3 OS × 2 arch), 6 archives, checksum count matches artifact count:**
-
-```
-$ ls dist/*.tar.gz dist/*.zip | wc -l   → 6
-$ wc -l < dist/SHA256SUMS               → 6
-```
-
-```
-net4sats-wizard_0.5.1-snapshot.a6805a4_darwin_amd64.tar.gz
-net4sats-wizard_0.5.1-snapshot.a6805a4_darwin_arm64.tar.gz
-net4sats-wizard_0.5.1-snapshot.a6805a4_linux_amd64.tar.gz
-net4sats-wizard_0.5.1-snapshot.a6805a4_linux_arm64.tar.gz
-net4sats-wizard_0.5.1-snapshot.a6805a4_windows_amd64.zip
-net4sats-wizard_0.5.1-snapshot.a6805a4_windows_arm64.zip
-```
-
-**Checksum verification — the full manifest, then the two required artifacts re-hashed by hand:**
-
-```
-$ sha256sum -c SHA256SUMS                          SHA256SUM_C_EXIT=0
-net4sats-wizard_0.5.1-snapshot.a6805a4_darwin_amd64.tar.gz: OK
-net4sats-wizard_0.5.1-snapshot.a6805a4_darwin_arm64.tar.gz: OK   <- non-linux requirement
-net4sats-wizard_0.5.1-snapshot.a6805a4_linux_amd64.tar.gz: OK    <- archive requirement
-net4sats-wizard_0.5.1-snapshot.a6805a4_linux_arm64.tar.gz: OK
-net4sats-wizard_0.5.1-snapshot.a6805a4_windows_amd64.zip: OK
-net4sats-wizard_0.5.1-snapshot.a6805a4_windows_arm64.zip: OK
-```
-
-```
-$ sha256sum …_linux_amd64.tar.gz …_darwin_arm64.tar.gz
-ddd60bcc0e8df7106fa64bda0a2d1e95f71bd24255ad1d39330d30c73031c6b7  …linux_amd64.tar.gz
-fc72e5d78a1f74a775b4a4b696c0b7860b229f0d23a90d53564890dd3cad4a95  …darwin_arm64.tar.gz
-$ grep -E 'linux_amd64|darwin_arm64' SHA256SUMS     # byte-identical to the above two lines
-```
-
-Membership: every manifest entry resolves to a real file on disk ⇒ `MISSING_COUNT=0`.
-
-Note on the `Get-FileHash`/Windows leg of the requirement: the manifest is plain
-`<68-char sha256><two spaces><filename>`, which is exactly the format PowerShell's
-`Get-FileHash` + `Compare-Object` consumes, and the same format the README documents
-(`sha256sum -c SHA256SUMS`); `.goreleaser.yaml:48-52` pins both the algorithm and the emitted
-filename for that reason. No Windows host is available on this box, so the Windows **archive** was
-verified by `sha256sum -c` on this host only — I did not execute `Get-FileHash` and do not claim I did.
-
-## STEP 4 — Binary smoke  →  PASS
-
-```
-$ file dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
-ELF 64-bit LSB executable, x86-64, SYSV, statically linked, Go BuildID=…, stripped
-
-$ ./dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard --version
-tollgate-wizard 0.5.1-snapshot.a6805a4             VERSION_EXIT=0
-```
-
-- Shape `tollgate-wizard <version>` ✔ (`programName` const, `main.go:55`).
-- Value is the **injected** snapshot version `0.5.1-snapshot.a6805a4`, **not** `dev` ✔.
-- Exit code **0** ✔. `CGO_ENABLED=0` + `-s -w` are visible in the artifact as `statically linked` /
-  `stripped`, matching `.goreleaser.yaml:21-35`.
-- `--version` is answered before any port bind (`main.go:637-642`), so it is safe to invoke.
-
-**Injected value provably changes (3-way, three separate builds):**
-
-```
-$ go build -o wz-nodev .                                      && ./wz-nodev --version
-tollgate-wizard dev                                           exit=0
-$ go build -ldflags "-s -w -X main.version=v9.9.9-TESTINJECT" -o wz-inject  . && ./wz-inject  --version
-tollgate-wizard v9.9.9-TESTINJECT                             exit=0
-$ go build -ldflags "-s -w -X main.version=0.0.0-delta-probe" -o wz-inject2 . && ./wz-inject2 --version
-tollgate-wizard 0.0.0-delta-probe                             exit=0
-```
-
-Three distinct outputs ⇒ the symbol is genuinely link-time injected, and goreleaser's
-`-X main.version={{ .Version }}` targets the right symbol (the repo's own
-`TestVersionFlagInjectedViaLdflags` guards this drift).
-
-## STEP 5 — GHA proof  →  PARTIAL: commit-level GREEN, PR-level rollup ABSENT (wiring defect)
-
-**The literal command in the brief fails because the named repo does not exist:**
-
-```
-$ gh run list --repo net4sats/tollgate-wizard-go --limit 5
-failed to get runs: HTTP 404: Not Found
-  (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5)
-```
-
-**Against the real repo — the actual finding.** PR #30 exists for my branch with head SHA equal to
-my HEAD, and it has **never been checked**:
-
-```
-$ gh pr view 30 --repo felixfelix-bot/net4sats-wizard-go --json headRefOid,statusCheckRollup
-{"headRefOid":"a6805a421e07a9c6512036a34ca1add29b1fc8ad","statusCheckRollup":[]}
-
-$ gh pr checks 30 --repo felixfelix-bot/net4sats-wizard-go
-no checks reported on the 'worker-heavy/t_10a913ec' branch
-```
-
-Root cause — **the PR lane has never fired in this repo.** Of all 28 runs on record, every single
-one is `event=workflow_dispatch`:
-
-```
-$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 40 --json event | (event counter)
-Counter({'workflow_dispatch': 28})          # zero `push`, zero `pull_request`, ever
-```
-
-Actions is *not* disabled — `actions/permissions` → `{"enabled":true,"allowed_actions":"all"}` and
-`ci.yml` is registered `active`. The workflow declares `on: pull_request:` and `on: push:
-branches:[main]`, so the correct read is **"the PR lane never triggered"**, not "CI pending" and not
-"CI red". Consistent with 20 open `consolidation:` PRs, all unmerged, all unchecked.
-
-**Proof the lane executes** — an explicit dispatch on my branch, pinned to my HEAD:
-
-```
-$ gh workflow run ci.yml --repo felixfelix-bot/net4sats-wizard-go --ref worker-heavy/t_10a913ec
-(exit 0)
-$ gh api repos/felixfelix-bot/net4sats-wizard-go/actions/runs/38899734040 \
-    --jq '"id=… name=\(.name) event=\(.event) branch=\(.head_branch) sha=\(.head_sha) status=\(.status) conclusion=\(.conclusion)"'
-id=38899734040 name=CI event=workflow_dispatch branch=worker-heavy/t_10a913ec
-  sha=a6805a421e07a9c6512036a34ca1add29b1fc8ad status=completed conclusion=success
-  created=2026-10-16T12:19:42Z   updated=2026-10-16T12:21:43Z
-```
-
-The covered `head_sha` is byte-identical to my HEAD. **`conclusion: success`.** Both jobs green,
-and — per the "a green run is compatible with a skipped gate" rule — every gate step is observed
-as *executed*, not merely absent:
-
-```
-JOB test -> success
-   2. Run actions/checkout@v4               -> success
-   3. Run actions/setup-go@v5               -> success
-   4. Run go build ./...                    -> success
-   5. Run go vet ./...                      -> success
-   6. Run go test ./... -race -count=1      -> success
-JOB lint -> success
-   4. Run golangci/golangci-lint-action@v6  -> success
-```
-
-**The `gh run list` line the task asks for:**
-
-```
-$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch worker-heavy/t_10a913ec --limit 5
-completed  success  CI  CI  worker-heavy/t_10a913ec  workflow_dispatch  38899734040  1m0s  2026-10-16T12:19:42Z
-```
-
-**Caveat stated plainly, because AC "CI green via `gh run list`" needs the qualifier:** the green is
-from a run **I dispatched**. GitHub does not attach a `workflow_dispatch` run to the PR's
-check-rollup, so `gh pr checks 30` *still* prints `no checks reported` and `statusCheckRollup`
-remains `[]` after the successful run; `GET /commits/a6805a4…/check-runs` → `total_count=2`, suite
-state `pending`. Therefore:
-
-- **commit-level CI evidence for `a6805a4`: exists, and is GREEN.**
-- **PR-level required-check evidence for #30: does not exist**, and that absence is a **repo wiring
-  defect**, not a passing gate. I fixed nothing here beyond the dispatch, and I did **not** weaken
-  any check to manufacture a green.
-
-## STEP 6 — Report  →  shipped
-
-This REPORT.md + the per-command evidence pack at `/home/c08r4d0r/wz19-audit/ev/`
-(`UNIT2-WG3-evidence.md` and 30+ raw capture files: vet, lint, goreleaser check, snapshot log, dist
-listing, SHA256SUMS, `sha256sum -c`, membership, `file`, all four `--version` outputs, every `gh`
-JSON payload). `PROGRESS.md` at the worktree root carries the finding → status → files-touched log.
+Note on sha provenance: this pass built with go1.22.12 (the toolchain on `PATH` at
+`/usr/local/go/bin`), whereas earlier passes' reports cite go1.24.4 from
+`/home/c08r4d0r/wz19-audit/go/bin/go` — hence a different binary sha for the same source. Both
+toolchains satisfy `go.mod`'s `go 1.22`. The source is unchanged; only the compiler differs.
 
 ---
 
-## What I could NOT verify (stated rather than implied)
+## STEP 3 — FULL `go test ./...` (zero failures)
 
-1. **`Get-FileHash` on Windows** — no Windows host here. The Windows `.zip` artifacts were verified
-   with `sha256sum -c` on Linux, which validates the same SHA-256 digests the PowerShell path reads.
-2. **A `push`/`pull_request`-triggered CI run for this branch or for `main`** — none has ever
-   occurred in this repo (28/28 runs are `workflow_dispatch`). This is measured, not assumed.
-3. **That the PR-level required checks are satisfiable at all** — with the PR lane not firing, no
-   PR in this repo can show a green check-rollup; that is an operator/CI-config decision outside the
-   scope of "verify and push".
-
-## Push evidence (this task's own commits)
+Non-vacuity check first — this repo is a single module, so `./...` covers everything:
 
 ```
-$ git status --porcelain          # before commit:  M PROGRESS.md  /  M REPORT.md
-$ git add PROGRESS.md REPORT.md && git commit -m "docs(t_10a913ec): UNIT-2/WG-3 E2E integration gate — …"
-[worker-heavy/t_10a913ec 9e5c65d] docs(t_10a913ec): UNIT-2/WG-3 E2E integration gate — 6/6 steps executed, suite+snapshot+--version green, CI run 38899734040 success at HEAD
- 2 files changed, 268 insertions(+), 261 deletions(-)
-$ git push origin HEAD:worker-heavy/t_10a913ec
-To https://github.com/felixfelix-bot/net4sats-wizard-go.git
-   a6805a4..9e5c65d  HEAD -> worker-heavy/t_10a913ec
-
-$ git fetch origin -q && git rev-list --left-right --count origin/worker-heavy/t_10a913ec...HEAD
-0	0                                  # pushed, in sync
-$ git rev-parse HEAD                  → 9e5c65d94cd9b78bd86cd3e791aa0fcebccabcf7
-$ git rev-parse origin/worker-heavy/t_10a913ec → 9e5c65d94cd9b78bd86cd3e791aa0fcebccabcf7   (identical)
-$ git status --porcelain              → (empty)  clean
+$ find . -name go.mod -not -path '*/.git/*' | wc -l
+1
+$ go list ./...
+net4sats-wizard
 ```
 
-(`dist/` is gitignored — it is build output, deliberately not committed; `git status --porcelain`
-stays clean after the gates.)
+Command and tail:
 
-**Why the green run's SHA (`a6805a4`) is not the pushed tip (`9e5c65d`) — and why that is correct:**
-`9e5c65d` contains **only** `PROGRESS.md` + `REPORT.md` (a docs-only commit, `268 insertions /
-261 deletions` — the deletions are prior content in those two files being replaced). CI was
-verified green on `a6805a4`, which is `9e5c65d`'s only parent and the exact tip that PR #30 pins
-(`headRefOid`). The push itself did not dispatch a run (only `workflow_dispatch` fires here), so no
-new run was created for the docs commit. Both statements in this report stand as written:
-**CI green at `a6805a4` (the PR head, the code commit) and the branch pushed to `9e5c65d`.**
+```
+### STEP3: go test -count=1 -v ./...
+...
+=== RUN   TestVersionFlagInjectedViaLdflags
+--- PASS: TestVersionFlagInjectedViaLdflags (0.54s)
+PASS
+ok  	net4sats-wizard	66.226s
+TEST rc=0
+```
 
-### Residual / remaining work for the operator (not silently dropped)
+Head of the same raw run (proves real tests executed, not a no-op):
 
-1. **Fix the PR CI lane.** `.github/workflows/ci.yml` declares `on: pull_request:` and `on: push:
-   branches:[main]`, Actions is enabled, and yet 28/28 recorded runs are `workflow_dispatch` —
-   no PR in this repo has ever been checked. This needs a repo/org-level decision (e.g. Actions
-   permissions for fork PRs, an org policy blocking PR-triggered runs, or a missing required-check
-   config). Until then, AC "CI green via `gh run list`" is only satisfiable by an explicit dispatch,
-   and `gh pr checks <n>` will keep returning "no checks reported".
-2. **PR #30 reports `mergeable: CONFLICTING` / `mergeStateStatus: DIRTY`** against a `main` that is
-   now `8fcc30e` (v0.7.0-alpha24) — i.e. the branch is stale against main. That is a separate
-   landing blocker from this integration gate and was deliberately not touched here (resolving it
-   would mean merging main into the branch, which is outside "verify and push" and would invalidate
-   the verified SHA).
+```
+=== RUN   TestHandleScan
+--- PASS: TestHandleScan (28.99s)
+=== RUN   TestHandleIndex
+--- PASS: TestHandleIndex (0.00s)
+=== RUN   TestDeployRequestValidation
+=== RUN   TestDeployRequestValidation/missing_IP_and_password
+=== RUN   TestDeployRequestValidation/empty_password_(fresh_reset)
+=== RUN   TestDeployRequestValidation/missing_IP
+=== RUN   TestDeployRequestValidation/invalid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lnurl
+--- PASS: TestDeployRequestValidation (0.00s)
+...
+=== RUN   TestArtifactPinsCoverDownloadedURLConstants
+--- PASS: TestArtifactPinsCoverDownloadedURLConstants (0.00s)
+=== RUN   TestVerifyArtifactPinBenignDownload
+```
 
+Tally computed from the full raw file (`wz-captures-heavypass/03-test-verbose.txt`):
+
+| metric | value |
+|---|---|
+| `=== RUN   Test…` (incl. subtests) | **123** |
+| `--- PASS` (top-level) | **52** |
+| `--- FAIL` | **0** |
+| `--- SKIP` | **0** |
+| package result | `ok  net4sats-wizard  66.226s` |
+| exit code | **0** |
+
+Grep for failure markers returned nothing:
+
+```
+$ grep -nE '^(FAIL|--- FAIL|panic)' 03-test-verbose.txt
+(no output)
+```
+
+**Zero failures, zero skips.** No test failed, so there was no vendored-asset/version-change
+breakage to fix. The hardening was **not** reverted (no source file was touched at all).
+
+### Vendored assets really are compiled in
+
+`embed.go` carries `//go:embed all:portal` and `all:admin`. The vendored-asset pins are asserted by
+the suite itself — `TestArtifactPinsCoverDownloadedURLConstants`, `TestVerifyArtifactPinBenignDownload`
+and `TestVersionFlagInjectedViaLdflags` all PASS — and the version-injection path is exercised by
+`TestVersionStringFormat` + `TestVersionFlagInjectedViaLdflags`.
+
+---
+
+## One-shot server smoke — and `ss :8099` AFTER
+
+Bare (no-arg) invocation, so the real server path is exercised:
+
+```
+### one-shot server (BARE invocation, no --version)
+--- pgrep -a -x net4sats-wizard ---
+1345858 ./net4sats-wizard
+pgrep rc=0
+--- ss -ltnp | grep 8099 ---
+LISTEN 0      4096            127.0.0.1:8099       0.0.0.0:*    users:(("net4sats-wizard",pid=1345858,fd=3))
+grep rc=0
+recorded PID=1345858
+--- GET / ---
+http_code=200 size=19976
+--- server log ---
+net4sats wizard running on http://127.0.0.1:8099
+Open this URL in your browser to set up a router.
+To serve on other interfaces, set WIZARD_BIND (e.g. WIZARD_BIND=0.0.0.0:8099).
+--- kill by recorded PID only ---
+kill rc=0
+--- ss -ltnp | grep 8099 (after kill) ---
+grep rc=1
+--- pkill -x net4sats-wizard final sweep ---
+pkill rc=1
+--- FINAL ss -ltnp | grep 8099 ---
+final grep rc=1  (1 = FREE)
+```
+
+Bound `127.0.0.1:8099` (pid 1345858; `ss` shows that exact PID owns the port), `GET /` → HTTP 200
+(19,976 B), then killed **by recorded PID only** and re-proved free.
+
+Raw: `wz-captures-heavypass/04-smoke-after.txt`.
+
+**`:8099` is free after the work** (final grep rc=1, and the post-kill sweep found no wizard).
+
+---
+
+## STEP 4 — vet / gofmt left untouched, tree clean
+
+```
+### go vet ./...
+VET rc=0
+### gofmt -l . (empty = clean)
+GOFMT_LINES=0
+### git status --porcelain
+(end)
+### git status -sb
+## worker-heavy/t_10a913ec...origin/worker-heavy/t_10a913ec
+### HEAD
+b93932986a8775a7362594e845390c2a8ed05567
+### go source above HEAD?
+0b5322a feat(release): link-time version injection, --version, goreleaser config and release docs
+```
+
+`go vet ./...` rc=0 with **empty** output; `gofmt -l .` **0 lines**; `git status --porcelain`
+**empty**; branch in sync with its remote.
+
+Raw: `wz-captures-heavypass/05-gates.txt`.
+
+Note: the worktree is **shared with a concurrent sibling session** (`hermes -p worker-heavy` running
+the "squash history into atomic conventional commits" task, visible in `ps`). That session committed
+`b939329` (docs-only) **during this pass**, taking HEAD from `a6805a4` → `b939329` and occupying the
+pathspec I had modified in PROGRESS.md. No Go file was touched by it. The build/test evidence above
+is unaffected in substance: `git log -1 --format='%h %s' -- '*.go'` still resolves to `0b5322a`, so
+the compiled+tested source is exactly what earlier passes verified.
+
+---
+
+## Commit / tree state
+
+- **No fix commit was required** (zero Go source changes, zero test failures).
+- `git status --porcelain` empty at end of the verification (STEP 4 block).
+- Sibling session committed docs-only `b939329` mid-pass (PROGRESS.md + REPORT.md).
+- This pass appends its own PROGRESS.md/REPORT.md update and pushes (see final section).
+
+## REMAINING steps
+
+None — all of STEP 1..4 are complete and verified in this pass.
