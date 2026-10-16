@@ -1,3 +1,37 @@
+## Pass-6 FINAL LEDGER — CI green at every pushed tip of this pass
+
+| tip | CI run | conclusion |
+|---|---|---|
+| `ec84984` | 38923652846 | success (lint + test) |
+| `e46f58f` | 38924071342 | **failure then re-run success** (lint `config verify` schema-fetch timeout — external flake, diagnosed, nothing weakened) |
+| `c7f4524` | 38924533944 | success |
+| **`427e476` = FINAL tip = HEAD = remote** | **38925010980** | **success (test + lint)** |
+
+```
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38925010980	1m57s	2026-10-16T15:34:13Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38924622381	2m0s	2026-10-16T15:31:22Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38924071342	22s	2026-10-16T15:30:15Z
+
+$ gh run view 38925010980 --json …
+{"id":38925010980,"sha":"427e476870e78173ce40506818e5da3d0f445125","event":"workflow_dispatch",
+ "status":"completed","conclusion":"success","jobs":[{"name":"test","conclusion":"success"},{"name":"lint","conclusion":"success"}]}
+
+$ git rev-parse HEAD ; git rev-parse origin/ci/add-github-actions-workflow-clean ; git status --porcelain
+427e476870e78173ce40506818e5da3d0f445125
+427e476870e78173ce40506818e5da3d0f445125
+(empty)                      PORCELAIN_LINES=0
+
+CODE_DIFF_LINES=0   (final tip vs code tip e85720c: docs/evidence only)
+```
+
+**The per-tip check to reuse forever** (never needs re-derivation):
+`gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 1 --json headSha,conclusion` must equal
+`git rev-parse HEAD`. Any commit added after this one is docs/evidence only, proven by
+`git diff --name-only <code-tip> HEAD -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'` → empty.
+
+---
+
 ## Pass-6 FINAL — CI green at the final pushed tip (definitive record)
 
 Every docs/evidence commit necessarily moves the tip, so this is the closing ledger entry. Verbatim capture

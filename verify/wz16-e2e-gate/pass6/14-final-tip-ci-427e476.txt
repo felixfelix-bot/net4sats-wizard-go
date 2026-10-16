@@ -1,0 +1,58 @@
+### PASS-6 FINAL — CI at the final pushed tip — 2026-10-16T17:33:31+02:00
+$ git rev-parse HEAD
+c7f45249705b8e3784479f87a73ac975447d7401
+$ git rev-parse origin/ci/add-github-actions-workflow-clean
+c7f45249705b8e3784479f87a73ac975447d7401
+$ git status --porcelain
+PORCELAIN_LINES=0
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38924622381	2m0s	2026-10-16T15:31:22Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38924071342	22s	2026-10-16T15:30:15Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38923652846	1m59s	2026-10-16T15:24:17Z
+
+$ gh run view 38924622381 --repo felixfelix-bot/net4sats-wizard-go --json databaseId,conclusion,headSha,headBranch,event,status,jobs,workflowName
+{"id":38924622381,"wf":"CI","branch":"ci/add-github-actions-workflow-clean","sha":"c7f45249705b8e3784479f87a73ac975447d7401","event":"workflow_dispatch","status":"completed","conclusion":"success","jobs":[{"name":"test","conclusion":"success"},{"name":"lint","conclusion":"success"}]}
+
+-- step detail --
+JOB test: success
+    success	Set up job
+JOB test: success
+    success	Run actions/checkout@v4
+JOB test: success
+    success	Run actions/setup-go@v5
+JOB test: success
+    success	Run go build ./...
+JOB test: success
+    success	Run go vet ./...
+JOB test: success
+    success	Run go test ./... -race -count=1
+JOB test: success
+    success	Post Run actions/setup-go@v5
+JOB test: success
+    success	Post Run actions/checkout@v4
+JOB test: success
+    success	Complete job
+JOB lint: success
+    success	Set up job
+JOB lint: success
+    success	Run actions/checkout@v4
+JOB lint: success
+    success	Run actions/setup-go@v5
+JOB lint: success
+    success	Run golangci/golangci-lint-action@v6
+JOB lint: success
+    success	Post Run golangci/golangci-lint-action@v6
+JOB lint: success
+    success	Post Run actions/setup-go@v5
+JOB lint: success
+    success	Post Run actions/checkout@v4
+JOB lint: success
+    success	Complete job
+
+FINAL_TIP      = c7f45249705b8e3784479f87a73ac975447d7401
+RUN_HEAD_SHA   = c7f45249705b8e3784479f87a73ac975447d7401
+RUN_CONCLUSION = success
+
+$ git diff --name-only e85720cd39a41d4af8bdff5172752a827e25bb86 HEAD -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'
+CODE_DIFF_LINES=0
