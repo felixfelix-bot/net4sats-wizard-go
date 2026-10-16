@@ -1,0 +1,3 @@
+### CI red at final tip e46f58f — diagnosis + re-run (NOT a lint finding, nothing weakened)
+$ gh run rerun 38924071342 --failed --repo felixfelix-bot/net4sats-wizard-go
+RERUN_RC=0

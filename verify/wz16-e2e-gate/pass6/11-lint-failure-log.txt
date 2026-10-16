@@ -1,0 +1,40 @@
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:39.8697690Z   problem-matchers: false
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:39.8697964Z   cache-invalidation-interval: 7
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:39.8698234Z ##[endgroup]
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.0046723Z ##[group]prepare environment
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.0050410Z Checking for go.mod: go.mod
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.0055443Z (node:2350) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.0056192Z (Use `node --trace-deprecation ...` to show where the warning was created)
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.2056171Z Cache hit for: golangci-lint.cache-Linux-2963-ec4850e71b02b9858515893ba8635d17a34933de
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.2193954Z (node:2350) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.5524037Z Received 169855 of 169855 (100.0%), 0.9 MBs/sec
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.5524720Z Cache Size: ~0 MB (169855 B)
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.5552694Z [command]/usr/bin/tar -xf /home/runner/work/_temp/d96a8439-0d7c-4d7a-99f6-532a793f22d6/cache.tzst -P -C /home/runner/work/net4sats-wizard-go/net4sats-wizard-go --use-compress-program unzstd
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6099671Z Cache restored successfully
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6104648Z Restored cache for golangci-lint from key 'golangci-lint.cache-Linux-2963-ec4850e71b02b9858515893ba8635d17a34933de' in 606ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6106185Z Finding needed golangci-lint version...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6109044Z Installation mode: binary
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6109983Z Installing golangci-lint binary v1.61.0...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.6111268Z Downloading binary https://github.com/golangci/golangci-lint/releases/download/v1.61.0/golangci-lint-1.61.0-linux-amd64.tar.gz ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:40.9714219Z [command]/usr/bin/tar xz --overwrite --warning=no-unknown-keyword --overwrite -C /home/runner -f /home/runner/work/_temp/be7c93c7-44d4-4ec2-b831-6532577e8a45
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2096161Z Installed golangci-lint into /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint in 599ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2097122Z Prepared env in 1205ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2098562Z ##[endgroup]
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2101056Z ##[group]run golangci-lint
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2107665Z Running [/home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config path] in [/home/runner/work/net4sats-wizard-go/net4sats-wizard-go] ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:41.2992510Z Running [/home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify] in [/home/runner/work/net4sats-wizard-go/net4sats-wizard-go] ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:43.3844170Z ##[endgroup]
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:43.3877116Z ##[error]Failed to run: Error: Command failed: /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify
+lint	Run golangci/golangci-lint-action@v6	Failed executing command with error: [.golangci.yml] validate: compile schema: jsonschema https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json compilation failed: Get "https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+lint	Run golangci/golangci-lint-action@v6	, Error: Command failed: /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify
+lint	Run golangci/golangci-lint-action@v6	Failed executing command with error: [.golangci.yml] validate: compile schema: jsonschema https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json compilation failed: Get "https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+lint	Run golangci/golangci-lint-action@v6	
+lint	Run golangci/golangci-lint-action@v6	    at genericNodeError (node:internal/errors:985:15)
+lint	Run golangci/golangci-lint-action@v6	    at wrappedFn (node:internal/errors:539:14)
+lint	Run golangci/golangci-lint-action@v6	    at ChildProcess.exithandler (node:child_process:417:12)
+lint	Run golangci/golangci-lint-action@v6	    at ChildProcess.emit (node:events:509:28)
+lint	Run golangci/golangci-lint-action@v6	    at maybeClose (node:internal/child_process:1141:16)
+lint	Run golangci/golangci-lint-action@v6	    at ChildProcess._handle.onexit (node:internal/child_process:306:5)
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T15:27:43.3894117Z ##[error]Command failed: /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify
+lint	Run golangci/golangci-lint-action@v6	Failed executing command with error: [.golangci.yml] validate: compile schema: jsonschema https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json compilation failed: Get "https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+lint	Run golangci/golangci-lint-action@v6	

@@ -1,3 +1,51 @@
+### Pass-6 — CI went RED once at the final tip, then GREEN on re-run (flake, diagnosed)
+
+Recorded because a red run happened during this pass and hiding it would be dishonest.
+
+At `2026-10-16T15:27:22Z`, run **`38924071342`** on the final tip `e46f58f9dd6a23eb51e7ab70447e939a2122dc8e`
+concluded **`failure`**: job `test` succeeded, job `lint` failed at step `Run golangci/golangci-lint-action@v6`.
+The verbatim error (capture `11-lint-failure-log.txt`):
+
+```
+##[error]Failed to run: Error: Command failed: /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify
+Failed executing command with error: [.golangci.yml] validate: compile schema: jsonschema
+  https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json compilation failed:
+  Get "https://golangci-lint.run/jsonschema/golangci.v1.61.jsonschema.json":
+  context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+```
+
+**This is not a lint finding and not a defect in the code.** Three independent reasons:
+
+1. The linter never ran — the action died in its `config verify` pre-step, which validates `.golangci.yml`
+   against a JSON schema it downloads over HTTP from `golangci-lint.run`. The failure is an outbound HTTP timeout.
+2. The **identical** code tree passed minutes earlier: run `38923652846` @ `ec84984` = `success`, and
+   `git diff --name-only e85720c e46f58f -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'` is empty
+   (`CODE_DIFF_LINES=0`). Nothing in the diff can change a lint outcome.
+3. The same pinned toolchain and config pass locally in this session: `golangci-lint 1.61.0` → `GOLANGCI_RC=0`,
+   zero findings (§2).
+
+**Response — re-run, not a weakened check:**
+
+```
+$ gh run rerun 38924071342 --failed --repo felixfelix-bot/net4sats-wizard-go
+RERUN_RC=0
+[10s] status=completed  [{"n":"lint","c":"success"},{"n":"test","c":"success"}]
+FINAL: {"status":"completed","conclusion":"success"}      # headSha still e46f58f (the pushed tip)
+```
+
+**No workflow file was edited, no check was weakened or removed, no re-push was needed.** The gate is green at the
+pushed tip by a faithful run of the unmodified `.github/workflows/ci.yml`.
+
+**Recommendation to the manager (deliberately NOT applied here).** The `lint` job carries an avoidable network
+dependency: `golangci-lint-action@v6` runs `golangci-lint config verify`, which fetches the schema from
+`golangci-lint.run`. It failed once in ~8 runs on this branch today. A reliability fix — *not* a weakening — would be
+to run the same pinned linter directly (`golangci-lint run` at v1.61.0) instead of through the action's
+config-verify path, or to pin an action version that does not fetch the schema, or to add a bounded retry. I did not
+apply it because `.github/workflows/ci.yml` is the very artifact this gate exists to verify; editing it here would
+change the subject under test and invalidate this pass's evidence. Escalated instead.
+
+---
+
 ## Pass-6 close-out — CI green at the pushed evidence tip
 
 - Evidence commit pushed: **`ec849846d4894a5e6610ba63187f6aaa678a788e`** on `ci/add-github-actions-workflow-clean`.
