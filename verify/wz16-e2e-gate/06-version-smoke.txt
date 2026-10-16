@@ -1,0 +1,29 @@
+### host: x280 c08r4d0r 2026-10-16T04:52:28+02:00
+### scratch: /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke
+
+# ---- extract the BUILT linux/amd64 binary from the snapshot archive (not a fresh build) ----
+$ tar -xzf /home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz
+tar_rc=0
+$ ls -la
+total 11016
+drwxrwxr-x 2 c08r4d0r c08r4d0r     4096 Oct 16 04:52 .
+drwxrwxr-x 4 c08r4d0r c08r4d0r     4096 Oct 16 04:52 ..
+-rw-rw-r-- 1 c08r4d0r c08r4d0r     1575 Oct 14 10:56 CHANGELOG.md
+-rw-rw-r-- 1 c08r4d0r c08r4d0r     8264 Oct 14 11:05 README.md
+-rwxr-xr-x 1 c08r4d0r c08r4d0r 11251864 Oct 16 04:52 net4sats-wizard
+
+$ file ./net4sats-wizard
+./net4sats-wizard: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=8DvX_RAUnpeXjQRJsD4Q/dnAbyCsODO8hHXU2UM0Z/lRueqDjOqhYpcww_ETGT/vkgJt1W6CvgSL4JT0n9R, stripped
+
+# ---- REQUIRED: execute it with --version; expect "tollgate-wizard <version>", rc 0, not dev ----
+$ ./net4sats-wizard --version
+tollgate-wizard 0.5.1-snapshot.9c37d2e
+exit_code=0
+LINE=[tollgate-wizard 0.5.1-snapshot.9c37d2e]
+FOUND_DEV=no (good)   shape_ok=yes
+injected_version_token=0.5.1-snapshot.9c37d2e
+
+# ---- also -version and the version baked into the SNAPSHOT version string ----
+$ ./net4sats-wizard -version
+tollgate-wizard 0.5.1-snapshot.9c37d2e
+dash_version_rc=0

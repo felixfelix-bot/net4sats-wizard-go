@@ -1,0 +1,80 @@
+### host: x280 2026-10-16T04:54:02+02:00
+### tampered copy: /home/c08r4d0r/wz16-tests-t_0509c320-p4/tamper/tampered   (4 facts corrupted)
+
+$ python3 wz16-90-adhoc-verify.py /home/c08r4d0r/wz16-tests-t_0509c320-p4/tamper/tampered   # MUST exit non-zero
+== STEP 1: clean tree + push + ahead/behind ==
+  PASS  01: git status --porcelain EMPTY (0 lines)
+  PASS  01: porcelain rc 0
+  PASS  01: git push was a no-op (branch already pushed)
+  PASS  01: git push rc 0
+  PASS  01: rev-list count is 0\t0 (ahead/behind == 0)
+  PASS  01: local HEAD == verified SHA
+  PASS  01: ls-remote remote ref == verified SHA (remote ground truth)
+== STEP 2: vet / test -race / golangci-lint / goreleaser check ==
+  PASS  02: go1.22.12 (CI-matching toolchain)
+  PASS  02: single module net4sats-wizard (so ./... covers all)
+  PASS  02a: go vet ./... rc 0
+  PASS  02: gofmt -l rc 0 (no unformatted files)
+  PASS  02c: golangci-lint v1.61.0 == CI pin
+  PASS  02c: golangci-lint run rc 0
+  PASS  02d: goreleaser check rc 0
+  PASS  02d: goreleaser validated the config
+  PASS  02b: go test ./... -race rc 0
+  PASS  02b: suite reported ok
+  PASS  02b: verbose 123 tests RUN
+  FAIL  02b: verbose 0 FAIL   missing 'FAIL  = 0'
+  PASS  02b: verbose 0 SKIP
+  PASS  02b: zero 'WARNING: DATA RACE'
+== STEP 3: snapshot release + artifacts + checksums ==
+  PASS  03: goreleaser release --snapshot --clean rc 0
+  PASS  03: exactly 6 archives
+  PASS  03: 6 distinct OS/arch targets
+  PASS  03: target darwin_amd64 present
+  PASS  03: target darwin_arm64 present
+  PASS  03: target linux_amd64 present
+  PASS  03: target linux_arm64 present
+  PASS  03: target windows_amd64 present
+  PASS  03: target windows_arm64 present
+  PASS  03: checksum count == artifact count (6 == 6)
+  FAIL  03: sha256sum -c real rc 0   SHA256SUM_C_REAL_RC = 1, want 0
+  PASS  03: 6/6 checksum lines OK, 0 failed
+  PASS  03: spot-check#1 linux archive recomputed MATCH
+  PASS  03: spot-check#2 non-linux (darwin arm64) recomputed MATCH
+  PASS  03: windows zip (Get-FileHash equivalent) recomputed MATCH
+== STEP 3b: checksum non-vacuity controls ==
+  PASS  03b: CONTROL A positive rc 0, OK=6
+  PASS  03b: CONTROL B (1 byte flipped) rc 1, exactly 1 FAILED
+  PASS  03b: the tampered artifact is the one reported FAILED
+  PASS  03b: CONTROL C (artifact removed) rc 1, FAILED open or read
+  PASS  03b: CONTROL C reports 'FAILED open or read'
+== STEP 4: binary smoke --version + injection change ==
+  PASS  04: built binary prints 'tollgate-wizard <version>'
+  FAIL  04: --version output line exactly matches the injected version   
+  PASS  04: --version exit code 0
+  PASS  04: version is NOT 'dev'
+  PASS  04: manual injection #1 visible
+  PASS  04: manual injection #2 (changed)
+  PASS  04: no-ldflags control falls back to dev
+  PASS  04: go tool nm locates the injected symbol
+  PASS  04: source anchor for the default value
+== STEP 5: GHA proof ==
+  PASS  05: the LITERAL card command was executed
+  PASS  05: literal command 404s (repo does not exist)
+  PASS  05: literal command real rc 1
+  PASS  05: gh repo view cannot resolve the named repo
+  PASS  05: upstream PR #35 has no checks (no .github/ upstream)
+  PASS  05: >=1 successful run at the pushed head SHA 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+  PASS  05: the run is completed + success at that SHA
+  FAIL  05: gh run view confirms conclusion success at that SHA   
+  PASS  05: CI test job ran the suite (ok net4sats-wizard)
+  PASS  05: CI ran go test -race
+  PASS  05: CI ran go vet
+  PASS  05: CI lint job clean
+
+TOTAL CHECKS = 62   FAILURES = 4
+FAILED CHECKS:
+  - 02b: verbose 0 FAIL
+  - 03: sha256sum -c real rc 0
+  - 04: --version output line exactly matches the injected version
+  - 05: gh run view confirms conclusion success at that SHA
+CONTROL_VERIFIER_EXIT=1   # non-zero == the checks are NOT vacuous (required)

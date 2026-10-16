@@ -1,0 +1,11 @@
+### host: x280 2026-10-16T04:52:11+02:00
+### verbose log: /home/c08r4d0r/wz16-captures-t_0509c320-p4/04-test-race-verbose.log
+RUN   = 123
+PASS  = 52
+FAIL  = 0
+SKIP  = 0
+DATA_RACE_WARNINGS = 0
+final ok line:
+--- PASS: TestVersionStringFormat (0.00s)
+--- PASS: TestVersionFlagInjectedViaLdflags (0.43s)
+ok  	net4sats-wizard	90.007s

@@ -1,0 +1,46 @@
+### host: x280 2026-10-16T04:52:35+02:00
+### gh: gh version 2.45.0 (2025-07-18 Ubuntu 2.45.0-1ubuntu0.3)   account: felixfelix-bot
+### pushed head SHA: 9c37d2e04fe5bfafeb8d210202375ff7f34b773d   branch: ci/add-github-actions-workflow-clean
+
+# ==== the LITERAL command from the card, against the repo the card names ====
+$ gh run list --repo net4sats/tollgate-wizard-go --limit 5
+failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5&exclude_pull_requests=true)
+literal_real_rc=1
+
+$ gh repo view net4sats/tollgate-wizard-go
+GraphQL: Could not resolve to a Repository with the name 'net4sats/tollgate-wizard-go'. (repository)
+repoview_real_rc=1
+
+$ git ls-remote https://github.com/net4sats/tollgate-wizard-go
+remote: Repository not found.
+fatal: repository 'https://github.com/net4sats/tollgate-wizard-go/' not found
+lsremote_real_rc=128
+
+# ==== upstream: is there CI to read? (main has no .github/ -- added by this PR) ====
+$ gh run list --repo net4sats/net4sats-wizard-go --limit 5
+upstream_runs_rc=0
+$ gh api repos/net4sats/net4sats-wizard-go/contents/.github --jq .message
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+upstream_ghdir_rc=1
+$ gh pr checks 35 --repo net4sats/net4sats-wizard-go
+no checks reported on the 'ci/add-github-actions-workflow-clean' branch
+prchecks_rc=1
+$ gh pr view 35 --repo net4sats/net4sats-wizard-go --json number,state,headRefOid,statusCheckRollup
+{"headRefOid":"9c37d2e04fe5bfafeb8d210202375ff7f34b773d","number":35,"state":"OPEN","statusCheckRollup":[]}
+
+# ==== the fork: the CI venue while .github/ is not yet upstream ====
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 5
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838430526	2m1s	2026-10-16T02:03:24Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838000347	2m1s	2026-10-16T01:58:39Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38834487839	1m57s	2026-10-16T01:19:29Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38761913548	1m54s	2026-10-15T15:37:06Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38738030458	2m3s	2026-10-15T12:52:40Z
+fork_runs_rc=0
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 5 --json databaseId,conclusion,status,headSha,headBranch,event,workflowName,url,createdAt
+[{"conclusion":"success","createdAt":"2026-10-16T02:03:24Z","databaseId":38838430526,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"9c37d2e04fe5bfafeb8d210202375ff7f34b773d","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38838430526","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T01:58:39Z","databaseId":38838000347,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"4ca0b381ab3aa40f00b74f133f7b9024740277d7","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38838000347","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T01:19:29Z","databaseId":38834487839,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"11c661b253ea29cfc051ae801d6bd99238c5201f","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38834487839","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-15T15:37:06Z","databaseId":38761913548,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38761913548","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-15T12:52:40Z","databaseId":38738030458,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38738030458","workflowName":"CI"}]
+
+# ---- REQUIRED: a run at THE PUSHED HEAD SHA with conclusion success ----
+successful_runs_at_9c37d2e04fe5bfafeb8d210202375ff7f34b773d = 1
+38838430526 completed success 9c37d2e04fe5bfafeb8d210202375ff7f34b773d https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38838430526
+match_rc=0

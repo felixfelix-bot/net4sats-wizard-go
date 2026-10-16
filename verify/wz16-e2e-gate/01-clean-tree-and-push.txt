@@ -1,0 +1,32 @@
+### host: x280 c08r4d0r 2026-10-16T04:48:03+02:00
+### repo: /home/c08r4d0r/wz16-verify
+### branch: ci/add-github-actions-workflow-clean
+### HEAD: 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+
+# ---- required check: `git status --porcelain` must be EMPTY ----
+$ git status --porcelain
+PORCELAIN_RC=0   PORCELAIN_LINES=0   # 0 lines = clean tree
+
+# ---- required check: branch is pushed (`git push`) ----
+$ git push
+Everything up-to-date
+PUSH_RC=0
+
+# ---- required check: ahead/behind is 0 vs the branch itself ----
+$ git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean
+0	0
+AB_RC=0   # format: <ahead>\t<behind>
+
+# ---- required check: ahead/behind is 0 vs the PR base the card names ----
+$ git rev-list --left-right --count origin/main...HEAD   # remote-tracking base
+AB2_RC=0   base_behind_tip_ahead
+16	11
+
+# ---- local vs remote SHA identity ----
+local_HEAD        = 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+origin/ci/add-github-actions-workflow-clean = 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+
+# ---- remote ground truth (ls-remote, independent of local tracking refs) ----
+$ git ls-remote origin refs/heads/ci/add-github-actions-workflow-clean
+9c37d2e04fe5bfafeb8d210202375ff7f34b773d	refs/heads/ci/add-github-actions-workflow-clean
+LSREMOTE_RC=0

@@ -1,0 +1,42 @@
+### host: x280 2026-10-16T04:52:25+02:00   scratch: /home/c08r4d0r/wz16-tests-t_0509c320-p4/negctl
+### copies of the real snapshot artifacts + the real SHA256SUMS
+
+--- CONTROL A (positive): pristine copies -- expect 6/6 OK, REAL_RC=0 ---
+$ sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip: OK
+REAL_RC=0
+OK=6  FAILED=0
+
+### tamper: flip one byte of the EXPLICIT path net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz (printf, not a dd glob)
+tamper_cmd_rc=0   size_after=4492301
+--- CONTROL B (negative): 1 byte flipped in net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz -- expect that line FAILED, REAL_RC=1 ---
+$ sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz: FAILED
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip: OK
+sha256sum: WARNING: 1 computed checksum did NOT match
+REAL_RC=1
+OK=5  FAILED=1
+
+### restore, then remove a DIFFERENT artifact (explicit): net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip
+--- CONTROL C (negative): net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip missing -- expect FAILED open or read, REAL_RC=1 ---
+$ sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip: OK
+sha256sum: net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip: No such file or directory
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip: FAILED open or read
+sha256sum: WARNING: 1 listed file could not be read
+REAL_RC=1
+OK=5  FAILED=1
+

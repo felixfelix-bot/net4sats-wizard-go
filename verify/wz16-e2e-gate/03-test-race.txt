@@ -1,0 +1,13 @@
+### host: x280 c08r4d0r 2026-10-16T04:48:51+02:00
+### go: go version go1.22.12 linux/amd64   cpus: 8   load: 2.33 1.93 1.94
+### gcc: gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0   CGO_ENABLED=1
+### worktree: /home/c08r4d0r/wz16-verify   HEAD: 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+
+# ---- 2b REQUIRED: go test ./... -race ----
+$ CGO_ENABLED=1 go test ./... -race -count=1
+ok  	net4sats-wizard	108.034s
+
+real	1m49.242s
+user	0m2.823s
+sys	0m0.638s
+TEST_RACE_RC=0

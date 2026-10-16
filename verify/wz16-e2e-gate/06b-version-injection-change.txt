@@ -1,0 +1,31 @@
+### host: x280 2026-10-16T04:52:28+02:00   worktree: /home/c08r4d0r/wz16-verify
+# ---- REQUIRED: build the injected value manually and confirm it CHANGES ----
+
+$ go build -ldflags "-X main.version=v9.9.9-manual-p4" -o /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-manual .
+build_rc=0
+$ /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-manual --version
+tollgate-wizard v9.9.9-manual-p4
+run_rc=0
+
+$ go build -ldflags "-X main.version=v0.0.0-second-different-value-p4" -o /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-manual .
+build_rc=0
+$ /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-manual --version
+tollgate-wizard v0.0.0-second-different-value-p4
+run_rc=0
+
+# ---- control: plain build with NO ldflags must fall back to the dev default ----
+$ go build -o /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-nodev .
+build_rc=0
+$ /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-nodev --version
+tollgate-wizard dev
+run_rc=0
+
+# ---- locate the injected symbol so the mechanism is proven, not asserted ----
+$ go tool nm /home/c08r4d0r/wz16-tests-t_0509c320-p4/smoke/wiz-manual | grep -F ' main.version'
+  eb5c20 D main.version
+  ca6b20 R main.version.str
+
+# ---- source anchors ----
+52:var version = "dev"
+59:func versionString() string {
+641:		case "--version", "-version":

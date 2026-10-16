@@ -1,0 +1,95 @@
+### host: x280 2026-10-16T04:52:50+02:00
+### run 38838430526 at head SHA 9c37d2e04fe5bfafeb8d210202375ff7f34b773d
+
+$ gh run view 38838430526 --repo felixfelix-bot/net4sats-wizard-go
+
+✓ ci/add-github-actions-workflow-clean CI #29 · 38838430526
+Triggered via workflow_dispatch about 49 minutes ago
+
+JOBS
+✓ lint in 20s (ID 116772683647)
+✓ test in 1m57s (ID 116772683899)
+
+ANNOTATIONS
+! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-go@v5, golangci/golangci-lint-action@v6. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+lint: .github#2
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+lint: .github#1
+
+! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-go@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+test: .github#2
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+test: .github#1
+
+
+For more information about a job, try: gh run view --job=<job-id>
+View this run on GitHub: https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38838430526
+runview_rc=0
+
+$ gh run view 38838430526 --json conclusion,headSha,headBranch,status,workflowName,event,createdAt,url
+{"conclusion":"success","createdAt":"2026-10-16T02:03:24Z","event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"9c37d2e04fe5bfafeb8d210202375ff7f34b773d","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38838430526","workflowName":"CI"}
+
+# ---- job log gate lines (build/vet/test/lint actually ran) ----
+lint	Set up job	﻿2026-10-16T02:03:28.6170104Z Current runner version: '2.337.0'
+lint	Set up job	2026-10-16T02:03:28.6196755Z Version: 20261012.601
+lint	Set up job	2026-10-16T02:03:28.6206993Z Version: 20261012.334.1
+lint	Set up job	2026-10-16T02:03:29.3959495Z Download action repository 'golangci/golangci-lint-action@v6' (SHA:55c2c1448f86e01eaae002a5a3a9624417608d84)
+lint	Run actions/setup-go@v5	2026-10-16T02:03:39.0296239Z (node:2319) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+lint	Run golangci/golangci-lint-action@v6	﻿2026-10-16T02:03:40.8646312Z ##[group]Run golangci/golangci-lint-action@v6
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8646673Z with:
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8646873Z   version: v1.61.0
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8647103Z   install-mode: binary
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8649559Z   github-token: ***
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8649792Z   verify: true
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8650014Z   only-new-issues: false
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8650256Z   skip-cache: false
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8650477Z   skip-save-cache: false
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8650719Z   problem-matchers: false
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8650981Z   cache-invalidation-interval: 7
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:40.8651508Z ##[endgroup]
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.0076059Z ##[group]prepare environment
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.0081116Z Checking for go.mod: go.mod
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.0086724Z (node:2371) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.0087633Z (Use `node --trace-deprecation ...` to show where the warning was created)
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.2606710Z Cache hit for: golangci-lint.cache-Linux-2963-ec4850e71b02b9858515893ba8635d17a34933de
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.2769308Z (node:2371) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.7836886Z Received 169855 of 169855 (100.0%), 0.7 MBs/sec
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.7837532Z Cache Size: ~0 MB (169855 B)
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.7867386Z [command]/usr/bin/tar -xf /home/runner/work/_temp/e4e57eac-4bab-4228-a18d-6315c87b1fda/cache.tzst -P -C /home/runner/work/net4sats-wizard-go/net4sats-wizard-go --use-compress-program unzstd
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8465277Z Cache restored successfully
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8469933Z Restored cache for golangci-lint from key 'golangci-lint.cache-Linux-2963-ec4850e71b02b9858515893ba8635d17a34933de' in 839ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8471539Z Finding needed golangci-lint version...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8474654Z Installation mode: binary
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8475756Z Installing golangci-lint binary v1.61.0...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:41.8477253Z Downloading binary https://github.com/golangci/golangci-lint/releases/download/v1.61.0/golangci-lint-1.61.0-linux-amd64.tar.gz ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.1413116Z [command]/usr/bin/tar xz --overwrite --warning=no-unknown-keyword --overwrite -C /home/runner -f /home/runner/work/_temp/33b6ab58-09e4-4e31-87b5-c185a0ae23c2
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.3481075Z Installed golangci-lint into /home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint in 500ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.3482754Z Prepared env in 1341ms
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.3483998Z ##[endgroup]
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.3486421Z ##[group]run golangci-lint
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.3492919Z Running [/home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config path] in [/home/runner/work/net4sats-wizard-go/net4sats-wizard-go] ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.4375878Z Running [/home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint config verify] in [/home/runner/work/net4sats-wizard-go/net4sats-wizard-go] ...
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:42.9551942Z Running [/home/runner/golangci-lint-1.61.0-linux-amd64/golangci-lint run] in [/home/runner/work/net4sats-wizard-go/net4sats-wizard-go] ...
+
+### appended 2026-10-16T04:53:25+02:00: gate steps actually executed in run 38838430526
+$ gh run view 38838430526 --log  (filtered to the real gate steps)
+test	Run go build ./...	﻿2026-10-16T02:03:41.4538222Z ##[group]Run go build ./...
+test	Run go build ./...	2026-10-16T02:03:41.4538585Z [36;1mgo build ./...[0m
+test	Run go build ./...	2026-10-16T02:03:41.4836021Z shell: /usr/bin/bash -e {0}
+test	Run go build ./...	2026-10-16T02:03:41.4836421Z ##[endgroup]
+test	Run go vet ./...	﻿2026-10-16T02:03:42.1020357Z ##[group]Run go vet ./...
+test	Run go vet ./...	2026-10-16T02:03:42.1020680Z [36;1mgo vet ./...[0m
+test	Run go vet ./...	2026-10-16T02:03:42.1085912Z shell: /usr/bin/bash -e {0}
+test	Run go vet ./...	2026-10-16T02:03:42.1086189Z ##[endgroup]
+test	Run go test ./... -race -count=1	﻿2026-10-16T02:03:43.8083025Z ##[group]Run go test ./... -race -count=1
+test	Run go test ./... -race -count=1	2026-10-16T02:03:43.8083677Z [36;1mgo test ./... -race -count=1[0m
+test	Run go test ./... -race -count=1	2026-10-16T02:03:43.8147657Z shell: /usr/bin/bash -e {0}
+test	Run go test ./... -race -count=1	2026-10-16T02:03:43.8147930Z ##[endgroup]
+test	Run go test ./... -race -count=1	2026-10-16T02:05:21.1972391Z ok  	net4sats-wizard	82.366s
+lint	Run golangci/golangci-lint-action@v6	2026-10-16T02:03:43.4342740Z golangci-lint found no issues
+
+✓ ci/add-github-actions-workflow-clean CI #29 · 38838430526
+✓ lint in 20s (ID 116772683647)
+✓ test in 1m57s (ID 116772683899)

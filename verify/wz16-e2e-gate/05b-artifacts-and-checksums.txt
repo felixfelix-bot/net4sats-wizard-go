@@ -1,0 +1,54 @@
+### host: x280 2026-10-16T04:52:22+02:00   cwd: /home/c08r4d0r/wz16-verify/dist
+
+$ ls -1 *.tar.gz *.zip | sort
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip
+ARCHIVE_COUNT=6
+
+# ---- REQUIRED: 6 artifacts, target matrix = {linux,windows,darwin} x {amd64,arm64} ----
+$ ls -1 *.tar.gz *.zip | sed -E "s/.*_(linux|windows|darwin)_(amd64|arm64)\.(tar\.gz|zip)/\1_\2/" | sort
+darwin_amd64
+darwin_arm64
+linux_amd64
+linux_arm64
+windows_amd64
+windows_arm64
+distinct_targets=6
+
+$ for a in *.tar.gz *.zip; do echo "$a -> $(file -b "$a")"; done
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz -> gzip compressed data, max compression, original size modulo 2^32 11445760
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz -> gzip compressed data, max compression, original size modulo 2^32 11225088
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz -> gzip compressed data, max compression, original size modulo 2^32 11265536
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz -> gzip compressed data, max compression, original size modulo 2^32 11023872
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip -> Zip archive data, at least v2.0 to extract, compression method=deflate
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip -> Zip archive data, at least v2.0 to extract, compression method=deflate
+
+# ---- REQUIRED: checksum file exists and its count matches the artifact count ----
+$ ls -la SHA256SUMS
+-rw-r--r-- 1 c08r4d0r c08r4d0r 744 Oct 16 04:52 SHA256SUMS
+$ wc -l < SHA256SUMS
+6
+6  ==  6  (checksum_count == artifact_count)
+
+# ---- REQUIRED: sha256sum -c verification (REAL exit code, no pipe) ----
+$ sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_arm64.zip: OK
+SHA256SUM_C_REAL_RC=0
+OK_LINES=6  FAILED_LINES=0
+
+# ---- REQUIRED: two named spot checks recomputed independently (one archive, one non-linux) ----
+artifact=net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz type=tar.gz recomputed=ce227c9c80e726ff2277f6bb8413a72639666d558d1030093a28122241ac4419 expected=ce227c9c80e726ff2277f6bb8413a72639666d558d1030093a28122241ac4419 MATCH
+artifact=net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz type=tar.gz recomputed=f2da1a6e81fc70283de80f182fb95bb923a46fc8fa41d00bfaf54eb3a33fd188 expected=f2da1a6e81fc70283de80f182fb95bb923a46fc8fa41d00bfaf54eb3a33fd188 MATCH
+artifact=net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip type=zip recomputed=97544c41ef17f89d9e5c9dd4860e22ef66db8aa60c58a9829a02295dd318f02e expected=97544c41ef17f89d9e5c9dd4860e22ef66db8aa60c58a9829a02295dd318f02e MATCH
+  (spot-check#1 archive   = net4sats-wizard_0.5.1-snapshot.9c37d2e_linux_amd64.tar.gz)
+  (spot-check#2 non-linux = net4sats-wizard_0.5.1-snapshot.9c37d2e_darwin_arm64.tar.gz ; plus Windows zip equivalent of Get-FileHash: net4sats-wizard_0.5.1-snapshot.9c37d2e_windows_amd64.zip)
+POWERSHELL_PRESENT=no
