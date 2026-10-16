@@ -1,0 +1,50 @@
+### host: x280 2026-10-16T06:32:13+02:00
+### run id under scrutiny: 38844256545
+local HEAD SHA        = 64008dc2cfa83f9e3679f1f40d21f186c765642d
+CI run headSha        = 64008dc2cfa83f9e3679f1f40d21f186c765642d
+SHA_MATCH             = OK  (the green run IS this exact tip)
+
+# ---- gh run view 38844256545 (detail) ----
+$ gh run view 38844256545 --repo felixfelix-bot/net4sats-wizard-go
+
+✓ ci/add-github-actions-workflow-clean CI #29 · 38844256545
+Triggered via workflow_dispatch about 1 hour ago
+
+JOBS
+✓ lint in 15s (ID 116791066488)
+✓ test in 1m49s (ID 116791066942)
+
+ANNOTATIONS
+! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-go@v5, golangci/golangci-lint-action@v6. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+lint: .github#2
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+lint: .github#1
+
+! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-go@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+test: .github#2
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+test: .github#1
+
+
+For more information about a job, try: gh run view --job=<job-id>
+View this run on GitHub: https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38844256545
+
+# ---- gh run view --json (conclusion/status/workflow) ----
+{"conclusion":"success","databaseId":38844256545,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"64008dc2cfa83f9e3679f1f40d21f186c765642d","jobs":[{"completedAt":"2026-10-16T03:11:38Z","conclusion":"success","databaseId":116791066488,"name":"lint","startedAt":"2026-10-16T03:11:23Z","status":"completed","steps":[{"conclusion":"success","name":"Set up job","number":1,"status":"completed"},{"conclusion":"success","name":"Run actions/checkout@v4","number":2,"status":"completed"},{"conclusion":"success","name":"Run actions/setup-go@v5","number":3,"status":"completed"},{"conclusion":"success","name":"Run golangci/golangci-lint-action@v6","number":4,"status":"completed"},{"conclusion":"success","name":"Post Run golangci/golangci-lint-action@v6","number":6,"status":"completed"},{"conclusion":"success","name":"Post Run actions/setup-go@v5","number":7,"status":"completed"},{"conclusion":"success","name":"Post Run actions/checkout@v4","number":8,"status":"completed"},{"conclusion":"success","name":"Complete job","number":9,"status":"completed"}],"url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38844256545/job/116791066488"},{"completedAt":"2026-10-16T03:13:12Z","conclusion":"success","databaseId":116791066942,"name":"test","startedAt":"2026-10-16T03:11:23Z","status":"completed","steps":[{"conclusion":"success","name":"Set up job","number":1,"status":"completed"},{"conclusion":"success","name":"Run actions/checkout@v4","number":2,"status":"completed"},{"conclusion":"success","name":"Run actions/setup-go@v5","number":3,"status":"completed"},{"conclusion":"success","name":"Run go build ./...","number":4,"status":"completed"},{"conclusion":"success","name":"Run go vet ./...","number":5,"status":"completed"},{"conclusion":"success","name":"Run go test ./... -race -count=1","number":6,"status":"completed"},{"conclusion":"success","name":"Post Run actions/setup-go@v5","number":11,"status":"completed"},{"conclusion":"success","name":"Post Run actions/checkout@v4","number":12,"status":"completed"},{"conclusion":"success","name":"Complete job","number":13,"status":"completed"}],"url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38844256545/job/116791066942"}],"status":"completed","workflowName":"CI"}
+
+# ---- CI workflow + goreleaser config present at this tip? ----
+$ git ls-tree -r --name-only HEAD | grep -E "workflows|\\.goreleaser"
+.github/workflows/ci.yml
+.github/workflows/release.yml
+.goreleaser.yaml
+
+# ---- last 6 commits on the branch (docs/ci/goreleaser must be committed) ----
+$ git log --oneline -6
+64008dc docs(wz16): append final verification block (tip cbbb092, 0/0, CI 38844056356 green)
+cbbb092 docs(wz16): record the per-tip CI ledger and the code-tree identity check (final)
+4cee1d2 docs(wz16): final PROGRESS with per-tip CI ledger (5 green runs, code tree unchanged)
+fadd82c docs(wz16): card evidence bundle — report/progress attachments + card comment
+b71af0b docs(wz16): final-state addendum — CI 38843145298 green at tip 5efd948; tree clean, 0/0 vs remote
+5efd948 docs(wz16): record CI re-run 38842920848 green at the post-report tip 649d90f

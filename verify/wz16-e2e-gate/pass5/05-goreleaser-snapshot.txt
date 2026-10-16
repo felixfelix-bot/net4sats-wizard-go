@@ -1,0 +1,41 @@
+### host: x280 2026-10-16T06:30:26+02:00
+### repo: /home/c08r4d0r/wz16-verify  HEAD: 64008dc2cfa83f9e3679f1f40d21f186c765642d
+# ---- STEP 3a: goreleaser release --snapshot --clean ----
+$ goreleaser release --snapshot --clean
+  • starting release
+  • skipping announce, publish, and validate...
+  • cleaning distribution directory
+  • loading environment variables
+  • getting and validating git state
+    • using tags                                     previous=v0.3.5 current=v0.5.0
+    • pipe skipped or partially skipped              reason=disabled during snapshot mode
+  • parsing tag
+  • setting defaults
+  • snapshotting
+    • building snapshot...                           version=0.5.1-snapshot.64008dc
+  • running before hooks
+    • running                                        hook=go mod verify
+  • ensuring distribution directory
+  • setting up metadata
+  • writing release metadata
+  • loading go mod information
+  • build prerequisites
+  • building binaries
+    • building                                       paths=. binaries=net4sats-wizard target=linux_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=darwin_amd64_v1
+    • building                                       paths=. binaries=net4sats-wizard target=windows_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=darwin_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=linux_amd64_v1
+    • building                                       paths=. binaries=net4sats-wizard target=windows_amd64_v1
+  • archives
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz
+  • calculating checksums
+  • writing artifacts metadata
+  • release succeeded after 5s
+  • thanks for using GoReleaser!
+GORELEASER_SNAPSHOT_RC=0

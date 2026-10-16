@@ -1,0 +1,79 @@
+### host: x280 2026-10-16T06:31:03+02:00
+### dist: /home/c08r4d0r/wz16-verify/dist
+### checksum file: dist/SHA256SUMS  (name_template from .goreleaser.yaml)
+
+# ---- artifact inventory ----
+$ ls -la dist/
+total 26044
+drwxr-xr-x  8 c08r4d0r c08r4d0r    4096 Oct 16 06:30 .
+drwxrwxr-x 12 c08r4d0r c08r4d0r    4096 Oct 16 06:30 ..
+-rw-r--r--  1 c08r4d0r c08r4d0r     744 Oct 16 06:30 SHA256SUMS
+-rw-r--r--  1 c08r4d0r c08r4d0r    4754 Oct 16 06:30 artifacts.json
+-rw-r--r--  1 c08r4d0r c08r4d0r    4379 Oct 16 06:30 config.yaml
+-rw-r--r--  1 c08r4d0r c08r4d0r     249 Oct 16 06:30 metadata.json
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4544369 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4413921 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4492303 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4268919 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4567564 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip
+-rw-rw-r--  1 c08r4d0r c08r4d0r 4310153 Oct 16 06:30 net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_darwin_amd64_v1
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_darwin_arm64_v8.0
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_linux_amd64_v1
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_linux_arm64_v8.0
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_windows_amd64_v1
+drwxr-xr-x  2 c08r4d0r c08r4d0r    4096 Oct 16 06:30 net4sats-wizard_windows_arm64_v8.0
+
+# ---- STEP 3b-1: archives (6 expected: linux/windows/darwin x amd64/arm64) ----
+$ ls dist/*.tar.gz dist/*.zip
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip
+ARCHIVE_COUNT=6
+  linux   = 2  (expect 2: amd64, arm64)
+  windows = 2  (expect 2: amd64, arm64)
+  darwin  = 2  (expect 2: amd64, arm64)
+  amd64   = 12  (expect 3)
+  arm64   = 12  (expect 3)
+
+# ---- STEP 3b-2: extracted per-target binaries (the 6 build targets) ----
+$ find dist -type f -name "net4sats-wizard" | sort
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_darwin_amd64_v1/net4sats-wizard
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_darwin_arm64_v8.0/net4sats-wizard
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_linux_arm64_v8.0/net4sats-wizard
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_windows_amd64_v1/net4sats-wizard.exe
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_windows_arm64_v8.0/net4sats-wizard.exe
+BINARY_COUNT=6  (expect 6)
+
+# ---- STEP 3b-3: checksum file contents ----
+$ cat dist/SHA256SUMS
+c132d4c3279080fcd195dc8bbcf8d30affcebcc819e6dc36c952b51a357c31ca  net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz
+ea2326ca28218dd8bf0ae93dabcc76faff957fbae6f74bbe865cf6a1e6602b75  net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz
+1a7c3a48d5f5cb8dcdf10e529cdd98061ac93712680443b2bfc72832e176eb33  net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz
+b08d5d1e4146f3556714fb66d94c09d2e14343c4f1bfd153e0a0531161f47873  net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz
+9cd29ad35cef6bf8b9b8f53e274ab9b658c476970db5aba8ee4cb20edc7a5e72  net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip
+50cbfb325c2c3da948cd443fcbcb363fbd8dc791d0b9534373cdf3c761326795  net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip
+CHECKSUM_LINES=6   ARCHIVE_COUNT=6
+
+# ---- STEP 3b-4: COUNT PARITY (checksum lines == archive count) ----
+PARITY: OK  (6 checksum lines == 6 archives)
+
+# ---- STEP 3c: sha256sum -c (ALL artifacts) ----
+$ sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip: OK
+SHA256SUM_C_ALL_RC=0
+net4sats-wizard_0.5.1-snapshot.64008dc_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.64008dc_windows_arm64.zip: OK

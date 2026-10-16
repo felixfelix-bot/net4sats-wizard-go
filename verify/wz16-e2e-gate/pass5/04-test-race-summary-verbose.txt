@@ -1,0 +1,14 @@
+### host: x280 2026-10-16T06:30:19+02:00
+### cmd: go test ./... -race -v   (full log: 04-test-race-verbose.log)
+TEST_RACE_VERBOSE_RC=0
+--- PASS = 52
+--- FAIL = 0
+--- SKIP = 0
+ok_pkgs  = 1
+DATA_RACE= 0
+panic    = 0
+--- tail ---
+(no FAIL lines)
+--- PASS: TestVersionStringFormat (0.00s)
+--- PASS: TestVersionFlagInjectedViaLdflags (0.51s)
+ok  	net4sats-wizard	59.629s

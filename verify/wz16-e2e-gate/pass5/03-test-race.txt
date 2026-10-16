@@ -1,0 +1,6 @@
+### host: x280 2026-10-16T06:27:52+02:00
+### go: go version go1.22.12 linux/amd64
+# ---- STEP 2d: go test ./... -race ----
+$ go test ./... -race
+ok  	net4sats-wizard	78.885s
+TEST_RACE_RC=0

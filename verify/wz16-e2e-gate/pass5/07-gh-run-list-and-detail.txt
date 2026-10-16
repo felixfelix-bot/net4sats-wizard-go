@@ -1,0 +1,28 @@
+### host: x280 2026-10-16T06:31:58+02:00
+### local HEAD (branch ci/add-github-actions-workflow-clean): 64008dc2cfa83f9e3679f1f40d21f186c765642d
+### remote SHA (ls-remote): 64008dc2cfa83f9e3679f1f40d21f186c765642d
+
+# ---- STEP 5a: gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 5 ----
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 5
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38844256545	1m54s	2026-10-16T03:11:19Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38844056356	1m57s	2026-10-16T03:08:56Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843855025	1m58s	2026-10-16T03:06:32Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843632861	1m48s	2026-10-16T03:04:03Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38843393341	1m52s	2026-10-16T03:01:14Z
+
+# ---- STEP 5b: the card names net4sats/tollgate-wizard-go — that repo does NOT exist ----
+$ gh run list --repo net4sats/tollgate-wizard-go --limit 5
+failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5&exclude_pull_requests=true)
+NET4SATS_TGW_RC=1
+
+$ gh repo view net4sats/tollgate-wizard-go
+GraphQL: Could not resolve to a Repository with the name 'net4sats/tollgate-wizard-go'. (repository)
+REPO_VIEW_RC=1
+
+# ---- STEP 5c: gh run list --repo net4sats/net4sats-wizard-go (the real upstream) --limit 5 ----
+$ gh run list --repo net4sats/net4sats-wizard-go --limit 5
+NET4SATS_NWG_RC=0
+
+# ---- STEP 5d: JSON view of the 5 runs (conclusion + headSha + event) ----
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 5 --json databaseId,conclusion,status,headBranch,headSha,event,workflowName,createdAt
+[{"conclusion":"success","createdAt":"2026-10-16T03:11:19Z","databaseId":38844256545,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"64008dc2cfa83f9e3679f1f40d21f186c765642d","status":"completed","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T03:08:56Z","databaseId":38844056356,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"cbbb09261f73e1bcfe627adeefa7b9ebde9fd130","status":"completed","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T03:06:32Z","databaseId":38843855025,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"4cee1d2c4a9beb2bd9d77c8c644e5c8d8624a5cc","status":"completed","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T03:04:03Z","databaseId":38843632861,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"fadd82c3423d1764670685592c75873a5e3e4d19","status":"completed","workflowName":"CI"},{"conclusion":"success","createdAt":"2026-10-16T03:01:14Z","databaseId":38843393341,"event":"workflow_dispatch","headBranch":"ci/add-github-actions-workflow-clean","headSha":"b71af0b5d3a09849434a56aca8e491a32d3c4403","status":"completed","workflowName":"CI"}]

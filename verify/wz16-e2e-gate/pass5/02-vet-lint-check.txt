@@ -1,0 +1,20 @@
+### GO: go version go1.22.12 linux/amd64
+### golangci-lint: golangci-lint has version 1.61.0 built with go1.23.1 from a1d6c560 on 2024-09-09T17:44:42Z
+### goreleaser:   ____       ____      _
+ / ___| ___ |  _ \ ___| | ___  __ _ ___  ___ _ __
+| |  _ / _ \| |_) / _ \ |/ _ \/ _` / __|/ _ \ '__|
+
+# ---- STEP 2a: go vet ./... ----
+$ go vet ./...
+VET_RC=0
+
+# ---- STEP 2b: golangci-lint run ----
+$ golangci-lint run
+LINT_RC=0
+
+# ---- STEP 2c: goreleaser check ----
+$ goreleaser check
+  • checking                                  path=.goreleaser.yaml
+  • 1 configuration file(s) validated
+  • thanks for using GoReleaser!
+GRCHECK_RC=0

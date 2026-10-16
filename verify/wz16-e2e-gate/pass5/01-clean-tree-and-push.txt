@@ -1,0 +1,27 @@
+### host: x280 c08r4d0r 2026-10-16T06:27:34+02:00
+### repo: /home/c08r4d0r/wz16-verify
+### branch: ci/add-github-actions-workflow-clean
+### HEAD: 64008dc2cfa83f9e3679f1f40d21f186c765642d
+
+# ---- STEP 1b: git status --porcelain (must be EMPTY) ----
+$ git status --porcelain
+PORCELAIN_RC=0  LINES=0
+
+# ---- STEP 1b: git push ----
+$ git push
+Everything up-to-date
+PUSH_RC=0
+
+# ---- STEP 1b: ahead/behind vs remote ----
+$ git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean
+0	0
+AB_RC=0   # <ahead>\t<behind>
+
+# ---- local HEAD vs origin SHA ----
+local_HEAD          = 64008dc2cfa83f9e3679f1f40d21f186c765642d
+origin/ci/add-github-actions-workflow-clean = 64008dc2cfa83f9e3679f1f40d21f186c765642d
+
+# ---- remote ground truth (ls-remote) ----
+$ git ls-remote origin refs/heads/ci/add-github-actions-workflow-clean
+64008dc2cfa83f9e3679f1f40d21f186c765642d	refs/heads/ci/add-github-actions-workflow-clean
+LSREMOTE_RC=0

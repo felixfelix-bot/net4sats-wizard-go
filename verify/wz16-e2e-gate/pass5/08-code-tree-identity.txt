@@ -1,0 +1,50 @@
+### host: x280 2026-10-16T06:32:30+02:00
+### HEAD = 64008dc2cfa83f9e3679f1f40d21f186c765642d
+
+# ---- source tree hash at HEAD (the SHA the snapshot + smoke ran against) ----
+$ git rev-parse HEAD^{tree}
+74d3597fd4377a704d903e02bfaf7eb163b61ef6
+
+# ---- every commit in the range that CI covered, with the files each touched ----
+$ for c in 64008dc cbbb092 4cee1d2 fadd82c b71af0b; do git show --stat --oneline $c | head -6; done
+64008dc docs(wz16): append final verification block (tip cbbb092, 0/0, CI 38844056356 green)
+ verify/wz16-e2e-gate/10-ci-rerun-at-final-tip.txt | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+  ---
+cbbb092 docs(wz16): record the per-tip CI ledger and the code-tree identity check (final)
+ verify/wz16-e2e-gate/10-ci-rerun-at-final-tip.txt | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+  ---
+4cee1d2 docs(wz16): final PROGRESS with per-tip CI ledger (5 green runs, code tree unchanged)
+ PROGRESS.md                                        | 59 +++++++++++++---------
+ .../wz16-e2e-gate/PROGRESS.wz16-e2e-gate-pass4.md  | 59 +++++++++++++---------
+ 2 files changed, 70 insertions(+), 48 deletions(-)
+  ---
+fadd82c docs(wz16): card evidence bundle — report/progress attachments + card comment
+ .../wz16-e2e-gate/PROGRESS.wz16-e2e-gate-pass4.md  |  52 +++
+ verify/wz16-e2e-gate/REPORT.wz16-e2e-gate-pass4.md | 397 +++++++++++++++++++++
+ verify/wz16-e2e-gate/card-comment.md               | 131 +++++++
+ 3 files changed, 580 insertions(+)
+  ---
+b71af0b docs(wz16): final-state addendum — CI 38843145298 green at tip 5efd948; tree clean, 0/0 vs remote
+ REPORT.md                                         | 22 +++++++++++++++++++---
+ verify/wz16-e2e-gate/10-ci-rerun-at-final-tip.txt | 13 +++++++++++++
+ 2 files changed, 32 insertions(+), 3 deletions(-)
+  ---
+
+# ---- are any .go / .goreleaser.yaml / workflow files modified between the oldest
+#      CI-green tip (b71af0b) and HEAD (64008dc)? (empty = code identical) ----
+$ git diff --name-only b71af0b 64008dc
+PROGRESS.md
+verify/wz16-e2e-gate/10-ci-rerun-at-final-tip.txt
+verify/wz16-e2e-gate/PROGRESS.wz16-e2e-gate-pass4.md
+verify/wz16-e2e-gate/REPORT.wz16-e2e-gate-pass4.md
+verify/wz16-e2e-gate/card-comment.md
+CODE_TREE_DIFF_RC=0
+
+$ git diff --name-only b71af0b 64008dc -- "*.go" ".goreleaser.yaml" ".github/**"
+GO_CODE_DIFF_LINES=0  (expect 0)
+
+# ---- blob identity: main.go + .goreleaser.yaml blob SHAs at HEAD ----
+100644 blob 0741e31079072bb26135fb605e689c66233d7434	.goreleaser.yaml
+100644 blob 30b35e02055417e35adc4695a08283ea9d0ad92c	main.go

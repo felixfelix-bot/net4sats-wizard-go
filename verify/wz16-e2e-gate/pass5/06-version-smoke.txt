@@ -1,0 +1,30 @@
+### host: x280 2026-10-16T06:31:43+02:00
+### binary under test: /home/c08r4d0r/wz16-verify/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+### expected format (task): 'tollgate-wizard <version>'  <- pinned by main.go:55 programName
+$ file dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+/home/c08r4d0r/wz16-verify/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=RE9I1k0LqRTQ78fi483j/t7ljOQgHxYOJnJcWRFM0/lRueqDjOqhYpcww_ETGT/Gw_PYsRZF0Dv5TjMqMl5, stripped
+$ ls -la dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+-rwxrwxr-x 1 c08r4d0r c08r4d0r 11251864 Oct 16 06:30 /home/c08r4d0r/wz16-verify/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+
+# ---- STEP 4a: execute built linux/amd64 binary with --version ----
+$ ./dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard --version
+STDOUT: tollgate-wizard 0.5.1-snapshot.64008dc
+STDERR: 
+VERSION_EXIT_CODE=0
+LINE=[tollgate-wizard 0.5.1-snapshot.64008dc]
+FORMAT: OK  (prints 'tollgate-wizard <version>')
+EXIT_CODE: OK (0)
+INJECTION: OK (non-dev version printed: 0.5.1-snapshot.64008dc)
+
+# ---- STEP 4b: manual ldflags injection control (value must CHANGE) ----
+$ go build -ldflags "-X main.version=v9.9.9-injection-control" -o /tmp/wz16v2-ctl .
+CTL_BUILD_RC=0
+CTL_STDOUT: tollgate-wizard v9.9.9-injection-control
+CTL_LINE=[tollgate-wizard v9.9.9-injection-control]
+CONTROL: OK (injected value flows through; 'v9.9.9-injection-control' != snapshot '0.5.1-snapshot.64008dc')
+
+# ---- STEP 4c: negative control (no ldflags -> must print dev) ----
+$ go build -o /tmp/wz16v2-nold .
+NOLD_BUILD_RC=0
+NOLD_LINE=[tollgate-wizard dev]
+NEGATIVE: OK (no injection -> 'dev', proves the snapshot's version was truly injected)

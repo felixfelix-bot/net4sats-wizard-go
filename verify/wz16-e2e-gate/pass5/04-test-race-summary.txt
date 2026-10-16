@@ -1,0 +1,7 @@
+TEST_RACE_RC=0
+PASS      = 0
+FAIL      = 0
+ok_pkgs   = 1
+notest_pkgs = 0
+DATA_RACE = 0
+panic     = 0
