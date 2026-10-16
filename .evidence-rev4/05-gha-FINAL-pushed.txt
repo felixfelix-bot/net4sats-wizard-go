@@ -1,0 +1,14 @@
+=== FINAL PUSH + CI AT PUSHED HEAD dadcb23 ===
+$ git push
+   a412b61..dadcb23  worker-heavy/t_0509c320-r3 -> worker-heavy/t_0509c320-r3  [rc=0]
+$ git rev-list --left-right --count @{u}...HEAD
+0	0
+HEAD=dadcb23d09ad0ce12e47d06330b4c92fa440be39
+u   =dadcb23d09ad0ce12e47d06330b4c92fa440be39
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch worker-heavy/t_0509c320-r3 --limit 3
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866690995	1m55s	2026-10-16T07:21:27Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866254688	2m6s	2026-10-16T07:17:16Z
+
+$ gh run view 38866690995 …
+{"branch":"worker-heavy/t_0509c320-r3","conclusion":"success","event":"workflow_dispatch","id":38866690995,"jobs":[{"conclusion":"success","name":"test"},{"conclusion":"success","name":"lint"}],"sha":"dadcb23d09ad0ce12e47d06330b4c92fa440be39","status":"completed","workflow":"CI"}

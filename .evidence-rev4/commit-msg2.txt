@@ -1,0 +1,9 @@
+docs(t_0509c320): pass 4 — final push dadcb23, CI green at the pushed head (run 38866690995)
+
+- pushed a412b61..dadcb23 on worker-heavy/t_0509c320-r3; upstream ref == HEAD; ahead/behind 0/0; tree clean
+- CI run 38866690995 conclusion=success at headSha=dadcb23==pushed HEAD, jobs test+lint success
+  (plus run 38866254688 success at a412b616, the head Steps 1-4 were measured against)
+- card: 3 comments posted; REPORT-t_0509c320-rev4.md attached; card is 'triage' so complete/promote refuse
+  (verbatim: "cannot complete t_0509c320 (unknown id or terminal state)" /
+   "cannot promote t_0509c320: task t_0509c320 is 'triage'; promote only applies to 'todo' or 'blocked'")
+- REPORT.md §5b updated to record both green runs at their respective heads

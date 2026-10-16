@@ -251,23 +251,29 @@ failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/t
 ```
 
 ### 5b CI green on the real repo, for the pushed branch, at head == pushed HEAD
+Two runs exist on this branch, both green, both at their respective pushed heads:
+
 ```
 $ git rev-parse HEAD
-a412b616c019e1950b523e2340b54a04e2656eb9
-$ git rev-parse origin/worker-heavy/t_0509c320-r3
-a412b616c019e1950b523e2340b54a04e2656eb9
+dadcb23d09ad0ce12e47d06330b4c92fa440be39          # final pushed head (after the pass-4 docs commit)
+$ git rev-parse @{u}
+dadcb23d09ad0ce12e47d06330b4c92fa440be39
+$ git rev-list --left-right --count @{u}...HEAD
+0	0
 
-$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch worker-heavy/t_0509c320-r3 --limit 5
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch worker-heavy/t_0509c320-r3 --limit 3
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866690995	1m55s	2026-10-16T07:21:27Z
 completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866254688	2m6s	2026-10-16T07:17:16Z
-[rc=0]
 
-$ gh run view 38866254688 --repo felixfelix-bot/net4sats-wizard-go --json databaseId,status,conclusion,headSha,headBranch,event,workflowName,jobs
-{"branch":"worker-heavy/t_0509c320-r3","conclusion":"success","event":"workflow_dispatch","id":38866254688,
- "jobs":[{"conclusion":"success","name":"lint"},{"conclusion":"success","name":"test"}],
- "sha":"a412b616c019e1950b523e2340b54a04e2656eb9","status":"completed","workflow":"CI"}
+$ gh run view 38866690995 --repo felixfelix-bot/net4sats-wizard-go --json databaseId,status,conclusion,headSha,headBranch,event,workflowName,jobs
+{"branch":"worker-heavy/t_0509c320-r3","conclusion":"success","event":"workflow_dispatch","id":38866690995,
+ "jobs":[{"conclusion":"success","name":"test"},{"conclusion":"success","name":"lint"}],
+ "sha":"dadcb23d09ad0ce12e47d06330b4c92fa440be39","status":"completed","workflow":"CI"}
 ```
-`git HEAD == origin ref == run headSha`. Both jobs green (`test` ran build/vet/`go test -race`; `lint` ran
-golangci-lint v1.61.0). Annotations are only `ubuntu-latest`-label and Node-20-deprecation notices.
+- Run **38866690995** at `dadcb23…` = the FINAL pushed head (after the pass-4 docs commit `dadcb23`).
+- Run **38866254688** at `a412b616…` = the head that all of Steps 1–4 were measured against.
+- `git HEAD == @{u} == run headSha` in both cases. Both jobs green (`test` ran build/vet/`go test -race`; `lint` ran
+  golangci-lint v1.61.0). Annotations are only `ubuntu-latest`-label and Node-20-deprecation notices.
 
 ### 5c Why the run is `workflow_dispatch` and not an automatic `pull_request` run
 Measured this pass on the pushed branch:
