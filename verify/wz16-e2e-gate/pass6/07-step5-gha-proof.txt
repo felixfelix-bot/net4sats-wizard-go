@@ -1,0 +1,65 @@
+### STEP 5 — GHA proof — 2026-10-16T17:22:44+02:00
+local HEAD = e85720cd39a41d4af8bdff5172752a827e25bb86
+
+=== 5a. THE CARD'S LITERAL REPO DOES NOT EXIST (measured, not cited) ===
+$ gh run list --repo net4sats/tollgate-wizard-go --limit 5
+failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5&exclude_pull_requests=true)
+RC=1
+
+$ gh api repos/net4sats/tollgate-wizard-go --jq .message
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/repos#get-a-repository","status":"404"}gh: Not Found (HTTP 404)
+RC=1
+-> fall back to the real repo: felixfelix-bot/net4sats-wizard-go (public fork; upstream net4sats/net4sats-wizard-go)
+
+=== 5b. THE CARD'S LITERAL COMMAND, on the real repo ===
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 5
+completed	success	CI	CI	worker-heavy/t_10a913ec	workflow_dispatch	38899734040	2m1s	2026-10-16T12:19:42Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38870340847	1m53s	2026-10-16T07:55:58Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38869481487	2m0s	2026-10-16T07:47:50Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38867038864	2m0s	2026-10-16T07:24:41Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866690995	1m55s	2026-10-16T07:21:27Z
+RC=0
+
+=== 5c. runs for THIS branch ===
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 5
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852530642	2m0s	2026-10-16T04:48:45Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852255804	2m2s	2026-10-16T04:45:27Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852038477	1m56s	2026-10-16T04:43:00Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851802391	1m56s	2026-10-16T04:40:12Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38851577790	1m59s	2026-10-16T04:37:28Z
+RC=0
+
+=== 5d. the green run that IS the pushed tip (load-bearing check) ===
+newest run id on this branch = 38852530642
+$ gh run view 38852530642 --repo felixfelix-bot/net4sats-wizard-go --json databaseId,conclusion,headSha,headBranch,event,status,jobs,workflowName
+{"id":38852530642,"wf":"CI","branch":"ci/add-github-actions-workflow-clean","sha":"e85720cd39a41d4af8bdff5172752a827e25bb86","event":"workflow_dispatch","status":"completed","conclusion":"success","jobs":[{"name":"lint","conclusion":"success"},{"name":"test","conclusion":"success"}]}
+
+local HEAD          = e85720cd39a41d4af8bdff5172752a827e25bb86
+CI run headSha      = e85720cd39a41d4af8bdff5172752a827e25bb86
+CI run conclusion   = success
+SHA_MATCH_CONCLUSION = OK  (the green run is exactly this pushed tip)
+
+=== 5e. the run's step log (proves which commands CI actually ran) ===
+
+=== 5f. CROSS-HEAD identity: is the OTHER candidate head's green CI covering the same code? ===
+$ gh run list --branch worker-heavy/t_0509c320-r3 --limit 3
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38870340847	1m53s	2026-10-16T07:55:58Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38869481487	2m0s	2026-10-16T07:47:50Z
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38867038864	2m0s	2026-10-16T07:24:41Z
+r3 tip = 6345e2b3f794494d5c66ab9e30050bd0b9ff5163
+
+$ git diff --name-only 6345e2b3f794494d5c66ab9e30050bd0b9ff5163 e85720cd39a41d4af8bdff5172752a827e25bb86 -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'
+handlers_test.go
+security_hardening_test.go
+
+blob identity for the build/CI-relevant paths (r3 vs this tip):
+  IDENTICAL  .goreleaser.yaml
+  IDENTICAL  .github/workflows/ci.yml
+  IDENTICAL  .github/workflows/release.yml
+  IDENTICAL  go.mod
+  IDENTICAL  go.sum
+  IDENTICAL  main.go
+  IDENTICAL  deploy.go
+  IDENTICAL  discover.go
+  IDENTICAL  ssh.go
+  IDENTICAL  embed.go

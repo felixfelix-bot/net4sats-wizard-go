@@ -1,0 +1,33 @@
+$ go test ./... -race -v -count=1
+=== RUN   TestCORSMiddleware/suffix_trick
+=== RUN   TestCORSMiddleware/port_must_match
+--- PASS: TestCORSMiddleware (0.00s)
+    --- PASS: TestCORSMiddleware/foreign_origin (0.00s)
+    --- PASS: TestCORSMiddleware/localhost_allowed (0.00s)
+    --- PASS: TestCORSMiddleware/loopback-ip_allowed (0.00s)
+    --- PASS: TestCORSMiddleware/no_origin_header (0.00s)
+    --- PASS: TestCORSMiddleware/scheme_must_match (0.00s)
+    --- PASS: TestCORSMiddleware/suffix_trick (0.00s)
+    --- PASS: TestCORSMiddleware/port_must_match (0.00s)
+=== RUN   TestValidLightningAddressUnchangedOnBenign
+--- PASS: TestValidLightningAddressUnchangedOnBenign (0.00s)
+=== RUN   TestValidLightningAddress
+--- PASS: TestValidLightningAddress (0.00s)
+=== RUN   TestVersionStringFormat
+--- PASS: TestVersionStringFormat (0.00s)
+=== RUN   TestVersionFlagInjectedViaLdflags
+--- PASS: TestVersionFlagInjectedViaLdflags (0.85s)
+PASS
+ok  	net4sats-wizard	82.248s
+GO_TEST_RACE_VERBOSE_RC=0
+--- per-test tally ---
+RUN_COUNT=123
+PASS_COUNT=52
+FAIL_COUNT=0
+SKIP_COUNT=0
+DATA_RACE_COUNT=0
+--- PASS: TestValidLightningAddressUnchangedOnBenign (0.00s)
+--- PASS: TestValidLightningAddress (0.00s)
+--- PASS: TestVersionStringFormat (0.00s)
+--- PASS: TestVersionFlagInjectedViaLdflags (0.85s)
+ok  	net4sats-wizard	82.248s

@@ -1,3 +1,27 @@
+# PROGRESS — wz16 e2e integration gate (t_0509c320) — PASS 6
+
+Worktree root: `/home/c08r4d0r/worktrees/wz16-pass6` (detached) · branch `ci/add-github-actions-workflow-clean`
+Pass start: 2026-10-16T17:14+02:00 · host x280 · **STATUS: COMPLETE — all 6 steps green, pushed, CI verified green at the tip**
+Subject under test: **`e85720cd39a41d4af8bdff5172752a827e25bb86`** (= `origin/…-clean`, PR #29 head)
+
+Supersedes the pass-5 section below. Raw captures: `verify/wz16-e2e-gate/pass6/`. Full report: `REPORT.md` (top section).
+
+## Finding → status → files touched
+
+| finding | status | files touched |
+|---|---|---|
+| Assigned workspace `/home/c08r4d0r/repos/net4sats-mvp-v2` is detached at `13de851` (old atomic branch, **no `.goreleaser.yaml`**) → steps 2/3 undefined there | worked around: dedicated worktree `~/worktrees/wz16-pass6` at the deliverable tip; board workspace left untouched | none (new worktree) |
+| Card's repo `net4sats/tollgate-wizard-go` → HTTP 404 (measured both via `gh run list` and `gh api`) | reported verbatim; real repo `felixfelix-bot/net4sats-wizard-go` | `REPORT.md` |
+| Steps 1–4 at the tip | **PASS** (porcelain 0; `0	0`; vet/lint/check rc 0; suite 123 RUN/52 PASS/0 FAIL/0 race; 6/6 artifacts, parity 6==6, `sha256sum -c` 6/6 OK + corruption control; `--version` = `tollgate-wizard 0.5.1-snapshot.e85720c` rc 0, injection changes, uninjected → `dev`) | `verify/wz16-e2e-gate/pass6/*` |
+| Step 5 (CI green at the pushed tip) | **PASS** — run `38852530642`, `headSha == HEAD == e85720c`, jobs `lint` + `test` success | `verify/wz16-e2e-gate/pass6/07-step5-gha-proof.txt` |
+| Windows `Get-FileHash` | **not run** — no Windows host; substituted `sha256sum -c` (same SHA-256) + recompute + corruption control; stated, not hidden | `REPORT.md` |
+| Card status `triage` | worker cannot transition it → report attached + comment posted; **manager must promote** | card `t_0509c320` |
+
+Deliverable files verified present at the tip: `.github/workflows/ci.yml`, `.github/workflows/release.yml`,
+`.goreleaser.yaml`, `docs/endo-runbook.md`.
+
+---
+
 # PROGRESS — wz16 e2e integration gate (pass 5, independent re-run)
 
 Worktree root: `/home/c08r4d0r/wz16-verify` · branch `ci/add-github-actions-workflow-clean`

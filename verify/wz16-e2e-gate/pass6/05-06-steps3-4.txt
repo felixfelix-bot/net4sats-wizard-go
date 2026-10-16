@@ -1,0 +1,145 @@
+### tools: goreleaser 2.18.3  go version go1.22.12 linux/amd64
+
+================ STEP 3 — snapshot release ================
+$ git check-ignore -v dist/   # confirm dist is not a tracked path
+.gitignore:1:dist/	dist/
+
+$ goreleaser release --snapshot --clean
+  • starting release
+  • skipping announce, publish, and validate...
+  • cleaning distribution directory
+  • loading environment variables
+  • getting and validating git state
+    • using tags                                     previous=v0.3.5 current=v0.5.0
+    • pipe skipped or partially skipped              reason=disabled during snapshot mode
+  • parsing tag
+  • setting defaults
+  • snapshotting
+    • building snapshot...                           version=0.5.1-snapshot.e85720c
+  • running before hooks
+    • running                                        hook=go mod verify
+  • ensuring distribution directory
+  • setting up metadata
+  • writing release metadata
+  • loading go mod information
+  • build prerequisites
+  • building binaries
+    • building                                       paths=. binaries=net4sats-wizard target=darwin_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=windows_amd64_v1
+    • building                                       paths=. binaries=net4sats-wizard target=windows_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=linux_arm64_v8.0
+    • building                                       paths=. binaries=net4sats-wizard target=linux_amd64_v1
+    • building                                       paths=. binaries=net4sats-wizard target=darwin_amd64_v1
+  • archives
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_windows_arm64.zip
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_windows_amd64.zip
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_darwin_amd64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_linux_arm64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz
+    • archiving                                      name=dist/net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz
+  • calculating checksums
+  • writing artifacts metadata
+  • release succeeded after 9s
+  • thanks for using GoReleaser!
+GORELEASER_SNAPSHOT_RC=0
+
+================ STEP 3b — artifact + checksum inventory ================
+$ ls -l dist/*.tar.gz dist/*.zip dist/SHA256SUMS
+-rw-r--r-- 1 c08r4d0r c08r4d0r     744 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/SHA256SUMS
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4543771 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_darwin_amd64.tar.gz
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4411830 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4491442 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4267818 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_linux_arm64.tar.gz
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4567009 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_windows_amd64.zip
+-rw-rw-r-- 1 c08r4d0r c08r4d0r 4309017 Oct 16 17:22 /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_0.5.1-snapshot.e85720c_windows_arm64.zip
+
+artifact list (name  size):
+net4sats-wizard_0.5.1-snapshot.e85720c_darwin_amd64.tar.gz	4543771
+net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz	4411830
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz	4491442
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_arm64.tar.gz	4267818
+net4sats-wizard_0.5.1-snapshot.e85720c_windows_amd64.zip	4567009
+net4sats-wizard_0.5.1-snapshot.e85720c_windows_arm64.zip	4309017
+
+matrix breakdown:
+linux  = 2
+darwin = 2
+windows= 2
+
+per-target built binaries:
+net4sats-wizard_darwin_amd64_v1/net4sats-wizard	11395152
+net4sats-wizard_darwin_arm64_v8.0/net4sats-wizard	11162146
+net4sats-wizard_linux_amd64_v1/net4sats-wizard	11215000
+net4sats-wizard_linux_arm64_v8.0/net4sats-wizard	10944664
+net4sats-wizard_windows_amd64_v1/net4sats-wizard.exe	11427328
+net4sats-wizard_windows_arm64_v8.0/net4sats-wizard.exe	11023872
+
+$ wc -l dist/SHA256SUMS
+6 /home/c08r4d0r/worktrees/wz16-pass6/dist/SHA256SUMS
+
+ARCHIVE_COUNT=6  BINARY_COUNT=6  CHECKSUM_LINES=6
+PARITY: OK  (6 checksum lines == 6 archives)
+
+================ STEP 3c — checksum verification ================
+$ cd dist && sha256sum -c SHA256SUMS
+net4sats-wizard_0.5.1-snapshot.e85720c_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_windows_arm64.zip: OK
+SHA256SUM_C_RC=0   OK_COUNT=6  FAILED_COUNT=0
+
+-- required: one archive (linux/amd64 .tar.gz) + one non-linux artifact (darwin/arm64 .tar.gz) --
+A (archive,    linux/amd64)  = net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz
+B (non-linux,  darwin/arm64) = net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz
+net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz: OK
+TWO_ARTIFACT_VERIFY_RC=0
+
+-- independent recompute (not trusting the sums file), vs the published line --
+71c6250fd8b7c7f799dc79d017e905b835232fb13fdd9504a4d2b0907e9d56c6  net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz
+3f4182b93d9b2a55f487698abf7330501b5a3d4c76b63b024ad6b93d53c4ccfe  net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz
+published lines:
+3f4182b93d9b2a55f487698abf7330501b5a3d4c76b63b024ad6b93d53c4ccfe  net4sats-wizard_0.5.1-snapshot.e85720c_darwin_arm64.tar.gz
+71c6250fd8b7c7f799dc79d017e905b835232fb13fdd9504a4d2b0907e9d56c6  net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz
+
+-- negative control: a corrupted copy MUST fail, proving the check is non-vacuous --
+net4sats-wizard_0.5.1-snapshot.e85720c_linux_amd64.tar.gz: FAILED
+NEGATIVE_CONTROL_RC=1  (non-zero = control is real)
+
+note: Windows 'Get-FileHash' was not executed (no Windows host available here).
+      The equivalent integrity proof is the SHA-256 comparison above; both implement the same
+      FIPS 180-4 SHA-256 over the file bytes. Stated rather than claimed.
+
+================ STEP 4 — binary smoke (--version) ================
+$ file /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+/home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=MLGELmQPH5C0Q2ZM925H/nSeyVZyNVizjwq4yUzjh/7THLysugF--HyRRxUhfx/cfstq_-1AYKG2s4cpz6H, stripped
+
+$ /home/c08r4d0r/worktrees/wz16-pass6/dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard --version
+STDOUT: tollgate-wizard 0.5.1-snapshot.e85720c
+STDERR: (empty)
+EXIT_CODE=0
+LINE=[tollgate-wizard 0.5.1-snapshot.e85720c]
+FORMAT:   OK   (prints 'tollgate-wizard <version>')
+EXIT:     OK   (0)
+INJECTION: OK   (non-dev version, not a fallback constant)
+
+-- manual injection control: build the same package with two different -X values --
+CTL_OUT=[tollgate-wizard v9.9.9-pass6-control]
+CTL2_OUT=[tollgate-wizard v0.0.1-changed]
+NOLD_OUT=[tollgate-wizard dev]   (no ldflags -> 'dev' is the fallback)
+
+INJECTION_CHANGES_WITH_FLAG: OK
+SNAPSHOT_VALUE_IS_STRIPPED_BINARY: OK
+
+================ STEP 3/4 SUPPORT — code-tree identity ================
+$ git rev-parse HEAD
+e85720cd39a41d4af8bdff5172752a827e25bb86
+HEAD^{tree}         = ca68cc13bb2d6cc99de065bbc8e5fe7fee419fc9
+main.go blob        = 30b35e02055417e35adc4695a08283ea9d0ad92c
+.goreleaser.yaml    = 0741e31079072bb26135fb605e689c66233d7434
+.github/workflows/ci.yml  = 6815d138459bf2d1d950612e749ecc6dce46bf25
+$ git status --porcelain   # after build/snapshot: build products must not dirty the tree
+?? verify/wz16-e2e-gate/pass6/
+POST_BUILD_PORCELAIN_LINES=1

@@ -1,0 +1,47 @@
+### wz16 e2e integration gate — PASS 6 — host x280 — 2026-10-16T17:18:53+02:00
+### subject branch: ci/add-github-actions-workflow-clean
+### worktree:       /home/c08r4d0r/worktrees/wz16-pass6
+### HEAD:           e85720cd39a41d4af8bdff5172752a827e25bb86
+### HEAD subject:   docs(wz16): add pass-5 card comment to the evidence bundle
+### tools:          go version go1.22.12 linux/amd64 | golangci-lint 1.61.0 | 2.18.3
+
+================ STEP 1 — clean tree check ================
+$ git status --porcelain
+?? verify/wz16-e2e-gate/pass6/
+PORCELAIN_RC=0  LINES=1
+
+$ git push          # literal, executed in the branch's own worktree ($WT-owner: wz16-verify)
+Everything up-to-date
+GIT_PUSH_RC=0
+
+$ git push origin HEAD:refs/heads/ci/add-github-actions-workflow-clean     # same op, from this detached pass worktree
+Everything up-to-date
+PUSH_EXPLICIT_RC=0
+
+$ git rev-list --left-right --count HEAD...origin/ci/add-github-actions-workflow-clean
+0	0
+local_HEAD            = e85720cd39a41d4af8bdff5172752a827e25bb86
+origin/ci/add-github-actions-workflow-clean = e85720cd39a41d4af8bdff5172752a827e25bb86
+
+$ git ls-remote origin refs/heads/ci/add-github-actions-workflow-clean
+e85720cd39a41d4af8bdff5172752a827e25bb86	refs/heads/ci/add-github-actions-workflow-clean
+
+### deliverable files present at this tip (CI workflow + goreleaser config + docs):
+.github/workflows/ci.yml
+.github/workflows/release.yml
+.goreleaser.yaml
+docs/endo-runbook.md
+
+================ STEP 2 — full suite ================
+$ go vet ./...
+GO_VET_RC=0
+
+$ golangci-lint run
+GOLANGCI_RC=0
+
+$ goreleaser check
+  • checking                                  path=.goreleaser.yaml
+  • 1 configuration file(s) validated
+  • thanks for using GoReleaser!
+GORELEASER_CHECK_RC=0
+
