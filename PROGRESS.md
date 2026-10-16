@@ -1,76 +1,49 @@
-# PROGRESS — E2E integration gate: snapshot build, --version smoke, full suite, push
+# PROGRESS — WZ1.6 e2e integration gate, re-dispatch (t_0509c320)
 
-Repo (actual): net4sats-wizard-go  — clone /home/c08r4d0r/wz16-verify
-  origin = https://github.com/felixfelix-bot/net4sats-wizard-go.git  (fork)
-  upstream = net4sats/net4sats-wizard-go (public org repo)
+Worktree: /home/c08r4d0r/wz16-verify · branch ci/add-github-actions-workflow-clean
+Tip verified: 4ca0b381ab3aa40f00b74f133f7b9024740277d7
+Evidence: /home/c08r4d0r/wz16-redispatch/captures/
 
-CARD REPO-NAME MISMATCH (finding, not a blocker):
-  Card says repo "net4sats/tollgate-wizard-go", workspace
-  /home/c08r4d0r/repos/net4sats-mvp-v2. Neither exists:
-    - `gh repo view net4sats/tollgate-wizard-go` -> GraphQL: Could not resolve.
-    - `gh api orgs/net4sats/repos` lists 10 repos; NO tollgate-wizard-go.
-      The wizard repo is `net4sats-wizard-go`.
-    - /home/c08r4d0r/repos/net4sats-mvp-v2 is the net4sats DEMO repo, not Go.
-  Work genuinely lives in /home/c08r4d0r/wz16-verify (felixfelix-bot fork).
-  CLI identity is `tollgate-wizard` (const programName, main.go:55) even though
-  the repo/module is net4sats-wizard — so the card's expected
-  "tollgate-wizard <version>" output is CORRECT and matches source.
+## Finding 1 — task's repo literal does not exist → RESOLVED (no file changes)
+- `gh run list --repo net4sats/tollgate-wizard-go` → HTTP 404 Not Found; GraphQL "could not
+  resolve to a Repository". Real repo = net4sats/net4sats-wizard-go (public); work lands on the
+  fork felixfelix-bot/net4sats-wizard-go, which is this worktree's `origin`.
+- Status: DONE. Files: none.
 
-Branch under test: ci/add-github-actions-workflow-clean
-  HEAD = 0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff
-  "feat(release): link-time version injection, --version, goreleaser config and release docs"
-  This is the commit the card says to verify AFTER (CI workflow + goreleaser + docs).
+## Finding 2 — the recorded "CI green" tip was STALE → re-dispatched on the true tip
+- On arrival the newest green CI run (38834487839) was at headSha 11c661b — one docs commit
+  BEHIND the current tip 4ca0b38. Query over 20 runs: `runs matching tip: 0`. So the earlier
+  report's green was not evidence about the shipped head.
+- Action: re-dispatched CI on the exact tip (`gh workflow run .github/workflows/ci.yml --ref
+  ci/add-github-actions-workflow-clean`), watched to completion.
+- Result: run 38838000347 → conclusion success, headSha 4ca0b38…, jobs lint=success, test=success.
+  Assertion: "runs at tip 4ca0b38 : 1 · AT LEAST ONE SUCCESS AT TIP: True".
+- Status: DONE. Files: none (no workflow change needed — CI was already correct; it had just
+  never been run on this commit).
 
-Toolchain (not on default PATH): /home/c08r4d0r/wz16-tools/
-  go122/bin/go = go1.22.12 ; goreleaser = 2.18.3 ; golangci-lint = 1.61.0
+## Finding 3 — all 5 gate steps re-executed green against the current tip
+- Step 1 clean tree: `git status --porcelain` empty, push "Everything up-to-date", ahead/behind 0 0.
+- Step 2 suite: `go vet` rc=0, `go test ./... -race` rc=0 (ok 121.327s), `golangci-lint run` rc=0
+  (no issues), `goreleaser check` rc=0, `gofmt -l .` empty.
+- Step 3 snapshot: `goreleaser release --snapshot --clean` rc=0, version 0.5.1-snapshot.4ca0b38,
+  6 binaries + 6 archives; SHA256SUMS has 6 lines == 6 artifacts; `sha256sum -c SHA256SUMS` all OK
+  rc=0; two-artifact spot check (linux_amd64 archive + darwin_arm64 NON-linux) OK; negative control
+  on a byte-tampered copy FAILED with rc=1 (check is real, not a rubber stamp).
+- Step 4 smoke: `--version` → `tollgate-wizard 0.5.1-snapshot.4ca0b38`, rc=0, not `dev`; manual
+  `-ldflags -X main.version=v9.9.9-manual-test` build prints the injected value; un-injected build
+  prints `dev` (proves ldflags is what changes it).
+- Status: DONE. Files: none — this is a verification task; no source or config was modified.
 
-STATUS: COMPLETE — all 6 steps executed and green; branch pushed; CI green at the
-shipped tip 11c661b253ea29cfc051ae801d6bd99238c5201f (run 38834487839, jobs
-lint+test success). No workflow change was needed (CI was never red) and none
-was made.
+## Finding 4 — summary comment posted
+- https://github.com/net4sats/net4sats-wizard-go/pull/35#issuecomment-6206347289
+- Note: `gh pr checks 35` still reports "no checks reported" — Actions do not fire on PRs in this
+  fork/upstream arrangement, so the gate's CI evidence is the branch-head run, at the same commit.
+- Status: DONE.
 
-SHIPPED TIP: 11c661b253ea29cfc051ae801d6bd99238c5201f
-  0b5322a (the CI/goreleaser/docs commit under test)
-  + 2f77f91 (lane PROGRESS)
-  + 11c661b (lane REPORT)   <- pushed, remote tip == local HEAD
+## Finding 5 — no workflow fix was required, and none was made
+- CI was NOT red anywhere in this run, so the "fix the workflow, do not weaken the checks" branch of
+  the task never triggered. Zero changes to .github/ or .goreleaser.yaml.
 
-## Findings -> status -> files touched
-
-1. FINDING: card repo name + workspace are both wrong (see above).
-   STATUS: routed to correct clone/ref. FILES: none (triage only).
-
-2. FINDING: `go`/`goreleaser`/`golangci-lint` absent from default PATH.
-   STATUS: fixed by exporting /home/c08r4d0r/wz16-tools paths. FILES: none.
-
-3. STEP 1 (clean tree + pushed): `git status --porcelain` -> only 2 UNTRACKED
-   lane docs (PROGRESS.md, REPORT.md); tracked tree clean. `git push` ->
-   "Everything up-to-date"; ahead/behind 0/0; ls-remote tip == local HEAD
-   == 0b5322a070ca00538d0d4d9be3fc3b2df41fc9ff.
-   STATUS: PASS. Raw: wz20-captures/01-clean-tree.txt, 01-push.txt.
-
-4. STEP 2 (full suite): go mod verify "all modules verified"; go build ./... RC=0;
-   `go vet ./...` RC=0 clean; `go test ./... -race -count=1` -> ok 165.236s;
-   verbose -> 123 tests run, 52 PASS, 0 FAIL, 0 SKIP, 0 DATA RACE;
-   `golangci-lint run` RC=0 (v1.61.0); `goreleaser check` 1 config validated RC=0.
-   STATUS: PASS. Raw: 02a-vet.txt, 02b-test-race.txt, 02c-lint-grcheck.txt,
-   02d-test-verbose.log, 02e-test-counts.txt.
-
-5. STEP 3 (snapshot): `goreleaser release --snapshot --clean` RC=0, version
-   0.5.1-snapshot.0b5322a. EXACTLY 6 archives: linux/windows/darwin x amd64/arm64
-   (4 tar.gz + 2 zip) + SHA256SUMS with 6 lines == 6 artifacts.
-   `sha256sum -c SHA256SUMS` -> all 6 OK, RC=0. Hand-verified MATCH for
-   linux_amd64.tar.gz (archive) AND darwin_arm64.tar.gz (non-linux); openssl
-   cross-check agrees. Counts 6==6.
-   STATUS: PASS. Raw: 03-snapshot-release.txt, 03b-checksums.txt.
-
-6. STEP 4 (--version smoke): raw goreleaser linux/amd64 binary prints
-   `tollgate-wizard 0.5.1-snapshot.0b5322a`, RC=0 (proves the card's exact
-   expected shape, version injected not dev). The SHIPPED archive's binary
-   prints the same -> the artifact itself is correct. Positive control
-   (-X main.version=v9.9.9-control) -> `tollgate-wizard v9.9.9-control`;
-   negative control (no ldflags) -> `tollgate-wizard dev`. Binary is ELF
-   x86-64, statically linked, stripped.
-   STATUS: PASS. Raw: 04-version-smoke.txt.
-
-## Capture directory
-/home/c08r4d0r/wz20-captures/   (all raw command output for this pass)
+## Milestones
+- (this commit) docs(wz16): e2e gate re-dispatch — all 5 steps green at tip 4ca0b38, CI re-run green
+- Report: REPORT.md (worktree root)
