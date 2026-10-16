@@ -1,3 +1,42 @@
+## Pass-6 FINAL — CI green at the final pushed tip (definitive record)
+
+Every docs/evidence commit necessarily moves the tip, so this is the closing ledger entry. Verbatim capture
+`13-final-tip-ci-c7f4524.txt`:
+
+```
+$ git rev-parse HEAD    ;  $ git rev-parse origin/ci/add-github-actions-workflow-clean
+c7f45249705b8e3784479f87a73ac975447d7401
+c7f45249705b8e3784479f87a73ac975447d7401
+PORCELAIN_LINES=0
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI  ci/add-github-actions-workflow-clean  workflow_dispatch  38924533944  ...  @ c7f4524
+completed	success	CI  ci/add-github-actions-workflow-clean  workflow_dispatch  38924071342  (lint re-run) @ e46f58f
+completed	success	CI  ci/add-github-actions-workflow-clean  workflow_dispatch  38923652846  ...  @ ec84984
+
+JOB lint: success
+    success	Run golangci/golangci-lint-action@v6
+JOB test: success
+    success	Run go build ./...
+    success	Run go vet ./...
+    success	Run go test ./... -race -count=1
+
+FINAL_TIP      = c7f45249705b8e3784479f87a73ac975447d7401
+RUN_HEAD_SHA   = c7f45249705b8e3784479f87a73ac975447d7401
+RUN_CONCLUSION = success
+CODE_DIFF_LINES = 0   (vs code tip e85720c — docs/evidence-only diff, so the green run certifies the verified source)
+```
+
+Commits created by this pass (all pushed to `ci/add-github-actions-workflow-clean`):
+
+```
+ec84984  docs(t_0509c320): pass-6 e2e integration gate — steps 1-5 green at e85720c, 6/6 artifacts, CI run 38852530642
+e46f58f  docs(t_0509c320): pass-6 close-out — CI run 38923652846 success at ec84984, code tree unchanged
+c7f4524  docs(t_0509c320): pass-6 — record the CI lint flake (schema-fetch timeout) and its re-run to green
+```
+
+---
+
 ### Pass-6 — CI went RED once at the final tip, then GREEN on re-run (flake, diagnosed)
 
 Recorded because a red run happened during this pass and hiding it would be dishonest.
