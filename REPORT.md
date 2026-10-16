@@ -282,13 +282,43 @@ JSON payload). `PROGRESS.md` at the worktree root carries the finding → status
 ## Push evidence (this task's own commits)
 
 ```
-$ git status --porcelain          # before commit:  M PROGRESS.md  (only the report/progress docs)
-$ git add PROGRESS.md REPORT.md && git commit -m "docs(t_10a913ec): UNIT-2/WG-3 E2E integration gate — 6/6 steps executed, suite+snapshot+--version green, CI run 38899734040 success at HEAD"
+$ git status --porcelain          # before commit:  M PROGRESS.md  /  M REPORT.md
+$ git add PROGRESS.md REPORT.md && git commit -m "docs(t_10a913ec): UNIT-2/WG-3 E2E integration gate — …"
+[worker-heavy/t_10a913ec 9e5c65d] docs(t_10a913ec): UNIT-2/WG-3 E2E integration gate — 6/6 steps executed, suite+snapshot+--version green, CI run 38899734040 success at HEAD
+ 2 files changed, 268 insertions(+), 261 deletions(-)
 $ git push origin HEAD:worker-heavy/t_10a913ec
-$ git fetch origin && git rev-list --left-right --count origin/worker-heavy/t_10a913ec...HEAD
-0	0
+To https://github.com/felixfelix-bot/net4sats-wizard-go.git
+   a6805a4..9e5c65d  HEAD -> worker-heavy/t_10a913ec
+
+$ git fetch origin -q && git rev-list --left-right --count origin/worker-heavy/t_10a913ec...HEAD
+0	0                                  # pushed, in sync
+$ git rev-parse HEAD                  → 9e5c65d94cd9b78bd86cd3e791aa0fcebccabcf7
+$ git rev-parse origin/worker-heavy/t_10a913ec → 9e5c65d94cd9b78bd86cd3e791aa0fcebccabcf7   (identical)
+$ git status --porcelain              → (empty)  clean
 ```
 
 (`dist/` is gitignored — it is build output, deliberately not committed; `git status --porcelain`
-stays clean after the gates.) The literal remote-sync check is re-run and recorded at the end of
-this session; see `PROGRESS.md`.
+stays clean after the gates.)
+
+**Why the green run's SHA (`a6805a4`) is not the pushed tip (`9e5c65d`) — and why that is correct:**
+`9e5c65d` contains **only** `PROGRESS.md` + `REPORT.md` (a docs-only commit, `268 insertions /
+261 deletions` — the deletions are prior content in those two files being replaced). CI was
+verified green on `a6805a4`, which is `9e5c65d`'s only parent and the exact tip that PR #30 pins
+(`headRefOid`). The push itself did not dispatch a run (only `workflow_dispatch` fires here), so no
+new run was created for the docs commit. Both statements in this report stand as written:
+**CI green at `a6805a4` (the PR head, the code commit) and the branch pushed to `9e5c65d`.**
+
+### Residual / remaining work for the operator (not silently dropped)
+
+1. **Fix the PR CI lane.** `.github/workflows/ci.yml` declares `on: pull_request:` and `on: push:
+   branches:[main]`, Actions is enabled, and yet 28/28 recorded runs are `workflow_dispatch` —
+   no PR in this repo has ever been checked. This needs a repo/org-level decision (e.g. Actions
+   permissions for fork PRs, an org policy blocking PR-triggered runs, or a missing required-check
+   config). Until then, AC "CI green via `gh run list`" is only satisfiable by an explicit dispatch,
+   and `gh pr checks <n>` will keep returning "no checks reported".
+2. **PR #30 reports `mergeable: CONFLICTING` / `mergeStateStatus: DIRTY`** against a `main` that is
+   now `8fcc30e` (v0.7.0-alpha24) — i.e. the branch is stale against main. That is a separate
+   landing blocker from this integration gate and was deliberately not touched here (resolving it
+   would mean merging main into the branch, which is outside "verify and push" and would invalidate
+   the verified SHA).
+

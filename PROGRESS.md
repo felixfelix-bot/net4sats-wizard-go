@@ -2,9 +2,9 @@
 
 Repo (actual): felixfelix-bot/net4sats-wizard-go (module `net4sats-wizard`, PUBLIC)
 Worktree: /home/c08r4d0r/worktrees/wizard-fix  branch worker-heavy/t_10a913ec
-HEAD: a6805a421e07a9c6512036a34ca1add29b1fc8ad   PR #30 -> main
+HEAD (pushed): 9e5c65d94cd9b78bd86cd3e791aa0fcebccabcf7   (parent a6805a4 = the CI-verified code tip, PR #30 head)
 Toolchain: go1.22.12 (== go.mod go 1.22) | goreleaser 2.18.3 | golangci-lint 1.61.0 | gh 2.45.0
-Evidence dir: /home/c08r4d0r/wz19-audit/ev/  (full markdown: UNIT2-WG3-evidence.md)
+Evidence: /home/c08r4d0r/wz19-audit/ev/  (UNIT2-WG3-evidence.md + 46 raw capture files)
 
 Task said repo `net4sats/tollgate-wizard-go` -> DOES NOT EXIST (gh 404 + GraphQL unresolvable).
 Resolved to the real tree holding the committed CI workflow + .goreleaser.yaml + docs.
@@ -18,17 +18,22 @@ Resolved to the real tree holding the committed CI workflow + .goreleaser.yaml +
    membership MISSING_COUNT=0; linux_amd64 + darwin_arm64 re-hashed OK. -> PASS -> dist/ (gitignored)
 5. STEP4 --version: `tollgate-wizard 0.5.1-snapshot.a6805a4` exit=0 (not `dev`); 3-way ldflags
    build proves injection (dev / v9.9.9-TESTINJECT / 0.0.0-delta-probe). -> PASS -> /home/c08r4d0r/wz19-audit/manual
-6. STEP5 GHA: task-named repo 404. Real repo PR#30 head==HEAD. ROOT CAUSE FOUND: all 28 runs are
-   workflow_dispatch; NO push/pull_request run has ever happened -> PR lane never triggered.
+6. STEP5 GHA: task-named repo 404. Real repo PR#30 head==a6805a4. ROOT CAUSE: all 28 runs are
+   workflow_dispatch; NO push/pull_request run has EVER fired -> PR lane never triggered.
    Actions enabled (enabled:true, allowed_actions:all), ci.yml registered active.
-   Probed by dispatching ci.yml on my branch -> run 38899734040, sha == HEAD a6805a4. -> PASS
-7. CI run 38899734040 -> conclusion=success (test+lint jobs, every gate step observed executed:
-   go build / go vet / go test -race / golangci-lint all step-level success). -> PASS
-8. PR-level rollup: `gh pr checks 30` = "no checks reported"; statusCheckRollup=[] persists (a
-   dispatched run is not attached to the PR rollup). commit-level check-runs total_count=2,
-   suite state=pending. Reported honestly, NOT claimed as PR-check green. -> REPORTED
+   Dispatched ci.yml on my branch -> run 38899734040 covering exactly HEAD a6805a4. -> PASS
+7. CI run 38899734040 -> conclusion=success; test+lint jobs with every gate step observed
+   executed (go build / go vet / go test -race / golangci-lint all step-level success). -> PASS
+8. PR-level rollup: `gh pr checks 30` = "no checks reported"; statusCheckRollup=[] persists even
+   AFTER the green run (a dispatched run is not attached to the PR rollup). Reported honestly,
+   NOT claimed as PR-check green. -> REPORTED
+9. STEP6 report: REPORT.md + PROGRESS.md written at worktree root; committed 9e5c65d; pushed
+   a6805a4..9e5c65d; post-push sync 0/0; local == remote; tree clean. -> PASS -> REPORT.md, PROGRESS.md
 
-## Deliverable state
-ALL 6 STEPS EXECUTED. Step 5's literal `gh run list` target repo does not exist; the equivalent
-evidence was produced against the real repo and the wiring defect was reported, not papered over.
-PROGRESS.md + REPORT.md committed and pushed to worker-heavy/t_10a913ec.
+## Deliverable state — ALL 6 STEPS EXECUTED
+Step 5's literal `gh run list` target repo does not exist; equivalent evidence produced against the
+real repo (conclusion=success at the PR head) and the wiring defect reported, not papered over.
+
+## Residual for operator (see REPORT.md "Residual / remaining work")
+1. PR CI lane never fires (28/28 workflow_dispatch) -> repo/org-level CI config decision needed.
+2. PR #30 is CONFLICTING/DIRTY against current main 8fcc30e -> stale branch, separate landing blocker.
