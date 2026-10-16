@@ -1,0 +1,39 @@
+=== CMD: gh pr view 36 --repo felixfelix-bot/net4sats-wizard-go --json ... ===
+{"baseRefName":"main","headRefName":"worker-heavy/t_0509c320-r3","headRefOid":"a412b616c019e1950b523e2340b54a04e2656eb9","mergeStateStatus":"DIRTY","mergeable":"CONFLICTING","number":36,"statusCheckRollup":[]}
+rc=0
+
+=== CMD: gh run list --repo felixfelix-bot/net4sats-wizard-go --branch worker-heavy/t_0509c320-r3 --limit 10 ===
+rc=0
+
+=== CMD: gh run list --repo net4sats/tollgate-wizard-go --limit 5  ===
+failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5&exclude_pull_requests=true)
+rc=1
+
+=== all runs, head_sha distinct (evidence: none at a412b61) ===
+2026-10-16T04:48:45Z success br=ci/add-github-actions-workflow-clean sha=e85720cd ev=workflow_dispatch
+2026-10-16T04:45:27Z success br=ci/add-github-actions-workflow-clean sha=11fcda44 ev=workflow_dispatch
+2026-10-16T04:43:00Z success br=ci/add-github-actions-workflow-clean sha=db00314b ev=workflow_dispatch
+2026-10-16T04:40:12Z success br=ci/add-github-actions-workflow-clean sha=c71b2f86 ev=workflow_dispatch
+2026-10-16T04:37:28Z success br=ci/add-github-actions-workflow-clean sha=21ba6363 ev=workflow_dispatch
+2026-10-16T04:34:52Z success br=ci/add-github-actions-workflow-clean sha=95743c3d ev=workflow_dispatch
+2026-10-16T03:11:19Z success br=ci/add-github-actions-workflow-clean sha=64008dc2 ev=workflow_dispatch
+2026-10-16T03:08:56Z success br=ci/add-github-actions-workflow-clean sha=cbbb0926 ev=workflow_dispatch
+2026-10-16T03:06:32Z success br=ci/add-github-actions-workflow-clean sha=4cee1d2c ev=workflow_dispatch
+2026-10-16T03:04:03Z success br=ci/add-github-actions-workflow-clean sha=fadd82c3 ev=workflow_dispatch
+2026-10-16T03:01:14Z success br=ci/add-github-actions-workflow-clean sha=b71af0b5 ev=workflow_dispatch
+2026-10-16T02:58:21Z success br=ci/add-github-actions-workflow-clean sha=5efd9483 ev=workflow_dispatch
+2026-10-16T02:55:37Z success br=ci/add-github-actions-workflow-clean sha=649d90ff ev=workflow_dispatch
+2026-10-16T02:03:24Z success br=ci/add-github-actions-workflow-clean sha=9c37d2e0 ev=workflow_dispatch
+2026-10-16T01:58:39Z success br=ci/add-github-actions-workflow-clean sha=4ca0b381 ev=workflow_dispatch
+2026-10-16T01:19:29Z success br=ci/add-github-actions-workflow-clean sha=11c661b2 ev=workflow_dispatch
+2026-10-15T15:37:06Z success br=ci/add-github-actions-workflow-clean sha=0b5322a0 ev=workflow_dispatch
+2026-10-15T12:52:40Z success br=ci/add-github-actions-workflow-clean sha=0b5322a0 ev=workflow_dispatch
+2026-10-15T03:41:31Z success br=ci/add-github-actions-workflow-clean sha=0b5322a0 ev=workflow_dispatch
+2026-10-14T09:12:20Z success br=ci/add-github-actions-workflow-clean sha=0b5322a0 ev=workflow_dispatch
+2026-10-14T09:12:19Z cancelled br=ci/add-github-actions-workflow-clean sha=0b5322a0 ev=workflow_dispatch
+2026-10-06T11:25:27Z success br=ci/add-github-actions-workflow sha=7658011b ev=workflow_dispatch
+2026-10-06T10:37:06Z failure br=ci/add-github-actions-workflow sha=c340141b ev=workflow_dispatch
+
+=== grep for a412b61 in all run shas ===
+0
+0 (none)

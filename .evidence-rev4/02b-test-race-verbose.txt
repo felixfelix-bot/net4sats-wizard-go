@@ -1,0 +1,248 @@
+=== RUN   TestHandleScan
+--- PASS: TestHandleScan (24.91s)
+=== RUN   TestHandleIndex
+--- PASS: TestHandleIndex (0.00s)
+=== RUN   TestDeployRequestValidation
+=== RUN   TestDeployRequestValidation/missing_IP_and_password
+=== RUN   TestDeployRequestValidation/empty_password_(fresh_reset)
+=== RUN   TestDeployRequestValidation/missing_IP
+=== RUN   TestDeployRequestValidation/invalid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lnurl
+--- PASS: TestDeployRequestValidation (0.00s)
+    --- PASS: TestDeployRequestValidation/missing_IP_and_password (0.00s)
+    --- PASS: TestDeployRequestValidation/empty_password_(fresh_reset) (0.00s)
+    --- PASS: TestDeployRequestValidation/missing_IP (0.00s)
+    --- PASS: TestDeployRequestValidation/invalid_lightning_address (0.00s)
+    --- PASS: TestDeployRequestValidation/valid_lightning_address (0.00s)
+    --- PASS: TestDeployRequestValidation/valid_lnurl (0.00s)
+=== RUN   TestDeployRequestDefaults
+--- PASS: TestDeployRequestDefaults (0.00s)
+=== RUN   TestStepInitialization
+--- PASS: TestStepInitialization (0.00s)
+=== RUN   TestArtifactPinsCoverDownloadedURLConstants
+--- PASS: TestArtifactPinsCoverDownloadedURLConstants (0.00s)
+=== RUN   TestVerifyArtifactPinBenignDownload
+--- PASS: TestVerifyArtifactPinBenignDownload (0.00s)
+=== RUN   TestVerifyArtifactPinTamperedDownload
+--- PASS: TestVerifyArtifactPinTamperedDownload (0.00s)
+=== RUN   TestVerifyArtifactPinUnknownURLFailsClosed
+--- PASS: TestVerifyArtifactPinUnknownURLFailsClosed (0.00s)
+=== RUN   TestVerifyArtifactPinHex
+--- PASS: TestVerifyArtifactPinHex (0.00s)
+=== RUN   TestExtractIPKFilenameStrict
+=== RUN   TestExtractIPKFilenameStrict/real_nodogsplash_listing_entry
+=== RUN   TestExtractIPKFilenameStrict/real_jq_listing_entry
+=== RUN   TestExtractIPKFilenameStrict/path_traversal_rejected
+=== RUN   TestExtractIPKFilenameStrict/shell_metacharacters_rejected
+=== RUN   TestExtractIPKFilenameStrict/non-numeric_version_start_rejected
+=== RUN   TestExtractIPKFilenameStrict/prefixed_package_ignored
+=== RUN   TestExtractIPKFilenameStrict/.ipk_not_at_token_end_ignored
+=== RUN   TestExtractIPKFilenameStrict/empty_listing
+--- PASS: TestExtractIPKFilenameStrict (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/real_nodogsplash_listing_entry (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/real_jq_listing_entry (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/path_traversal_rejected (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/shell_metacharacters_rejected (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/non-numeric_version_start_rejected (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/prefixed_package_ignored (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/.ipk_not_at_token_end_ignored (0.00s)
+    --- PASS: TestExtractIPKFilenameStrict/empty_listing (0.00s)
+=== RUN   TestClamp
+--- PASS: TestClamp (0.00s)
+=== RUN   TestSshRunFunction
+--- PASS: TestSshRunFunction (10.00s)
+=== RUN   TestDiscoverRoutersNoNetwork
+--- PASS: TestDiscoverRoutersNoNetwork (22.83s)
+=== RUN   TestEmptyJobOperations
+--- PASS: TestEmptyJobOperations (0.00s)
+=== RUN   TestDownloadURLsPointToTollgateRepo
+=== RUN   TestDownloadURLsPointToTollgateRepo/tollgatePkgURL
+--- PASS: TestDownloadURLsPointToTollgateRepo (0.00s)
+    --- PASS: TestDownloadURLsPointToTollgateRepo/tollgatePkgURL (0.00s)
+=== RUN   TestTollgatePkgURLAssetName
+--- PASS: TestTollgatePkgURLAssetName (0.00s)
+=== RUN   TestScanFailedHeuristic
+=== RUN   TestScanFailedHeuristic/empty_output
+=== RUN   TestScanFailedHeuristic/whitespace_only
+=== RUN   TestScanFailedHeuristic/command_not_found
+=== RUN   TestScanFailedHeuristic/No_such_device
+=== RUN   TestScanFailedHeuristic/No_such_wireless_device
+=== RUN   TestScanFailedHeuristic/Operation_not_supported
+=== RUN   TestScanFailedHeuristic/Operation_not_permitted
+=== RUN   TestScanFailedHeuristic/Device_or_resource_busy
+=== RUN   TestScanFailedHeuristic/real_scan_output
+=== RUN   TestScanFailedHeuristic/iwinfo_scan_with_SSIDs
+--- PASS: TestScanFailedHeuristic (0.00s)
+    --- PASS: TestScanFailedHeuristic/empty_output (0.00s)
+    --- PASS: TestScanFailedHeuristic/whitespace_only (0.00s)
+    --- PASS: TestScanFailedHeuristic/command_not_found (0.00s)
+    --- PASS: TestScanFailedHeuristic/No_such_device (0.00s)
+    --- PASS: TestScanFailedHeuristic/No_such_wireless_device (0.00s)
+    --- PASS: TestScanFailedHeuristic/Operation_not_supported (0.00s)
+    --- PASS: TestScanFailedHeuristic/Operation_not_permitted (0.00s)
+    --- PASS: TestScanFailedHeuristic/Device_or_resource_busy (0.00s)
+    --- PASS: TestScanFailedHeuristic/real_scan_output (0.00s)
+    --- PASS: TestScanFailedHeuristic/iwinfo_scan_with_SSIDs (0.00s)
+=== RUN   TestAllRadiosUp
+=== RUN   TestAllRadiosUp/all_radios_up
+=== RUN   TestAllRadiosUp/single_radio_up
+=== RUN   TestAllRadiosUp/one_radio_down_—_keep_polling
+=== RUN   TestAllRadiosUp/radio_still_pending
+=== RUN   TestAllRadiosUp/empty_object_—_keep_polling
+=== RUN   TestAllRadiosUp/empty_output
+=== RUN   TestAllRadiosUp/ubus_error_text
+=== RUN   TestAllRadiosUp/array_not_object
+--- PASS: TestAllRadiosUp (0.00s)
+    --- PASS: TestAllRadiosUp/all_radios_up (0.00s)
+    --- PASS: TestAllRadiosUp/single_radio_up (0.00s)
+    --- PASS: TestAllRadiosUp/one_radio_down_—_keep_polling (0.00s)
+    --- PASS: TestAllRadiosUp/radio_still_pending (0.00s)
+    --- PASS: TestAllRadiosUp/empty_object_—_keep_polling (0.00s)
+    --- PASS: TestAllRadiosUp/empty_output (0.00s)
+    --- PASS: TestAllRadiosUp/ubus_error_text (0.00s)
+    --- PASS: TestAllRadiosUp/array_not_object (0.00s)
+=== RUN   TestIfaceUp
+=== RUN   TestIfaceUp/wwan_up_with_dhcp_address
+=== RUN   TestIfaceUp/wwan_up_minimal
+=== RUN   TestIfaceUp/wwan_down
+=== RUN   TestIfaceUp/missing_up_field
+=== RUN   TestIfaceUp/empty_output
+=== RUN   TestIfaceUp/ubus_not_found
+--- PASS: TestIfaceUp (0.00s)
+    --- PASS: TestIfaceUp/wwan_up_with_dhcp_address (0.00s)
+    --- PASS: TestIfaceUp/wwan_up_minimal (0.00s)
+    --- PASS: TestIfaceUp/wwan_down (0.00s)
+    --- PASS: TestIfaceUp/missing_up_field (0.00s)
+    --- PASS: TestIfaceUp/empty_output (0.00s)
+    --- PASS: TestIfaceUp/ubus_not_found (0.00s)
+=== RUN   TestHTTPGetFile
+--- PASS: TestHTTPGetFile (0.00s)
+=== RUN   TestStaSetupScript
+--- PASS: TestStaSetupScript (0.00s)
+=== RUN   TestHandleStatus
+--- PASS: TestHandleStatus (0.00s)
+=== RUN   TestHandleDeploy
+=== RUN   TestHandleDeploy/invalid_JSON
+=== RUN   TestHandleDeploy/missing_IP
+=== RUN   TestHandleDeploy/empty_password_allowed_(fresh_reset)
+=== RUN   TestHandleDeploy/invalid_lightning_address
+=== RUN   TestHandleDeploy/valid_request
+--- PASS: TestHandleDeploy (0.00s)
+    --- PASS: TestHandleDeploy/invalid_JSON (0.00s)
+    --- PASS: TestHandleDeploy/missing_IP (0.00s)
+    --- PASS: TestHandleDeploy/empty_password_allowed_(fresh_reset) (0.00s)
+    --- PASS: TestHandleDeploy/invalid_lightning_address (0.00s)
+    --- PASS: TestHandleDeploy/valid_request (0.00s)
+=== RUN   TestMainFunctionStructure
+--- PASS: TestMainFunctionStructure (0.00s)
+=== RUN   TestJobStructFields
+--- PASS: TestJobStructFields (0.00s)
+=== RUN   TestDeployStepStruct
+--- PASS: TestDeployStepStruct (0.00s)
+=== RUN   TestLogEntryStruct
+--- PASS: TestLogEntryStruct (0.00s)
+=== RUN   TestConcurrentJobOperations
+--- PASS: TestConcurrentJobOperations (0.00s)
+=== RUN   TestTruncate
+--- PASS: TestTruncate (0.00s)
+=== RUN   TestNewJob
+--- PASS: TestNewJob (0.00s)
+=== RUN   TestAddLog
+--- PASS: TestAddLog (0.00s)
+=== RUN   TestSetStep
+--- PASS: TestSetStep (0.00s)
+=== RUN   TestWriteError
+--- PASS: TestWriteError (0.00s)
+=== RUN   TestTcpProbe
+--- PASS: TestTcpProbe (0.10s)
+=== RUN   TestJobMutexSafety
+--- PASS: TestJobMutexSafety (0.00s)
+=== RUN   TestTollgatePkgURLPinsExistingAsset
+--- PASS: TestTollgatePkgURLPinsExistingAsset (0.00s)
+=== RUN   TestDeployGoPinRegistry
+--- PASS: TestDeployGoPinRegistry (0.03s)
+=== RUN   TestPinnedURLsAreLive
+=== RUN   TestPinnedURLsAreLive/tollgatePkgURL
+=== RUN   TestPinnedURLsAreLive/configwizURL
+--- PASS: TestPinnedURLsAreLive (0.41s)
+    --- PASS: TestPinnedURLsAreLive/tollgatePkgURL (0.36s)
+    --- PASS: TestPinnedURLsAreLive/configwizURL (0.05s)
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-0
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-1
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-2
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-0
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-1
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-2
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-0
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-1
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-2
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-0
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-1
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-2
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-0
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-1
+=== RUN   TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-2
+--- PASS: TestRemoteCommandsNeverInterpolatePayloads (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-0 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-1 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/passwd-sink/payload-2 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-0 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-1 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-ssid-sink/payload-2 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-0 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-1 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/sta-key-sink/payload-2 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-0 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-1 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/lnurl-sink/payload-2 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-0 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-1 (0.00s)
+    --- PASS: TestRemoteCommandsNeverInterpolatePayloads/mint-sink/payload-2 (0.00s)
+=== RUN   TestVulnerableConstructionsAreGone
+--- PASS: TestVulnerableConstructionsAreGone (0.00s)
+=== RUN   TestBenignValuesRoundTripThroughCarriers
+--- PASS: TestBenignValuesRoundTripThroughCarriers (0.00s)
+=== RUN   TestPasswdCommandInertUnderSh
+--- PASS: TestPasswdCommandInertUnderSh (0.00s)
+=== RUN   TestStaCarriersDecodeUnderSh
+--- PASS: TestStaCarriersDecodeUnderSh (0.00s)
+=== RUN   TestLnIdentCommandJQRoundTrip
+--- PASS: TestLnIdentCommandJQRoundTrip (0.01s)
+=== RUN   TestCfgConfigCommandJQRoundTrip
+=== RUN   TestCfgConfigCommandJQRoundTrip/benign_mint
+=== RUN   TestCfgConfigCommandJQRoundTrip/attack_payload_mint_is_inert_data
+=== RUN   TestCfgConfigCommandJQRoundTrip/empty_mint_still_updates_config
+--- PASS: TestCfgConfigCommandJQRoundTrip (0.02s)
+    --- PASS: TestCfgConfigCommandJQRoundTrip/benign_mint (0.01s)
+    --- PASS: TestCfgConfigCommandJQRoundTrip/attack_payload_mint_is_inert_data (0.00s)
+    --- PASS: TestCfgConfigCommandJQRoundTrip/empty_mint_still_updates_config (0.00s)
+=== RUN   TestListenAddress
+--- PASS: TestListenAddress (0.00s)
+=== RUN   TestCORSMiddleware
+=== RUN   TestCORSMiddleware/foreign_origin
+=== RUN   TestCORSMiddleware/localhost_allowed
+=== RUN   TestCORSMiddleware/loopback-ip_allowed
+=== RUN   TestCORSMiddleware/no_origin_header
+=== RUN   TestCORSMiddleware/scheme_must_match
+=== RUN   TestCORSMiddleware/suffix_trick
+=== RUN   TestCORSMiddleware/port_must_match
+--- PASS: TestCORSMiddleware (0.00s)
+    --- PASS: TestCORSMiddleware/foreign_origin (0.00s)
+    --- PASS: TestCORSMiddleware/localhost_allowed (0.00s)
+    --- PASS: TestCORSMiddleware/loopback-ip_allowed (0.00s)
+    --- PASS: TestCORSMiddleware/no_origin_header (0.00s)
+    --- PASS: TestCORSMiddleware/scheme_must_match (0.00s)
+    --- PASS: TestCORSMiddleware/suffix_trick (0.00s)
+    --- PASS: TestCORSMiddleware/port_must_match (0.00s)
+=== RUN   TestValidLightningAddressUnchangedOnBenign
+--- PASS: TestValidLightningAddressUnchangedOnBenign (0.00s)
+=== RUN   TestValidLightningAddress
+--- PASS: TestValidLightningAddress (0.00s)
+=== RUN   TestVersionStringFormat
+--- PASS: TestVersionStringFormat (0.00s)
+=== RUN   TestVersionFlagInjectedViaLdflags
+--- PASS: TestVersionFlagInjectedViaLdflags (0.47s)
+PASS
+ok  	net4sats-wizard	59.831s

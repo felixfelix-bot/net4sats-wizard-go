@@ -1,0 +1,21 @@
+===== STEP3b: artifact inventory =====
+--- archives (expect 6: linux/windows/darwin x amd64/arm64) ---
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_darwin_amd64.tar.gz
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_darwin_arm64.tar.gz
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_linux_amd64.tar.gz
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_linux_arm64.tar.gz
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_windows_amd64.zip
+dist/net4sats-wizard_0.5.1-snapshot.a412b61_windows_arm64.zip
+[archive_count=6]
+
+--- SHA256SUMS content ---
+920d798e1016246e8c0b146887b1e8f65a8e41901400d838a9625879b7d8011a  net4sats-wizard_0.5.1-snapshot.a412b61_darwin_amd64.tar.gz
+36f4b99458e6281afa2713edbff4a6be952d088b0031dfa4906e4baa6554368f  net4sats-wizard_0.5.1-snapshot.a412b61_darwin_arm64.tar.gz
+a2c3cd99fc8a56d2e6dbc48230aee0d5fc152d9fb48f79d236e8d476bfe0d828  net4sats-wizard_0.5.1-snapshot.a412b61_linux_amd64.tar.gz
+a83153724a88bb873c02be63d85251884cda7e713a1f9468e68ef9afdab892e5  net4sats-wizard_0.5.1-snapshot.a412b61_linux_arm64.tar.gz
+12796f7af8c1c7f93d787392bd4f8df6876e6c362fcc9a619a809408faa9d757  net4sats-wizard_0.5.1-snapshot.a412b61_windows_amd64.zip
+be7f824de036bc20c8ae0511249f9f6244d812d685445bea9be6184324769a2f  net4sats-wizard_0.5.1-snapshot.a412b61_windows_arm64.zip
+[checksum_lines=6]
+
+--- checksum line count vs artifact count ---
+checksums=6  artifacts=6

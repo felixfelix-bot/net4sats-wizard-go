@@ -1,0 +1,19 @@
+===== STEP3c: sha256sum -c SHA256SUMS (all 6) =====
+net4sats-wizard_0.5.1-snapshot.a412b61_darwin_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.a412b61_darwin_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.a412b61_linux_amd64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.a412b61_linux_arm64.tar.gz: OK
+net4sats-wizard_0.5.1-snapshot.a412b61_windows_amd64.zip: OK
+net4sats-wizard_0.5.1-snapshot.a412b61_windows_arm64.zip: OK
+[sha256sum_c_rc=0]
+
+===== STEP3d: independent recompute (one archive, one non-linux) =====
+artifact A (archive/linux): net4sats-wizard_0.5.1-snapshot.a412b61_linux_amd64.tar.gz
+recorded_in_SHA256SUMS: a2c3cd99fc8a56d2e6dbc48230aee0d5fc152d9fb48f79d236e8d476bfe0d828  net4sats-wizard_0.5.1-snapshot.a412b61_linux_amd64.tar.gz
+INDEPENDENT_RECOMPUTE_A=MATCH
+artifact B (non-linux/windows): net4sats-wizard_0.5.1-snapshot.a412b61_windows_arm64.zip
+recorded_in_SHA256SUMS: be7f824de036bc20c8ae0511249f9f6244d812d685445bea9be6184324769a2f  net4sats-wizard_0.5.1-snapshot.a412b61_windows_arm64.zip
+INDEPENDENT_RECOMPUTE_B=MATCH
+
+===== STEP3e: NEGATIVE CONTROL (corrupted copy MUST FAIL) =====
+NEGATIVE_CONTROL=FAIL_AS_EXPECTED

@@ -1,0 +1,24 @@
+docs(t_0509c320): pass 4 — re-verify e2e gate; Steps 1-4 green, Step 5 closed with CI green at the pushed head
+
+Re-executed every gate live at HEAD a412b61 (branch worker-heavy/t_0509c320-r3).
+No source, test, or workflow file changed; the branch is green as received.
+
+Steps 1-4 PASS
+- clean tree, HEAD == upstream, ahead/behind 0/0, push "Everything up-to-date"
+- go vet rc 0, gofmt clean, go test ./... -race (123 RUN / 0 FAIL / 0 SKIP / 0 race), golangci-lint rc 0, goreleaser check rc 0
+- goreleaser snapshot 0.5.1-snapshot.a412b61: 6 archives (linux/windows/darwin x amd64/arm64),
+  SHA256SUMS 6 lines == 6 artifacts, sha256sum -c 6/6 OK, two independent recomputes MATCH,
+  corrupted-copy negative control FAILs as expected (non-vacuous)
+- binary --version prints "tollgate-wizard 0.5.1-snapshot.a412b61" rc 0 (not dev); two manual
+  -X main.version builds changed the value; no-ldflags control printed dev
+
+Step 5 (was red) now green at the pushed head SHA
+- run 38866254688 conclusion=success, headSha=a412b616==pushed HEAD, jobs test+lint success
+- the card's literal slug net4sats/tollgate-wizard-go is a real 404; real repo is
+  net4sats/net4sats-wizard-go, push target fork felixfelix-bot/net4sats-wizard-go
+- fork PRs get pull_request runs from the BASE repo, and upstream main has no .github/,
+  so this is a workflow_dispatch of the branch's OWN unmodified ci.yml at a412b61;
+  no check weakened, no workflow edited. A merge-blocking required check on PR #36 still
+  needs the workflow upstream (PR #35) or a branches: addition — flagged, not claimed.
+
+Evidence: .evidence-rev4/ (verbatim captures + scripts), REPORT.md, PROGRESS.md

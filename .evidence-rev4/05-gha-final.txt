@@ -1,0 +1,15 @@
+=== STEP5 FINAL: gh run list --branch worker-heavy/t_0509c320-r3 ===
+completed	success	CI	CI	worker-heavy/t_0509c320-r3	workflow_dispatch	38866254688	2m6s	2026-10-16T07:17:16Z
+rc=0
+
+=== run detail (head SHA must equal pushed HEAD a412b61) ===
+{"branch":"worker-heavy/t_0509c320-r3","conclusion":"success","event":"workflow_dispatch","id":38866254688,"jobs":[{"conclusion":"success","name":"lint"},{"conclusion":"success","name":"test"}],"sha":"a412b616c019e1950b523e2340b54a04e2656eb9","status":"completed","workflow":"CI"}
+
+=== proof: branch head pushed == run head ===
+git HEAD        = a412b616c019e1950b523e2340b54a04e2656eb9
+origin ref      = a412b616c019e1950b523e2340b54a04e2656eb9
+run headSha     = a412b616c019e1950b523e2340b54a04e2656eb9
+
+=== the dispatched-slug line, still a real 404 (verbatim) ===
+failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/net4sats/tollgate-wizard-go/actions/runs?per_page=5&exclude_pull_requests=true)
+rc=1

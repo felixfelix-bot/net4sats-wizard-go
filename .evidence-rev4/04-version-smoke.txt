@@ -1,0 +1,22 @@
+===== STEP4a: snapshot binary --version =====
+binary: dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard
+dist/net4sats-wizard_linux_amd64_v1/net4sats-wizard: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=4RT1vvF_ETIoK-6MALAk/lDWZqWuHgI6oidxi-hxk/Dyl7ftR2QVYukp4NS1s0/qhnBCBoI7hkR4ucaPPLp, stripped
+tollgate-wizard 0.5.1-snapshot.a412b61
+[version_rc=0]
+
+===== STEP4b: -version short form =====
+tollgate-wizard 0.5.1-snapshot.a412b61
+[short_rc=0]
+
+===== STEP4c: manually build with injected ldflags value #1 =====
+[build1_rc=0]
+tollgate-wizard v9.9.9-evidence
+[v1_rc=0]
+===== STEP4d: manually build with injected ldflags value #2 (must differ) =====
+[build2_rc=0]
+tollgate-wizard v0.0.1-changed
+[v2_rc=0]
+===== STEP4e: control build with NO ldflags (must print 'dev') =====
+[build0_rc=0]
+tollgate-wizard dev
+[v0_rc=0]
