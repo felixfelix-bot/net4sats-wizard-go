@@ -1,0 +1,68 @@
+### STEP 5b — CI run detail at the evidence tip — 2026-10-16T17:26:50+02:00
+$ gh run view 38923652846 --repo felixfelix-bot/net4sats-wizard-go --json databaseId,conclusion,headSha,headBranch,event,status,workflowName,jobs
+{"id":38923652846,"wf":"CI","branch":"ci/add-github-actions-workflow-clean","sha":"ec849846d4894a5e6610ba63187f6aaa678a788e","event":"workflow_dispatch","status":"completed","conclusion":"success"}
+
+-- job + step detail (proves which commands CI executed) --
+JOB lint: success
+    success	Set up job
+JOB lint: success
+    success	Run actions/checkout@v4
+JOB lint: success
+    success	Run actions/setup-go@v5
+JOB lint: success
+    success	Run golangci/golangci-lint-action@v6
+JOB lint: success
+    success	Post Run golangci/golangci-lint-action@v6
+JOB lint: success
+    success	Post Run actions/setup-go@v5
+JOB lint: success
+    success	Post Run actions/checkout@v4
+JOB lint: success
+    success	Complete job
+JOB test: success
+    success	Set up job
+JOB test: success
+    success	Run actions/checkout@v4
+JOB test: success
+    success	Run actions/setup-go@v5
+JOB test: success
+    success	Run go build ./...
+JOB test: success
+    success	Run go vet ./...
+JOB test: success
+    success	Run go test ./... -race -count=1
+JOB test: success
+    success	Post Run actions/setup-go@v5
+JOB test: success
+    success	Post Run actions/checkout@v4
+JOB test: success
+    success	Complete job
+
+local HEAD                  = ec849846d4894a5e6610ba63187f6aaa678a788e
+origin/ci/add-github-actions-workflow-clean = ec849846d4894a5e6610ba63187f6aaa678a788e
+CI run 38923652846 headSha   = ec849846d4894a5e6610ba63187f6aaa678a788e
+SHA_MATCH = OK (green run is exactly the pushed tip)
+
+=== code-tree identity: this tip vs the code tip the snapshot/suite evidence came from ===
+$ git diff --name-only e85720cd39a41d4af8bdff5172752a827e25bb86 HEAD
+PROGRESS.md
+REPORT.md
+verify/wz16-e2e-gate/pass6/01-02-steps1-2.txt
+verify/wz16-e2e-gate/pass6/03-test-race.txt
+verify/wz16-e2e-gate/pass6/04-test-race-summary.txt
+verify/wz16-e2e-gate/pass6/04-test-race-verbose.log
+verify/wz16-e2e-gate/pass6/05-06-steps3-4.txt
+verify/wz16-e2e-gate/pass6/07-step5-gha-proof.txt
+verify/wz16-e2e-gate/pass6/wz16-01-02-steps1-2.sh
+verify/wz16-e2e-gate/pass6/wz16-03-04-steps3-4.sh
+verify/wz16-e2e-gate/pass6/wz16-05-step5-gha-proof.sh
+$ git diff --name-only e85720cd39a41d4af8bdff5172752a827e25bb86 HEAD -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'
+CODE_DIFF_LINES=0   (0 => identical buildable source, so the CI-green run covers the verified snapshot)
+HEAD^{tree}                = c0fb58376089bd2ce2fb298726e5dec1869865ec
+main.go blob               = 30b35e02055417e35adc4695a08283ea9d0ad92c
+.goreleaser.yaml blob      = 0741e31079072bb26135fb605e689c66233d7434
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38923652846	1m59s	2026-10-16T15:24:17Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852530642	2m0s	2026-10-16T04:48:45Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852255804	2m2s	2026-10-16T04:45:27Z

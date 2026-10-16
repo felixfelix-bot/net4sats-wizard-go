@@ -1,3 +1,52 @@
+## Pass-6 close-out — CI green at the pushed evidence tip
+
+The evidence commit of this pass is **`ec849846d4894a5e6610ba63187f6aaa678a788e`**, pushed to
+`ci/add-github-actions-workflow-clean`. CI was dispatched on it and is green **at that exact sha**:
+
+```
+$ gh workflow run CI --repo felixfelix-bot/net4sats-wizard-go --ref ci/add-github-actions-workflow-clean
+DISPATCH_RC=0
+
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38923652846	1m59s	2026-10-16T15:24:17Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852530642	2m0s	2026-10-16T04:48:45Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38852255804	2m2s	2026-10-16T04:45:27Z
+
+$ gh run view 38923652846 --repo felixfelix-bot/net4sats-wizard-go --json …
+{"id":38923652846,"wf":"CI","branch":"ci/add-github-actions-workflow-clean","sha":"ec849846d4894a5e6610ba63187f6aaa678a788e",
+ "event":"workflow_dispatch","status":"completed","conclusion":"success",
+ "jobs":[{"name":"lint","conclusion":"success"},{"name":"test","conclusion":"success"}]}
+
+$ gh run view 38923652846 --json jobs   # step detail — the real commands CI ran
+JOB lint: success
+    success	Run actions/checkout@v4
+    success	Run golangci/golangci-lint-action@v6
+JOB test: success
+    success	Run go build ./...
+    success	Run go vet ./...
+    success	Run go test ./... -race -count=1
+
+local HEAD = ec849846d4894a5e6610ba63187f6aaa678a788e
+CI run headSha = ec849846d4894a5e6610ba63187f6aaa678a788e   -> SHA_MATCH = OK
+
+=== code-tree identity: evidence tip vs the code tip the local suite/snapshot ran on ===
+$ git diff --name-only e85720cd39a41d4af8bdff5172752a827e25bb86 HEAD -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'
+CODE_DIFF_LINES=0
+HEAD^{tree} = c0fb58376089bd2ce2fb298726e5dec1869865ec     main.go blob = 30b35e02055417e35adc4695a08283ea9d0ad92c
+.goreleaser.yaml blob = 0741e31079072bb26135fb605e689c66233d7434
+```
+
+The diff between the code tip whose local suite/snapshot/`--version` evidence was produced (`e85720c`) and the pushed
+tip `ec84984` is **docs/evidence only** (`PROGRESS.md`, `REPORT.md`, `verify/wz16-e2e-gate/pass6/*`), so the green CI
+run certifies the same buildable source that was actually exercised locally.
+
+**Definitive per-tip check (use this for any later tip, it never needs re-derivation):**
+`gh run list --repo felixfelix-bot/net4sats-wizard-go --limit 1 --json headSha,conclusion` must equal
+`git rev-parse HEAD`. Every commit added after this one is docs/evidence only, proven by re-running the
+`git diff --name-only <code-tip> HEAD -- '*.go' '.goreleaser.yaml' '.github' 'go.mod' 'go.sum'` command above.
+
+---
+
 # REPORT — wz16 e2e integration gate (t_0509c320) — PASS 6, independent re-run
 
 **Verdict: PASS — all 6 card steps were executed live this pass, on the pushed tip; the tree is clean and

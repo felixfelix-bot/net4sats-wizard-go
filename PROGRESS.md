@@ -1,3 +1,13 @@
+## Pass-6 close-out — CI green at the pushed evidence tip
+
+- Evidence commit pushed: **`ec849846d4894a5e6610ba63187f6aaa678a788e`** on `ci/add-github-actions-workflow-clean`.
+- CI at that exact sha: **run `38923652846`, `conclusion=success`** (`headSha == HEAD`), jobs `lint` ✓ and
+  `test` (go build / go vet / go test ./... -race -count=1) ✓.
+- Code-tree identity vs the tip the local suite+snapshot ran on: `CODE_DIFF_LINES=0` (docs/evidence-only diff).
+- Capture: `verify/wz16-e2e-gate/pass6/08-dispatch-at-ec84984.txt`, `09-run-at-ec84984.txt`.
+
+---
+
 # PROGRESS — wz16 e2e integration gate (t_0509c320) — PASS 6
 
 Worktree root: `/home/c08r4d0r/worktrees/wz16-pass6` (detached) · branch `ci/add-github-actions-workflow-clean`

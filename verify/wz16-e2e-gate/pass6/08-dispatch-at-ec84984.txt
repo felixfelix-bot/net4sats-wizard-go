@@ -1,0 +1,4 @@
+=== dispatch CI at the pushed tip ===
+TIP=ec849846d4894a5e6610ba63187f6aaa678a788e
+$ gh workflow run CI --repo felixfelix-bot/net4sats-wizard-go --ref ci/add-github-actions-workflow-clean
+DISPATCH_RC=0
