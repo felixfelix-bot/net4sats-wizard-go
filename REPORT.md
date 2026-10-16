@@ -1,3 +1,313 @@
+# REPORT — t_10a913ec (re-dispatch pass 5)
+
+## Build wizard and run full go test suite green
+
+**Goal:** Prove the vendored/version-bumped wizard builds and its full test suite passes.
+**Verdict: PASS — all four card steps complete, zero test failures, zero wizard source changes required.**
+
+| | |
+|---|---|
+| Host | x280 (home `/home/c08r4d0r`) |
+| Worktree | `/home/c08r4d0r/worktrees/wizard-fix` |
+| Branch | `worker-heavy/t_10a913ec` (tip at start `74090de`, up to date with origin) |
+| Source head under test | `0b5322a` — *feat(release): link-time version injection, --version, goreleaser config and release docs* |
+| Repo | fork `felixfelix-bot/net4sats-wizard-go` (clone `/home/c08r4d0r/wz16-verify`) |
+| Toolchain | go1.24.4 linux/amd64 (`/home/c08r4d0r/wz19-audit/go/bin/go`); go.mod requires 1.22 |
+| Raw captures | `/home/c08r4d0r/wz-captures-t_10a913ec-pass5/` |
+| Date | 2026-10-16 |
+
+Pass 5 of an identical dispatch; pass-1..4 reports are preserved in this branch's git history
+(`a242f4b`, `a645c56`, `cb1db08`, `3ff9ae4`, `188df08`, `da5715a`). **Every figure below was
+re-observed live in this pass**; nothing is carried forward from an earlier pass.
+
+### Which commit is under test
+
+The branch tip at start is `74090de`, which is docs-only. The last commit touching Go source is `0b5322a`:
+
+```
+$ git log --oneline 0b5322a..HEAD
+74090de docs(t_10a913ec) pass-4: disclose the sibling session's net4sats-wizard.test process left running on this shared host (different worktree, no listening socket, not this pass's process)
+da5715a docs(t_10a913ec) pass-4: re-verify build + full suite green at 0b5322a
+188df08 docs(t_10a913ec) pass-3: re-verify build + 123/123 suite green at 0b5322a
+3ff9ae4 docs(t_10a913ec) pass-2: independent re-verification — build + 123/123 suite green at 0b5322a
+cb1db08 docs(t_10a913ec): final-state capture in REPORT
+a645c56 docs(t_10a913ec): full verification REPORT (build + 123/123 suite green at 0b5322a)
+a242f4b docs(t_10a913ec): wizard build + full-suite verification PROGRESS at 0b5322a
+
+$ git diff --stat 0b5322a..HEAD
+ PROGRESS.md | 131 +++++++++
+ REPORT.md   | 907 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 1038 insertions(+)
+
+$ git log -1 --format='%h %s' -- '*.go'
+0b5322a feat(release): link-time version injection, --version, goreleaser config and release docs
+```
+
+So the source under test is byte-identical to `0b5322a`; every commit above it touches only the two
+markdown records.
+
+### Card premises that are stale on this host (disclosed, not silently worked around)
+
+1. **`WORKTREE: /home/c03rad0r/worktrees/wizard-fix` does not exist.** This host's home is
+   `/home/c08r4d0r` (`whoami` = `c08r4d0r`); `/home/c03rad0r` is the *other* fleet node's home and
+   holds only a directory named `c08r4d0r`. The worktree was already created at the equivalent path
+   on this host — `/home/c08r4d0r/worktrees/wizard-fix` — registered against the wizard clone
+   `/home/c08r4d0r/wz16-verify`. That is where this pass ran.
+
+2. **"there is NO `--version` flag — ANY invocation starts a server" is stale at this head.**
+   `--version` / `-version` exists and is answered *before* the listener binds:
+
+   ```
+   $ grep -n -- '--version' main.go
+   54:// programName is the CLI identity reported by --version.
+   57:// versionString is the single line --version prints: the program name followed
+   637:	// --version is answered before the server binds a port, so release
+   641:		case "--version", "-version":
+
+   $ ./net4sats-wizard --version
+   tollgate-wizard dev
+   VERSION_RC=0
+   ```
+
+   The port hygiene below was performed in full anyway, exactly as the card demands, and the server
+   invocation was a one-shot that was killed.
+
+3. **STEP 4's "pre-existing `go vet` IPv6 warning and gofmt drift" do not exist at this head** — both
+   are already clean (lint commit `7ceade3` removed them upstream of `0b5322a`). Nothing was touched
+   and nothing was "fixed" either. See STEP 4.
+
+4. **The wizard clone's CI branch has advanced past the head under test.** `/home/c08r4d0r/wz16-verify`
+   is now at `e85720c` (was `0b5322a`). This does not change the verdict:
+
+   ```
+   $ git -C /home/c08r4d0r/wz16-verify diff --stat 0b5322a..e85720c -- '*.go'
+                                  (empty — no Go source changed)
+   $ git -C /home/c08r4d0r/wz16-verify diff --stat 0b5322a..e85720c | tail -1
+    56 files changed, 3937 insertions(+)     # all under verify/ (evidence bundles) + docs
+   ```
+
+   The worktree branch under test (`worker-heavy/t_10a913ec`) was not rebased; its Go source is still
+   exactly `0b5322a`, which is what was built and tested.
+
+---
+
+## STEP 1 — Server hygiene (raw output)
+
+### Before any local run — no wizard process, port 8099 free
+
+```
+$ pkill -x net4sats-wizard; echo "pkill_rc=$?"
+pkill_rc=1                              # 1 = no matching process (nothing running this pass)
+$ sleep 1
+$ pgrep -a -x net4sats-wizard; echo "pgrep_rc=$?"
+pgrep_rc=1                              # 1 = no process
+$ ss -ltnp | grep -E ':8099'; echo "ss_8099_grep_rc=$?"
+ss_8099_grep_rc=1                       # 1 = no listener = FREE
+```
+
+Full `ss -ltnp` before the work (nothing on 8099; the other listeners are unrelated host services):
+
+```
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess
+LISTEN 0      5                 0.0.0.0:9100       0.0.0.0:*    users:(("python3",pid=1243,fd=3))
+LISTEN 0      4096              0.0.0.0:631        0.0.0.0:*
+LISTEN 0      5                 0.0.0.0:8899       0.0.0.0:*    users:(("python3",pid=807504,fd=3))
+LISTEN 0      4096              0.0.0.0:22         0.0.0.0:*
+LISTEN 0      128               0.0.0.0:8443       0.0.0.0:*
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*
+LISTEN 0      4096              0.0.0.0:18081      0.0.0.0:*
+LISTEN 0      511             127.0.0.1:8898       0.0.0.0:*    users:(("node-MainThread",pid=820004,fd=21))
+LISTEN 0      1024            127.0.0.1:8388       0.0.0.0:*
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*
+LISTEN 0      5                       *:9099             *:*    users:(("socat",pid=1244,fd=5))
+LISTEN 0      4096                 [::]:631           [::]:*
+LISTEN 0      1024                [::1]:8388          [::]:*
+LISTEN 0      4096                 [::]:22            [::]:*
+LISTEN 0      50     [::ffff:127.0.0.1]:8080             *:*    users:(("java",pid=1245,fd=66))
+```
+
+No `:8099` line anywhere. Capture: `01-hygiene-before.txt`
+
+### The single manual invocation — a one-shot server, then killed
+
+```
+=== 5a: --version premise check (must NOT bind :8099) ===
+$ ./net4sats-wizard --version
+tollgate-wizard dev
+VERSION_RC=0
+$ pgrep -a -x net4sats-wizard; echo "pgrep_rc=$?"
+pgrep_rc=1                              # no process
+$ ss -ltnp | grep -E ':8099'; echo "ss_8099_rc=$?"
+ss_8099_rc=1                            # still FREE => --version opened no listener
+
+=== 5b: one-shot server on default 127.0.0.1:8099 ===
+$ ./net4sats-wizard &
+server pid=3334046
+$ ss -ltnp | grep -E ':8099'
+LISTEN 0      4096            127.0.0.1:8099       0.0.0.0:*    users:(("net4sats-wizard",pid=3334046,fd=3))
+
+$ curl -s -o /dev/null -w 'HTTP %{http_code}  bytes=%{size_download}  time=%{time_total}s\n' http://127.0.0.1:8099/
+HTTP 200  bytes=19976  time=0.000492s
+
+$ curl -s --max-time 30 http://127.0.0.1:8099/api/scan | head -c 400
+{"routers":[{"ip":"192.168.2.1","mac":"e8:8f:6f:df:9e:11","vendor":"unknown","model":"unknown","firmware":"unknown","ssh_open":false,"http_port":80},{"ip":"192.168.2.30","mac":"7c:7a:91:86:a1:0f",...
+
+=== 5c: kill the one-shot server ===
+$ kill 3334046; sleep 1; kill -9 3334046
+$ pgrep -a -x net4sats-wizard; echo "pgrep_rc=$?"
+pgrep_rc=1                              # 1 = gone
+$ ss -ltnp | grep -E ':8099'; echo "ss_8099_rc=$?"
+ss_8099_rc=1                            # 1 = FREE again
+```
+
+### After the work — port 8099 free again (acceptance check)
+
+```
+$ ss -ltnp | grep -E ':8099'; echo "ss_8099_rc=$?"
+ss_8099_rc=1
+```
+
+The final full `ss -ltnp` is identical to the "before" listing above — no `:8099` entry, no
+`net4sats-wizard` process. Captures: `05-oneshot-server.txt` (full transcript incl. final `ss`).
+
+---
+
+## STEP 2 — `go build -buildvcs=false`
+
+```
+$ go version
+go version go1.24.4 linux/amd64         # go.mod requires go 1.22
+$ git check-ignore -v net4sats-wizard
+.gitignore:6:net4sats-wizard	net4sats-wizard     # build output is ignored
+$ rm -f net4sats-wizard
+$ go build -buildvcs=false
+BUILD_RC=0                              # <-- no compiler output at all
+$ ls -l net4sats-wizard
+-rwxrwxr-x 1 c08r4d0r c08r4d0r 15690826 Oct 16 08:51 net4sats-wizard
+$ sha256sum net4sats-wizard
+28ef640cd7ad74d0a7cd9497b7f3739261e473abe6fb5e450494f1c481da4bdc  net4sats-wizard
+$ git status --porcelain
+                                        # empty => build did not dirty the tree
+```
+
+**Build succeeds** (rc=0, empty stdout/stderr) and the 15,690,826-byte binary is byte-identical
+(sha256 + size) to the binaries produced in passes 2, 3 and 4 — the build is reproducible.
+Capture: `02-build.txt`
+
+---
+
+## STEP 3 — FULL `go test ./...` (raw output, zero failures)
+
+The module is a single package, so `./...` is the whole suite:
+
+```
+$ go list ./...
+net4sats-wizard
+```
+
+Uncached verbose run (`-count=1`, so no cached PASS can masquerade as fresh evidence):
+
+```
+$ go test ./... -count=1 -v
+=== RUN   TestHandleScan
+--- PASS: TestHandleScan (123.84s)
+=== RUN   TestHandleIndex
+--- PASS: TestHandleIndex (0.00s)
+=== RUN   TestDeployRequestValidation
+=== RUN   TestDeployRequestValidation/missing_IP_and_password
+=== RUN   TestDeployRequestValidation/empty_password_(fresh_reset)
+=== RUN   TestDeployRequestValidation/missing_IP
+=== RUN   TestDeployRequestValidation/invalid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lightning_address
+=== RUN   TestDeployRequestValidation/valid_lnurl
+--- PASS: TestDeployRequestValidation (0.00s)
+    --- PASS: TestDeployRequestValidation/missing_IP_and_password (0.00s)
+    ... (123 RUN/PASS lines in total; full raw capture on disk) ...
+=== RUN   TestVersionStringFormat
+--- PASS: TestVersionStringFormat (0.00s)
+=== RUN   TestVersionFlagInjectedViaLdflags
+--- PASS: TestVersionFlagInjectedViaLdflags (0.50s)
+PASS
+ok  	net4sats-wizard	157.867s
+TEST_RC=0
+```
+
+Counts parsed from the raw verbose capture (`03-go-test-verbose.txt`, 254 lines on disk):
+
+| metric | count |
+|---|---|
+| `=== RUN` (incl. subtests) | **123** |
+| `--- PASS` (incl. subtests) | **123** |
+| `--- PASS` (top-level) | **52** |
+| `--- FAIL` | **0** |
+| `--- SKIP` | **0** |
+| `ok  ` package lines | **1** (`ok net4sats-wizard 157.867s`) |
+| `FAIL` package lines | **0** |
+
+`TEST_RC=0`. **Zero failures, zero skips.**
+
+No test failure was caused by the vendored asset / version bump, so no wizard fix was required and
+none was made. The hardening was neither reverted nor touched. Captures:
+`03-go-test-verbose.txt` (full raw), `03-tally.txt`, `07-tally-embed.txt`.
+
+---
+
+## STEP 4 — pre-existing vet/gofmt state left untouched
+
+The card asks to leave a pre-existing `go vet` IPv6 warning and gofmt drift alone. **At this head
+there is nothing to leave** — both are already clean:
+
+```
+$ go vet ./...
+VET_RC=0                                # no output at all
+$ gofmt -l .
+GOFMT_RC=0                              # empty list => no gofmt drift
+$ git status --porcelain
+                                        # empty
+```
+
+Nothing was modified and nothing was "fixed". (The card's premise dates from before lint commit
+`7ceade3`, which cleaned both upstream of the head under test.) Capture: `04-vet-gofmt.txt`,
+re-confirmed live in `04b-vet-gofmt-live.txt`.
+
+---
+
+## Bonus — the vendored asset really is inside the binary (the card's GOAL)
+
+The "vendored/version-bumped wizard" claim is not just about the build succeeding; it is that the
+vendored UI asset tree is compiled in. Proven first-hand by substring-searching the built binary for
+each asset file's exact bytes:
+
+```
+$ python3 run-06-portal-embed.py
+binary size: 15,690,826 bytes
+binary sha256: 28ef640cd7ad74d0a7cd9497b7f3739261e473abe6fb5e450494f1c481da4bdc
+portal files: 25/25 embedded byte-for-byte (4,250,775 bytes total)
+missing: 0
+EMBED_RC=0
+
+$ python3 run-07-tally-embed.py
+  portal/ : 25/25 files embedded byte-for-byte (4,250,775 B)
+  admin/  : 27/27 files embedded byte-for-byte (1,267,428 B)
+```
+
+Both `portal/` (`//go:embed all:portal`) and `admin/` (`all:admin`) trees are present byte-for-byte
+in the shipped binary. Captures: `06-portal-embed.txt`, `07-tally-embed.txt`.
+
+---
+
+## Files touched
+
+- **Repo worktree** `/home/c08r4d0r/worktrees/wizard-fix` (branch `worker-heavy/t_10a913ec`):
+  `PROGRESS.md` and `REPORT.md` only. **Zero `.go`, asset, config or build-file changes** — no fix
+  was needed. The build output `net4sats-wizard` is gitignored.
+- **Outside the repo** (evidence only): `/home/c08r4d0r/wz-captures-t_10a913ec-pass5/*`.
+
+## Verdict
+
+PASS. Build rc=0 and reproducible; full suite 123/123 with 0 failures/0 skips uncached; `:8099` free
+before and after; one-shot server smoke green; vendored assets embedded 25/25 + 27/27; frozen
+vet/gofmt state observed-clean and untouched; tree clean and branch pushed.
 # REPORT — t_10a913ec (re-dispatch pass 4)
 
 ## Build wizard and run full go test suite green
