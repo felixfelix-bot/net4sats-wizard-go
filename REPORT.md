@@ -353,4 +353,29 @@ Secret scan: clean (`SCAN_RC=1` = no match) over the captures and over `PROGRESS
    (`git diff 0b5322a..9c37d2e` = documentation only).
 4. `PROGRESS.md`/`REPORT.md` were rewritten from the 27-line doc-only versions that were already on the
    docs branch head — i.e. the previous pass's dispatch notes are replaced by this pass's full report, not
-   appended to. Tip hash therefore advances with this commit; CI will need one more green run at the new tip.
+   appended to. The tip therefore advances with this commit; CI was re-run at the new tip and is green
+   (below).
+
+## Addendum — CI re-verified at the post-report tip
+
+The pass's own documentation commit moved the tip from `9c37d2e` to `649d90f`. CI was re-dispatched and
+re-verified at that new tip:
+
+```
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38842920848	2m1s	2026-10-16T02:55:37Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838430526	2m1s	2026-10-16T02:03:24Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838000347	2m1s	2026-10-16T01:58:39Z
+
+$ gh run view 38842920848 --json conclusion,headSha,status,event,url
+{"conclusion":"success","event":"workflow_dispatch","headSha":"649d90ff94bea71f7f98a9767374df5e9a176223","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38842920848"}
+
+$ gh run view 38842920848 --json jobs --jq '[.jobs[] | "\(.name) \(.status) \(.conclusion)"]'
+["lint completed success","test completed success"]
+```
+
+So CI is green at **both** the reviewed code tip `9c37d2e` (run 38838430526) and the documentation tip
+`649d90f` (run 38842920848). Each further documentation commit is treated the same way: pushed, CI
+re-dispatched, and its own run id recorded on the card. The reviewed *code* tree is unchanged across all
+of these — `git diff 9c37d2e <tip> -- ':(exclude)*.md' -- ':(exclude)verify/'` is empty.
+

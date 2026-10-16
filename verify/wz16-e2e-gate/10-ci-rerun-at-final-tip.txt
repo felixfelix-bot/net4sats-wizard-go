@@ -1,0 +1,12 @@
+
+### APPENDED 2026-10-16T04:57:48+02:00: CI re-run at the post-report tip 649d90f
+$ gh run list --repo felixfelix-bot/net4sats-wizard-go --branch ci/add-github-actions-workflow-clean --limit 3
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38842920848	2m1s	2026-10-16T02:55:37Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838430526	2m1s	2026-10-16T02:03:24Z
+completed	success	CI	CI	ci/add-github-actions-workflow-clean	workflow_dispatch	38838000347	2m1s	2026-10-16T01:58:39Z
+
+$ gh run view 38842920848 --json conclusion,headSha,status,event,url
+{"conclusion":"success","event":"workflow_dispatch","headSha":"649d90ff94bea71f7f98a9767374df5e9a176223","status":"completed","url":"https://github.com/felixfelix-bot/net4sats-wizard-go/actions/runs/38842920848"}
+
+$ gh run view 38842920848 --json jobs --jq "[.jobs[] | \"\(.name) \(.conclusion)\"]"
+["lint completed success","test completed success"]
