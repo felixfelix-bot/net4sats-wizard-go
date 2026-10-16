@@ -1,0 +1,17 @@
+docs(t_0509c320): pass 4 — record hermes verify outcome (build+test green; readiness red on a misdetected port)
+
+hermes verify --json, three consecutive runs: build (go build ./...) rc 0, test (go test ./...) rc 0
+(ok net4sats-wizard 90.917s), readiness red every time.
+
+The readiness probe targets http://127.0.0.1:8000/ while the wizard binds 127.0.0.1:8099
+(main.go:67 defaultListenAddr, main.go:83-84 allowed origins). Port 8000 appears nowhere in the
+project. Proof: the built binary boots on 8099 and curl to 8099 returns 200 while 8000 refuses.
+So ok:false is a harness misdetection, not a defect.
+
+An earlier "signal: terminated / FAIL" was transient cross-task interference from a sibling agent on
+this host (routine pkill/starts of the same binary), not the suite. Controlled: isolated test 3/3 pass,
+four sequential full runs 4/4 pass, three parallel full runs 3/3 pass, verify build+test 3/3 green,
+0 data races. My initial WIZARD_BIND-leak explanation is retracted in the notes.
+
+Notes + captures: .evidence-rev4/VERIFICATION-NOTES.md, .evidence-rev4/parallel-suite.sh
+No source, test, or workflow change.
