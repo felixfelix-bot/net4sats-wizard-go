@@ -143,6 +143,25 @@ LISTEN 0      50     [::ffff:127.0.0.1]:8080             *:*    users:(("java",p
 
 **Port :8099 is free before and after; no listener survives this pass.**
 
+### Shared-host disclosure: a sibling session's test binary is running
+
+At the end of this pass `pgrep -af net4sats-wizard` shows one *other* wizard-ish process:
+
+```
+3035033 /home/c08r4d0r/.cache/tmp-go/go-build3923712378/b001/net4sats-wizard.test \
+  -test.paniconexit0 -test.timeout=10m0s -test.count=1 -test.v=true \
+  -test.run=TestDiscoverRoutersNoNetwork|TestPinnedURLsAreLive
+```
+
+This is **not** this pass's process and was deliberately left running. Evidence of ownership:
+its parent chain is `hermes` (pid 2898659) → `bash` → `go` → `net4sats-wizard.test`, and its
+`cwd` is `/home/c08r4d0r/worktrees/wizard-pr-prep` — a **different worktree**, i.e. a concurrent
+sibling session on this shared host. It is a `net4sats-wizard.test` binary, so
+`pkill -x net4sats-wizard` does not match it (exact-name match), and it holds **no listening
+socket** (`/proc/3035033/fd` has 0 sockets; `ss -ltnp | grep 3035033` is empty). It therefore
+does not affect the :8099 criterion. Killing another session's live test run would be destructive,
+so it was not touched.
+
 ---
 
 ## STEP 2 — `go build -buildvcs=false`
