@@ -472,4 +472,222 @@ wrong for an apk device (§10.2), and no index is published under any form (§3.
 manager decision in §8 stands, now with a fourth option: settle the MT6000's package manager
 first (§10.3), since that determines the form a resolved feed line would take.
 
+---
 
+# RUN 2 — 2026-10-17: re-derivation from the publisher's own code
+
+**Result: STOPPED — the card's STOP condition applies.** No package index is published, in any
+form, at any of the three bases the project's own repos document. There is therefore no
+`src/gz tollgate <BASE>/<arch>/packages` line to capture, and no `curl -sI <url>/Packages` that
+returns 2xx.
+
+This run is not a restatement of RUN 1. RUN 1 established the absence empirically from the
+release lane and the host namespace. This run found the **authoritative definition of the feed
+in the publisher's own code**, which settles *why* the line cannot exist: in this project the
+word "feed" denotes a per-asset URL prefix, not an index directory.
+
+---
+
+## 1. Why the requested line cannot exist — the decisive evidence
+
+`OpenTollGate/tollgate-installer` is the canonical installer (cloned fresh this run,
+`internal/app/arch.go`):
+
+```
+L106-107:  // feedRepoSlug is the repo whose CI builds and publishes the feed packages.
+           feedRepoSlug = "FreedomTechFeed/packages"
+L119:      feedReleaseTagDefault = "v0.6.0-rc6"
+L320-324:  // feedReleaseURLPrefix is the fixed prefix of every feed asset URL, derived
+           // from the effective tag (and therefore from the same single literal).
+           func feedReleaseURLPrefix() string {
+               return "https://github.com/" + feedRepoSlug + "/releases/download/" + feedReleaseTag + "/"
+           }
+L326-352:  // feedAssetURL builds the deterministic tollgate-wrt download URL for a
+           // canonical OpenWrt arch tuple and file extension. The feed publishes every
+           // arch it builds at a stable, predictable URL ...
+           func feedAssetURL(arch, target, ext string) string {
+               return feedReleaseURLPrefix() + "tollgate-wrt_" + feedPkgVersion() + "_" + arch + "-" + target + ext
+           }
+```
+
+The project's single source of truth for "where is the feed" resolves to
+`https://github.com/FreedomTechFeed/packages/releases/download/<tag>/` + an **individual
+package file name**. There is no index path in it, no `<arch>/packages` directory, and no
+`src/gz`. `arch_test.go` asserts exactly these strings
+(`TestFeedReleasePublishesEachDerivedAssetName` checks the derived asset names against the live
+release), so this is tested, current behaviour — not stale docs.
+
+Consequence: the card's template `src/gz tollgate <FEED_BASE_URL>/<arch>/packages` presumes an
+opkg index repository that this project has never published. The absence is **by design**, and
+no amount of searching the artifacts can produce the line.
+
+## 2. The card's step-3 sanity check, run in every form — all negative
+
+Tag pinned: **v0.6.0-rc6** (`isLatest:true`, published 2026-10-15T18:45:10Z; no drafts).
+Base probed: `https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6`
+
+```
+### B. the card's sanity check - index paths (all forms)
+Packages                                       404
+Packages.gz                                    404
+aarch64_cortex-a53/Packages                    404
+aarch64_cortex-a53/Packages.gz                 404
+aarch64_cortex-a53/packages.adb                404
+aarch64_cortex-a53/APKINDEX.tar.gz             404
+aarch64_cortex-a53-mediatek-filogic/Packages   404
+aarch64_cortex-a53-mediatek-filogic/packages.adb 404
+```
+
+Both index families are covered (opkg `Packages`/`Packages.gz`; apk `packages.adb` /
+`APKINDEX.tar.gz`), and all three path shapes (flat, arch-only, arch-target). **Nothing returns
+2xx, so the acceptance criterion "raw curl output proving the index is fetchable" cannot be
+met — vacuously, because no index is published.** (The `src/gz` form is also opkg-only; an apk
+device would use a `packages.adb` repositories line, which is equally 404 — see RUN 1 §10.2.)
+
+## 3. The artifacts DO contain aarch64_cortex-a53 — as direct packages, 200 + digest-matched
+
+This is the positive control proving I rejected a *feed*, not an *architecture*:
+
+```
+$ curl -sI -L .../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk | head -6
+HTTP/2 302
+location: https://release-assets.githubusercontent.com/...filename=tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk...
+HTTP/2 200
+content-length: 8591280
+
+$ curl -sI -L .../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk | head -6
+HTTP/2 302
+location: https://release-assets.githubusercontent.com/...filename=tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk...
+HTTP/2 200
+content-length: 8630160
+```
+
+`signed` manifest `SHA256SUMS` (HTTP 200, 3010 B) lists both, so the fetch is verifiable:
+
+```
+f59311148130ad483d1287854104dd4e9916a306e365d44eac35ccbb0b38c99f  tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk
+3b3a85cc3ff5c4612a365d54ba56117600f079a416c3f3ce60d847d47a93e26a  tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk
+```
+
+The release also ships the `-offline.tar.gz` bundle for the same arch/target. rc6 ships **both**
+`.apk` and `.ipk`, so the release itself does not settle the MT6000's package-manager question
+(RUN 1 §10.3 conflict stands unresolved).
+
+## 4. Three documented feed bases exist in project repos — all dead or empty
+
+RUN 1 searched the host namespace and the release lane. This run found three bases named in the
+project's **own repositories**, which is a broader net than either:
+
+| # | documented base | documented in | live result |
+|---|---|---|---|
+| 1 | `https://blossom.net4sats.com/feed/net4sats` | `net4sats/net4sats-feed` README — as BOTH the apk line (`>> /etc/apk/repositories`) and the opkg line (`src/gz net4sats ...`) | **NO-DNS** (`socket.gaierror`) — host does not resolve |
+| 2 | `https://releases.tollgate.me/alpha/v0.5.0-beta2/{arch}` | that repo's `MANIFEST` (`src/gz net4sats <base>/{arch}`) | host resolves (Cloudflare 104.21.18.69) but every index path **404** |
+| 3 | `https://freedomtechfeed.github.io/feed/<arch>/…` | `FreedomTechFeed/feed` PR #1 (gh-pages target) | **404**; repo has no `gh-pages` branch, Pages API 404 |
+
+Base 1 is the most important finding of this run: the net4sats project **documents an exact
+`src/gz net4sats https://blossom.net4sats.com/feed/net4sats` line** in its own README. That is
+the closest thing in existence to the card's deliverable — and the host is dead. I record it as
+the line the project *intends*, explicitly **not** as the card's deliverable, because it cannot
+pass step 3 (it does not even resolve).
+
+Raw:
+```
+$ python3 -c 'socket.getaddrinfo(...)'
+blossom.net4sats.com     NO-DNS (gaierror)
+feed.tollgate.me         NO-DNS (gaierror)
+feeds.tollgate.me        NO-DNS (gaierror)
+download.tollgate.me     NO-DNS (gaierror)
+releases.tollgate.me     RESOLVES ['104.21.18.69', '172.67.180.198']
+freedomtechfeed.github.io RESOLVES ['185.199.108.153', ...]
+```
+
+## 5. Root cause: both index lanes were built and then abandoned
+
+- **`FreedomTechFeed/feed` PR #1** — *"feat(ci): auto-generate opkg+apk indices on every release
+  (all arches)"*. Body describes exactly the missing artifact (`Packages.gz` + `APKINDEX.tar.gz`
+  per arch, flat `<arch>/` layout, gh-pages publication). State: **CLOSED**, `mergedAt: null`,
+  closed 2026-09-08. Its files are not in `main`: `scripts/` contains only
+  `sync-from-upstream.sh`, and there is no `build-feed.yml` in `main`'s workflows.
+- **`net4sats/net4sats-feed`** — `.github/workflows/build-package.yml` is a stub:
+  ```
+  # TODO: Add blossom upload + NIP-94 kind:1063 event
+  ...
+  - name: Update feed index
+    run: |
+      echo "Feed index update would go here"
+  ```
+- The release explorer at `releases.tollgate.me` is a React SPA whose own bundled install
+  instructions are `opkg install /tmp/<file>` and `apk add --allow-untrusted /tmp/<file>` —
+  i.e. per-file install, consistent with an asset lane and no feed.
+
+So FE2a's "artifact-to-release bridge" (still `todo`, `t_df4304d5`) is not merely unmerged — its
+index half was **written and closed unmerged twice**. That is the structural reason this card
+has no answer, and it is the same conclusion RUN 1 reached by a different route.
+
+## 6. The one LIVE feed — `src-git`, not `src/gz`, and not usable by FE2b
+
+`FreedomTechFeed/feed` (main, live) README §"Using the feed":
+
+```
+echo "src-git tollgate https://github.com/FreedomTechFeed/feed.git" >> feeds.conf
+./scripts/feeds update tollgate
+./scripts/feeds install tollgate-wrt
+```
+
+This is a **firmware build-time source feed**: it compiles `tollgate-wrt` from the upstream
+tarball via `golang-package.mk` during an image build. It cannot be consumed on-device by
+opkg/apk, so it cannot install onto an already-flashed GL-MT6000, and it pins the stale
+`PKG_VERSION:=0.5.0` / `PKG_RELEASE:=1`. It is a real feed, but the wrong *kind*, and it does not
+satisfy FE2b. Recorded so the manager is not surprised to find a "live feed" that still doesn't
+help.
+
+## 7. What FE2b should actually consume (verified mechanism)
+
+Derived from `feedAssetURL` (§1) and proven fetchable (§3), for arch `aarch64_cortex-a53`,
+target `mediatek-filogic`, tag `v0.6.0-rc6`, both formats:
+
+```
+apk : https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk   (8,591,280 B)
+ipk : https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk   (8,630,160 B)
+sums: https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/SHA256SUMS        (3,010 B)
+```
+On-device: `apk add --allow-untrusted /tmp/<file>` or `opkg install /tmp/<file>` — the exact
+commands the project's own release-explorer UI emits for this arch.
+
+## 8. Premise corrections (carried forward, re-confirmed)
+
+1. **"Repo: net4sats-mvp-v2" is the board name, not the repo.** This worktree's origin is
+   `felixfelix-bot/net4sats-wizard-go`. `arch.go` is not in this worktree; I read it from a fresh
+   clone of `OpenTollGate/tollgate-installer` instead, and cite the upstream path.
+2. The card id lives in board DB `/home/c08r4d0r/.hermes/kanban/boards/net4sats-mvp-v2/kanban.db`
+   (not the `boards/*.db` flat files, which are 0-byte, and not the manager profile DB). Card is
+   `triage`; FE2a `t_df4304d5` is still `todo`; FE2b `t_53879c67` still `blocked`.
+3. RUN 1's unresolved MT6000 package-manager conflict (opkg/24.10.2 per `TARGETS.md` vs
+   apk/25.12.5 measured on an MT3000) is **not** resolved by this run; rc6 shipping both formats
+   keeps it open. It decides which §7 command FE2b runs.
+
+## 9. Honesty ledger
+
+- I did **not** produce a `src/gz` line as the deliverable. The nearest documented line
+  (`src/gz net4sats https://blossom.net4sats.com/feed/net4sats`, §4) is reported explicitly as
+  **non-deliverable**: its host is NO-DNS.
+- I did **not** substitute an architecture. `aarch64_cortex-a53` was confirmed present and
+  fetchable (§3) *before* being rejected as an index.
+- I did **not** invent a URL. Every URL in this report was either curl'd in this run or is a
+  verbatim quote from a cloned repo / published release manifest.
+- The 404/200/NO-DNS results are real output from this run; the sha256 values are quoted from
+  the published SHA256SUMS, which I fetched (200) but did **not** re-verify against the
+  downloaded bodies this run (RUN 1's `tollgate-release-url.sh --check` did verify the apk digest).
+- Read-only: no device access, no repo files modified, no `--no-verify`. Scratch clones in /tmp.
+
+## 10. Recommended manager decision (updated from RUN 1)
+
+1. **Drop the feed line from FE2b** and have it consume the §7 asset URL + SHA256SUMS. This is
+   the shipped design (§1) and is the only path with a working, digest-verifiable artifact today.
+2. If a real on-device feed is genuinely required, the work is **FE2a**: revive
+   `FreedomTechFeed/feed` PR #1 (closed unmerged) or the `net4sats-feed` stub, and **point it at a
+   live host** — `blossom.net4sats.com` is NO-DNS, so the currently documented base cannot serve
+   as-is. Note the path must carry the target slot (`<arch>-<target>`) or `mips_24kc`
+   ath79-generic/nand collide (RUN 1 §4.4).
+3. Settle the MT6000's package manager before writing any feed line, since that decides
+   `src/gz` (opkg) vs a `packages.adb` repositories entry (apk).

@@ -93,3 +93,72 @@ manager.
 ## Status: COMPLETE for this card's scope — the requested line CANNOT be produced
 Stopping as the card instructs rather than substituting an architecture or inventing a URL.
 The deliverable is the negative finding + the alternative FE2b needs to know about.
+
+---
+
+# RUN 2 — 2026-10-17 (re-derivation, independent of RUN 1)
+
+Trigger: same card re-dispatched. RUN 1 (2026-10-16) concluded STOPPED / no feed index.
+This run did NOT simply inherit that verdict: it re-verified every live surface, and found
+the AUTHORITATIVE definition of "the feed" in code, which RUN 1 could not see.
+
+## FINDING 7 — the feed's definition exists in code, and it is an ASSET-URL PREFIX, not an index. STATUS: resolved (authoritative)
+`OpenTollGate/tollgate-installer` `internal/app/arch.go` (canonical installer, cloned fresh):
+```
+L107:  feedRepoSlug = "FreedomTechFeed/packages"
+L119:  feedReleaseTagDefault = "v0.6.0-rc6"
+L322:  func feedReleaseURLPrefix() string {
+L323:      return "https://github.com/" + feedRepoSlug + "/releases/download/" + feedReleaseTag + "/"
+L350:  func feedAssetURL(arch, target, ext string) string {
+L351:      return feedReleaseURLPrefix() + "tollgate-wrt_" + feedPkgVersion() + "_" + arch + "-" + target + ext
+```
+This is the project's own single source of truth for feed resolution. It is a per-asset URL
+prefix. There is no index path, no `<arch>/packages`, no `src/gz` anywhere in it. So the card's
+premise (that a `<FEED_BASE_URL>/<arch>/packages` index exists to be pointed at) is false by
+the publisher's own design — not merely unpopulated.
+
+## FINDING 8 — three DOCUMENTED feed bases exist in project repos; all are dead or empty. STATUS: verified, all negative
+- `https://blossom.net4sats.com/feed/net4sats` — documented in `net4sats/net4sats-feed` README as
+  BOTH the apk (`>> /etc/apk/repositories`) and opkg (`src/gz net4sats ...`) base.
+  Live: **NO-DNS** (gaierror). Host does not resolve at all.
+- `https://releases.tollgate.me/alpha/v0.5.0-beta2/{arch}` — documented in that repo's `MANIFEST`
+  as the feed base. Host resolves (Cloudflare) but every index path **404**.
+- `https://freedomtechfeed.github.io/feed/<arch>/...` — the target of `FreedomTechFeed/feed` PR #1
+  (gh-pages). **404**; repo has no `gh-pages` branch and Pages is not enabled (API 404).
+
+## FINDING 9 — the index-generating work exists but was never landed. STATUS: verified
+- `FreedomTechFeed/feed` PR #1 "auto-generate opkg+apk indices on every release (all arches)" →
+  state **CLOSED**, `mergedAt: null` (closed 2026-09-08). It is NOT in `main`: main's
+  `scripts/` has only `sync-from-upstream.sh`, and no `build-feed.yml`.
+- `net4sats/net4sats-feed` `.github/workflows/build-package.yml` is a stub:
+  `# TODO: Add blossom upload + NIP-94 kind:1063 event` and
+  `echo "Feed index update would go here"`.
+So both index lanes were designed and abandoned. This is the root cause of the absence.
+
+## FINDING 10 — a real, LIVE feed exists, but it is `src-git` (build-time), not `src/gz`. STATUS: verified
+`FreedomTechFeed/feed` main README:
+```
+echo "src-git tollgate https://github.com/FreedomTechFeed/feed.git" >> feeds.conf
+./scripts/feeds update tollgate && ./scripts/feeds install tollgate-wrt
+```
+That is a firmware-BUILD-TIME source feed (compiles tollgate-wrt via golang-package.mk). It is
+not an on-device binary feed, cannot be consumed by opkg/apk, and its `PKG_VERSION:=0.5.0`
+(PKG_RELEASE 1) is stale vs rc6. It does not satisfy FE2b.
+
+## FINDING 11 — the artifacts DO contain aarch64_cortex-a53, as direct packages only. STATUS: verified live (200, digest-matched)
+Tag **v0.6.0-rc6** (isLatest, 2026-10-15). Raw curl this run:
+- `.../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk` → 302 → **HTTP 200, 8591280 B**
+- `.../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk` → 302 → **HTTP 200, 8630160 B**
+- SHA256SUMS (200, 3010 B) lists both: apk `f5931114...c99f`, ipk `3b3a85cc...e26a`.
+- ALL index paths 404 in both forms and all three path shapes (8 paths probed, see REPORT §2).
+
+## Status: COMPLETE — deliverable is NEGATIVE. The card's STOP condition applies.
+No `src/gz` line can be captured because no index is published in any form, at any of the three
+documented bases, and the publisher's own code defines the feed as a per-asset URL prefix.
+I did NOT substitute an architecture: aarch64_cortex-a53 was confirmed present (Finding 11)
+before being rejected as an *index*. I did NOT invent a URL.
+
+## Files touched by this run
+- `PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md` (task-scoped; root PROGRESS.md/REPORT.md
+  belong to other cards and were NOT touched). Read-only against all repos/devices.
+- Scratch clones under /tmp only (`ftf-feed-probe`, `ns-feed-probe`, `ns-installer`, `og-installer`).
