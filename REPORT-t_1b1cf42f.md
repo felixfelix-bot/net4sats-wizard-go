@@ -691,3 +691,232 @@ commands the project's own release-explorer UI emits for this arch.
    ath79-generic/nand collide (RUN 1 §4.4).
 3. Settle the MT6000's package manager before writing any feed line, since that decides
    `src/gz` (opkg) vs a `packages.adb` repositories entry (apk).
+
+---
+
+# RUN 3 — 2026-10-18: re-derivation #3 (live), with the signature sub-clause closed
+
+## 11.0 Verdict (unchanged, now signature-complete)
+
+**No `src/gz` line can be produced.** The acceptance criteria's STOP clause applies verbatim:
+the artifacts do not contain a `aarch64_cortex-a53` **feed**. I did not substitute an
+architecture, and I did not substitute a publisher.
+
+What this run adds over RUN 1/RUN 2 is the one acceptance-criteria sub-clause neither had tested:
+*"and the matching package index/**signature** files."* Result: signature files **do** exist — and
+their existence makes the negative *stronger*, not weaker, because they sign the flat assets
+rather than an index (§11.3).
+
+Everything below is raw output from this run, 2026-10-18.
+
+## 11.1 Re-derived, not inherited: the release surface is unchanged
+
+RUN 1 and RUN 2 both concluded NEGATIVE. I re-verified from scratch rather than citing them.
+
+```
+$ curl -sS -o /dev/null -w '%{http_code} %{url_effective}\n' -L https://github.com/FreedomTechFeed/packages/releases/latest
+200 https://github.com/FreedomTechFeed/packages/releases/tag/v0.6.0-rc6
+
+$ gh release list -R FreedomTechFeed/packages --limit 20
+v0.6.0-rc6	Latest	v0.6.0-rc6	2026-10-15T19:50:37Z
+v0.6.0-rc5		v0.6.0-rc5	2026-10-14T11:58:14Z
+v0.6.0-rc4		v0.6.0-rc4	2026-10-13T10:51:53Z
+... (18 more, all older)
+
+$ gh release view v0.6.0-rc6 -R FreedomTechFeed/packages --json tagName,publishedAt,isDraft,isPrerelease,name -q .
+{"isDraft":false,"isPrerelease":false,"name":"v0.6.0-rc6","publishedAt":"2026-10-15T19:50:37Z","tagName":"v0.6.0-rc6"}
+```
+
+**Release pin for any FE2b feed line: `v0.6.0-rc6`, published 2026-10-15T19:50:37Z.** No new tag
+has appeared in the ~3 days since RUN 2, which is *why* the answer is stable rather than
+merely repeated. (Note: `isLatest` is not a supported `--json` field on this gh version; the
+`Latest` column of `gh release list` and the `releases/latest` redirect both establish it.)
+
+## 11.2 The arch IS present — as packages, not as a feed
+
+`gh release view ... --json assets -q '.assets[].name' | sort` → 26 assets. Every one is a flat
+file. The aarch64_cortex-a53/mediatek-filogic row exists in three forms:
+
+```
+tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk
+tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk
+tollgate-wrt-0.6.0_rc6-aarch64_cortex-a53-mediatek-filogic-offline.tar.gz
+```
+
+plus `SHA256SUMS`, `SHA256SUMS.sig`, and the same apk/ipk/offline triple for 7 other
+arch-target tuples. **There is no directory entry, no `Packages`, no `Packages.gz`, no
+`Packages.sig`, no `packages.adb`.** This is the STOP condition: the arch is present as a
+package and absent as a feed. I did not substitute an architecture.
+
+## 11.3 The acceptance-criteria check, run verbatim — all 404
+
+The card specifies `curl -sI <url>/Packages`. Raw headers, this run:
+
+```
+--- curl -sI .../releases/download/v0.6.0-rc6/Packages
+HTTP/2 404
+date: Sun, 18 Oct 2026 00:05:03 GMT
+content-type: text/plain; charset=utf-8
+
+--- curl -sI .../releases/download/v0.6.0-rc6/aarch64_cortex-a53/Packages
+HTTP/2 404
+
+--- curl -sI .../releases/download/v0.6.0-rc6/packages.adb
+HTTP/2 404
+
+--- curl -sI .../releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages.adb
+HTTP/2 404
+
+--- curl -sI .../releases/download/v0.6.0-rc6/Packages.sig
+HTTP/2 404
+```
+
+Ten path shapes were probed in total this run (adding `Packages.gz`, `Packages.sig`,
+`aarch64_cortex-a53/mediatek-filogic/{Packages,packages.adb}`, `aarch64_cortex-a53/packages/Packages`).
+**Every index path in both index forms returned 404.** No `curl -sI` returned 2xx, so the
+acceptance criterion "must return 2xx" is **unmet — and unmet for a structural reason**, not a
+transient one (§11.6).
+
+## 11.4 NEW: the signature files exist — and that closes the sub-clause *against* the card
+
+The card asks to locate the feed "and the matching package index/signature files". The signature
+files are real and fetchable:
+
+```
+200 8591280B  .../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk
+200 8630160B  .../tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.ipk
+200    3010B  .../SHA256SUMS
+200     334B  .../SHA256SUMS.sig
+200 9490009B  .../tollgate-wrt-0.6.0_rc6-aarch64_cortex-a53-mediatek-filogic-offline.tar.gz
+```
+
+`SHA256SUMS.sig` (334 B) is a genuine detached signature over `SHA256SUMS`. So **the release is
+signed** — but what is signed is the checksum list of the **flat per-asset files**. There is no
+`Packages.sig`, no `Packages.gz.sig`, no `packages.adb.sig`, because **there is no index to
+sign** (all three 404, §11.3).
+
+This is the decisive point for the sub-clause: a `src/gz` feed requires a *signed index*. A
+signature over loose assets is not a feed signature and cannot be consumed by opkg or apk as a
+repository. **The signature files exist and are correctly rejected as feed signatures.**
+
+## 11.5 NEW: the offline bundle is the real consumption path, and it contains no index
+
+`tollgate-wrt-0.6.0_rc6-aarch64_cortex-a53-mediatek-filogic-offline.tar.gz` → HTTP 200, 9490009 B.
+Extracted:
+
+```
+$ find rc6b -type f | wc -l
+44
+$ find rc6b -iname '*packages*' -o -iname '*APKINDEX*' -o -iname '*.adb'
+(no output)
+```
+
+44 files, **zero index files**. Its README states the bundle is *"38 packages: the tollgate-wrt
+package + its closed dependency set"* fetched *"from the PUBLISHED apk indexes of OpenWrt 25.12.5
+for `aarch64_cortex-a53` / `mediatek-filogic`"*, with `MANIFEST.sha256` for integrity and the
+release's signed `SHA256SUMS` as the provenance chain.
+
+That sentence is the answer to *why* no feed index is published: **the publisher resolves the
+dependency closure at build time and ships the bytes**, so the device never needs an index. It
+also states the limitation explicitly:
+
+> The `.ipk` / OpenWrt <= 24.x (`opkg`) lane is NOT covered: this bundle is the apk-tools 3 lane
+> only (OpenWrt 25.x).
+
+and, in the runbook, that `--allow-untrusted` is required on the apk lane because the packages
+carry no repository signature. Consistent: signed *asset sums*, unsigned *packages*, no *index*.
+
+## 11.6 The only live index at this arch/target is OpenWrt's own — explicitly NOT substituted
+
+```
+https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/packages/packages.adb
+  → HTTP 200, 14417 B, magic bytes "ADBd" (a valid apk index)
+  → grep -c -i tollgate → 0
+
+https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/packages/Packages
+  → 404
+https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/packages/Packages.sig
+  → 404
+```
+
+This is the one URL in the whole investigation that satisfies `curl -sI <url>/...` with a 2xx and
+is a real index at the correct arch/target. It is **not** the feed, and I am not offering it:
+wrong publisher, and its contents do not include `tollgate-wrt` (0 matches). Substituting it
+would produce a `src/gz` line that installs nothing — exactly the failure the card's STOP clause
+exists to prevent. It is recorded so the manager can see the alternative was tested and refused
+on evidence rather than overlooked.
+
+## 11.7 Why the negative is structural, not transient — both index lanes are still abandoned
+
+```
+$ gh api repos/FreedomTechFeed/packages/contents/.github/workflows -q '.[].name'
+build-tollgate-sdk-image.yml  feed-gates.yml  llm-review.yml  multi-arch-test-build.yml
+pkg-tarball-parity.yml  release-manifest-backfill.yml  release-publish.yml
+release-tooling.yml  vendor-drift.yml  scripts
+
+$ gh api 'search/code?q=repo:FreedomTechFeed/packages+packages.adb'   -q .total_count   → 0
+$ gh api 'search/code?q=repo:FreedomTechFeed/packages+APKINDEX'       -q .total_count   → 0
+
+$ gh pr view 1 -R FreedomTechFeed/feed --json state,mergedAt,closedAt,title -q .
+{"closedAt":"2026-09-08T11:16:51Z","mergedAt":null,"state":"CLOSED",
+ "title":"feat(ci): auto-generate opkg+apk indices on every release (all arches)"}
+
+$ gh api repos/FreedomTechFeed/feed/branches/ci/auto-feed-indices -q '.commit.commit.author.date'
+2026-07-05T16:27:53Z
+$ gh api repos/FreedomTechFeed/feed/commits/main -q '.commit.author.date'
+2026-09-08T10:46:33Z
+```
+
+`release-publish.yml`'s own header describes its output as *"release assets with deterministic,
+TARGET-QUALIFIED names"* — flat assets by design. The only index-generating PR was closed
+unmerged; its branch has not moved since 2026-07-05. **Nothing in the publisher's own CI can
+produce a feed index**, so re-running this card will keep returning the same verdict until the
+index lane is built.
+
+Host namespace re-probed this run, all still dead:
+
+```
+blossom.net4sats.com      → NO-DNS (curl exit 6: Could not resolve host)
+feed.tollgate.me          → NO-DNS
+feeds.tollgate.me         → NO-DNS
+download.tollgate.me      → NO-DNS
+feed.net4sats.com         → NO-DNS
+releases.tollgate.me      → A=172.67.180.198 (Cloudflare); serves only a React SPA
+                            ("TollGate Release Explorer"); 12 candidate index paths → all 404
+freedomtechfeed.github.io/feed/aarch64_cortex-a53/packages.adb → 404
+                            (FreedomTechFeed/feed has no gh-pages branch; Pages API → 404)
+```
+
+Also re-confirmed from the docs of record: `net4sats/net4sats-feed` README documents
+`blossom.net4sats.com/feed/net4sats` as **both** the apk and opkg base, and that host does not
+resolve; its `MANIFEST` documents `releases.tollgate.me/alpha/v0.5.0-beta2/{arch}` as the feed
+base, and every path under it 404s.
+
+## 11.8 What FE2b should do instead (unchanged recommendation, now with the bundle)
+
+1. **Drop the feed line.** Consume the digest-verified flat asset, or the offline bundle:
+   `.../releases/download/v0.6.0-rc6/tollgate-wrt_0.6.0_rc6_aarch64_cortex-a53-mediatek-filogic.apk`
+   (or `.ipk` for the opkg lane), verifying against `SHA256SUMS` / `SHA256SUMS.sig`.
+2. **For a no-uplink install**, use the offline bundle (44 files, closed closure, `MANIFEST.sha256`).
+3. **If a real `src/gz` feed is required**, the index lane must be built first (the closed
+   `FreedomTechFeed/feed` PR #1 is the work item), and the path must be arch **and target**
+   qualified — `mips_24kc` covers both `ath79-generic` and `ath79-nand`, so an arch-only path
+   collides. A `<FEED_BASE_URL>/<arch>/packages` template cannot express this project's tuples.
+4. **Note the `src/gz` form is opkg-only.** The FE2b bench device is apk/25.12.5 (per the prior
+   card's live evidence), where the repositories line is a full `.../packages.adb` URL in
+   `/etc/apk/repositories.d/`, not `src/gz <name> <dir>`.
+
+## 11.9 Honesty notes for this run
+
+- I did **not** produce a `src/gz` line, because no index exists to derive one from.
+- I did **not** substitute an architecture: aarch64_cortex-a53 was confirmed present as a
+  *package* (§11.2) before being rejected as a *feed*.
+- I did **not** substitute a publisher: OpenWrt's live index was found, then explicitly refused
+  on evidence (§11.6).
+- I did **not** substitute a *form* either: both the opkg (`Packages`/`Packages.gz`) and apk
+  (`packages.adb`) index forms were probed at every candidate path, in the release lane and in
+  all four documented host bases.
+- The only 2xx responses this run were for flat assets, signature files, the offline bundle, and
+  OpenWrt's own index. **No tollgate feed index returned 2xx anywhere.**
+- Read-only: no repo files modified outside this card's two record files; no device access; no
+  `--no-verify`. Scratch clones and downloads confined to `/tmp`.

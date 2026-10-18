@@ -162,3 +162,67 @@ before being rejected as an *index*. I did NOT invent a URL.
 - `PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md` (task-scoped; root PROGRESS.md/REPORT.md
   belong to other cards and were NOT touched). Read-only against all repos/devices.
 - Scratch clones under /tmp only (`ftf-feed-probe`, `ns-feed-probe`, `ns-installer`, `og-installer`).
+
+---
+
+# RUN 3 — 2026-10-18 (re-derivation #3, live; closes the "signature files" sub-clause)
+
+Trigger: same card re-dispatched. RUN 1 and RUN 2 both concluded NEGATIVE. This run re-verified
+every live surface rather than inheriting that verdict, and found the state unchanged (latest
+release is still `v0.6.0-rc6`, published 2026-10-15T19:50:37Z — no new tag in ~3 days). It adds
+the one acceptance-criteria sub-clause neither prior run tested: *"and the matching package
+index/**signature** files"*.
+
+## FINDING 12 — signature files EXIST, but they sign flat assets, not an index. STATUS: verified live
+The card's "signature files" clause is satisfiable in a form the card did not anticipate:
+- `SHA256SUMS` → **HTTP 200, 3010 B**
+- `SHA256SUMS.sig` → **HTTP 200, 334 B**  (an actual detached signature over the sums file)
+
+So the release IS signed. But what is signed is the *sums of the flat per-asset files* — there is
+no `Packages.sig` / `Packages.gz.sig` / `packages.adb.sig` because there is no index to sign
+(`Packages.sig` probed → **404**). A `src/gz` feed needs a signed **index**; a signature over
+loose assets cannot be consumed by opkg/apk as a feed.
+
+## FINDING 13 — the offline bundle is the only self-contained consumption path, and it has no index. STATUS: verified (downloaded + extracted)
+`tollgate-wrt-0.6.0_rc6-aarch64_cortex-a53-mediatek-filogic-offline.tar.gz` → **HTTP 200, 9490009 B**;
+extracted → **44 files, 0 index files** (`find -iname '*packages*' -o -iname '*APKINDEX*' -o -iname '*.adb'` → empty).
+Its own README states the bundle ships a **closed 38-package closure** plus
+`MANIFEST.sha256`, and that its members were *"fetched from the PUBLISHED apk indexes of OpenWrt
+25.12.5 for aarch64_cortex-a53 / mediatek-filogic"* — i.e. the publisher resolves the closure at
+BUILD time and ships the bytes, so no on-device index is needed or published. It also documents:
+*"The .ipk / OpenWrt <= 24.x (opkg) lane is NOT covered"*, and that `--allow-untrusted` is needed
+on the apk lane.
+
+## FINDING 14 — the only *fetchable* index at this arch/target is OpenWrt's own, and it does not carry tollgate-wrt. STATUS: verified live
+`https://downloads.openwrt.org/releases/25.12.5/targets/mediatek/filogic/packages/packages.adb`
+→ **HTTP 200, 14417 B** (valid apk index: magic bytes `ADBd`). `grep -c -i tollgate` → **0**.
+The sibling opkg paths are 404 at that same tree (`Packages`, `Packages.sig` → 404; OpenWrt
+publishes `packages.adb` for the apk era). So the only working index at the correct arch/target
+is upstream's, and it does not contain the package the feed line is supposed to serve. I did NOT
+substitute this URL: it is the wrong publisher and the wrong content.
+
+## FINDING 15 — no feed lane advanced since RUN 2. STATUS: verified (this is why the answer is stable)
+- `FreedomTechFeed/packages` main workflows: `release-publish.yml`, `feed-gates.yml`, … — no
+  index-generating job; `search/code` for `packages.adb` and `APKINDEX` in that repo → **0 hits**.
+- `FreedomTechFeed/feed` PR #1 ("auto-generate opkg+apk indices on every release") → still
+  **CLOSED, `mergedAt: null`** (closed 2026-09-08). Its branch `ci/auto-feed-indices` has not
+  moved since **2026-07-05**; `main` head is 2026-09-08. Both index lanes remain abandoned.
+- `FreedomTechFeed/feed` has **no gh-pages branch and Pages is not enabled** (API 404), so
+  `freedomtechfeed.github.io/feed/...` → **404**.
+- Documented bases re-probed this run: `blossom.net4sats.com` → **NO-DNS** (curl exit 6);
+  `feed.tollgate.me`, `feeds.tollgate.me`, `download.tollgate.me`, `feed.net4sats.com` → **NO-DNS**;
+  `releases.tollgate.me` resolves (Cloudflare 172.67.180.198) but serves only a **SPA release
+  explorer** (a React shell), and all 12 candidate index paths probed → **404**.
+
+## Status: COMPLETE — deliverable remains NEGATIVE, now signature-complete
+The STOP condition in the acceptance criteria applies and I am honouring it: no `src/gz` line can
+be captured, because no package index is published in any form (opkg `Packages`, apk
+`packages.adb`) at any of the four documented bases or in the release-asset lane. I did NOT
+substitute an architecture (aarch64_cortex-a53 was confirmed present as a *package* before being
+rejected as a *feed*) and did NOT substitute a publisher (OpenWrt's live index was explicitly
+rejected in FINDING 14).
+
+## Files touched by this run
+- `PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md` (task-scoped; root PROGRESS.md/REPORT.md belong
+  to other cards and were NOT touched). Read-only against every repo and device; scratch clones
+  and downloads under /tmp only.
