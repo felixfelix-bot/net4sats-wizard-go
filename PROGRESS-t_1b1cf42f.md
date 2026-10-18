@@ -226,3 +226,15 @@ rejected in FINDING 14).
 - `PROGRESS-t_1b1cf42f.md`, `REPORT-t_1b1cf42f.md` (task-scoped; root PROGRESS.md/REPORT.md belong
   to other cards and were NOT touched). Read-only against every repo and device; scratch clones
   and downloads under /tmp only.
+
+## RUN 3 — commit / push (observed)
+- commit `1fd67785303ea018dae52ff44bcce223b8d05cec`, exactly 2 files
+  (PROGRESS-t_1b1cf42f.md +64, REPORT-t_1b1cf42f.md +229), 293 insertions, rc=0.
+  Pathspec repeated on the commit (`-- PROGRESS-t_1b1cf42f.md REPORT-t_1b1cf42f.md`)
+  so the untracked `verify/wz16-e2e-gate/` from another card was NOT swept.
+- push: `git push origin HEAD:refs/heads/worker-tollgate/t_1b1cf42f` →
+  `7260034..1fd6778  HEAD -> worker-tollgate/t_1b1cf42f`, rc=0.
+- server truth: `git ls-remote origin refs/heads/worker-tollgate/t_1b1cf42f` =
+  `1fd67785303ea018dae52ff44bcce223b8d05cec`, identical to local HEAD; `git ls-tree`
+  on that server-side commit lists both record files.
+- No `--no-verify` used at any point.
