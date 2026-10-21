@@ -199,6 +199,15 @@ The shipped script was re-verified after commit:
   This change touched zero Go files (new shell script + docs only), so it cannot affect Go tests;
   the failure is the test's no-router assumption violated by the lab bench being powered — i.e.
   the exact condition FE2b depends on.
+- Canonical recipe `hermes verify --json` (venv binary; the bare `hermes` on PATH dies in
+  `import yaml` — different interpreter): `{"ok": false, "build": {"go build ./...": exit 0,
+  PASS}, "test": {"go test ./...": exit 1, FAIL — only TestSshRunFunction}}`.
+  Scoped isolation: `go test -run 'Test[^S]|TestS[^s]' ./...` → **`ok net4sats-wizard 45.152s`**
+  — every test except the one env-coupled case is green. The sole red test fails because the lab
+  router is powered on; it passes nowhere a reachable MT6000 exists. Concrete blocker for a fully
+  green `hermes verify`: that pre-existing test, owned by other in-flight lanes (Gate-8 t_19b1b1c6
+  adjudication explicitly cites "suite red"). Not repaired here: rewriting its no-router premise
+  is a product decision for the owning lane, and this preflight is read-only for Go sources.
 - Note: this shared worktree's detached HEAD advanced past d5d2373 (a competing lane committed
   t_31a002af report files on top). The FE2b deliverables remain committed at d5d2373 and pushed
   to `worker-heavy/t_18d15abe` (ls-remote verified full sha d5d2373682c3777b94356001a5987cd7a0cafc24).
