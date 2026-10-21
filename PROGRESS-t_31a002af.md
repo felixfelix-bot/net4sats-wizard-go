@@ -39,5 +39,11 @@ Mode: read-only against code/docs; only report files written.
 - CREATED `PROGRESS-t_31a002af.md` — this file.
 - No source, config, AGENTS.md, or test file modified. No tests run.
 
+## Delivery — STATUS: pushed, observed
+- Local commit `841538e` in the shared worktree (its parent `d5d2373` is unpushed, so not pushed from there).
+- Shipped branch `worker-tollgate/t_31a002af` = `origin/main` `8fcc30e` + one cherry-picked commit `42043e5`.
+- Verified: `git ls-remote origin refs/heads/worker-tollgate/t_31a002af` → `42043e579132d1868b214d54f57392700190e797`, equal to local HEAD.
+- No PR opened (card asks for a report, not a merge).
+
 ## Remaining work
 - None for this card's acceptance. If the author wants the **admin-UI half** asserted rather than dropped, a `configurationwizzard` checkout must be made available — it is not on this host.

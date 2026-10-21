@@ -110,6 +110,17 @@ One line each, present tense, each with its citation.
 
 ---
 
+## Delivery
+
+| item | observed |
+|---|---|
+| Local commit in the shared worktree | `841538e4050d59b6d5f1e9da9d995dba45300c54` — `docs(wz1.7): adjudicate AGENTS.md identity-API claims — server TRUE, wizard caller FALSE` (2 files, +160) |
+| Why a separate branch | That commit's parent (`d5d2373`) is **not** on `origin/main` — another card's unpushed commit. Publishing from there would carry foreign commits, so the report was cherry-picked onto `origin/main` in a throwaway worktree (`/tmp/wt-t31a`). |
+| Shipped branch | `worker-tollgate/t_31a002af`, cut from `origin/main` `8fcc30e`, single commit `42043e579132d1868b214d54f57392700190e797` |
+| Push observed | `git ls-remote origin refs/heads/worker-tollgate/t_31a002af` → `42043e579132d1868b214d54f57392700190e797` — **identical to local HEAD**. Not a self-report. |
+| Credential gate | `cred-gate: clean (30 literals checked, mode=staged)` on the local commit; pass-with-no-PR at push |
+| No PR opened | Correct for this card — it asks for a report, not a merge. PR URL offered by the remote is unused. |
+
 ## Method / reproducibility
 
 Read-only throughout. Commands used, all against the two checkouts: `git rev-parse HEAD`, `git remote -v`, `git log -- AGENTS.md`, `git grep -c -i -E "identity|reveal-seed"`, `git grep -n "reveal-seed"`, `grep -rn` over `*.go`/`*.js`/`*.html`, `read_file` at explicit offsets, and `sqlite3 -readonly` against the board DB. No build, no test run, no write to any source file.
