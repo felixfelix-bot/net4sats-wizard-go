@@ -180,3 +180,25 @@ A2 and A5 are the two the feed install must flip.
   the device, and its 404 is quoted.
 - The plan file does not contain the FE2b DoD; the board cards are the source used, quoted above.
 - The A8 403 is reported as the baseline, with the vantage caveat named rather than tuned away.
+## 9. Verification addendum (2026-10-21, post-ship)
+
+The shipped script was re-verified after commit:
+
+- `sh -n scripts/fe2b_feed_check.sh` → clean (shellcheck not installed on this host).
+- Committed bytes == on-disk bytes: `git show HEAD:scripts/fe2b_feed_check.sh | sha256sum` and
+  `sha256sum scripts/fe2b_feed_check.sh` both `e6394ed5f1939e22c3a866dc82a75c7c9696830c3118f9c35c8b45c2991fae79`
+  (at commit d5d2373).
+- **Determinism**: 3 runs (02:23Z, and two 10 s apart post-commit) — identical verdict every time:
+  5 PASS / 3 FAIL, same failing assertions (A2, A5, A8). True script exit code captured directly
+  (not through a pipe): **exit 1**.
+- `go vet ./...` → clean. `go test ./...` → 1 failure: `TestSshRunFunction`
+  (coverage_test.go:18) — **pre-existing environment-coupled debt, unrelated to this change**:
+  the test asserts `sshIdentify("192.168.1.1", "")` returns empty strings (assumes no reachable
+  router), but the live lab router is up and answers, returning
+  `firmware="OpenWrt 24.10.2 r28739-d9340319c6", vendor="OpenWrt", model="glinet,gl-mt6000"`.
+  This change touched zero Go files (new shell script + docs only), so it cannot affect Go tests;
+  the failure is the test's no-router assumption violated by the lab bench being powered — i.e.
+  the exact condition FE2b depends on.
+- Note: this shared worktree's detached HEAD advanced past d5d2373 (a competing lane committed
+  t_31a002af report files on top). The FE2b deliverables remain committed at d5d2373 and pushed
+  to `worker-heavy/t_18d15abe` (ls-remote verified full sha d5d2373682c3777b94356001a5987cd7a0cafc24).
