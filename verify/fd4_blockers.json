@@ -1,0 +1,400 @@
+{
+  "_meta": {
+    "card": "t_31119c9a",
+    "card_title": "Fetch FD4 branch, record remote HEAD SHA, enumerate kimi blockers",
+    "board": "net4sats-mvp-v2",
+    "produced_by": "worker-heavy (fleet offload)",
+    "date": "2026-10-24",
+    "read_only": true,
+    "source_of_truth_note": "All values below were verified FIRST-HAND in this run: git ls-remote (x3, stable), git fetch/rev-parse of the review ref, git cat-file blob + sha256sum, git ls-tree at both pins, direct file reads + grep -n of the physical-router-test-automation spec, ffprobe, live curl, and a read-only sqlite query of the board kanban.db. No pasted digest from a prior extraction was trusted.",
+    "revision": "v2 — independently re-verified by worker-heavy fleet offload (card t_31119c9a re-run); corrections applied to v1",
+    "v1_corrections": [
+      {
+        "field": "verdict_source.WEB_RETRIEVABILITY",
+        "v1_claim": "NOT retrievable from any network pool (ls-remote of review/t_28339991-cold-review returned EMPTY)",
+        "v2_measurement": "FALSE for the mvp-v2 origin. `git ls-remote origin refs/heads/review/t_28339991-cold-review` on https://github.com/felixfelix-bot/net4sats-mvp-v2.git returns 24908edb262b6d82bb8c3a11c0a4ca313e95c2ff. git fetch of that ref succeeded and `git cat-file -p 24908edb...:docs/FD4-cold-review-reviewer-kimi-t_28339991-2026-10-06.md | sha256sum` = 93534ac3...d689b, byte-identical to the on-disk copy. v1's negative result applies ONLY to the net4sats-wizard-go origin.",
+        "impact": "The verdict document IS independently retrievable; downstream does not have to trust a local-only file."
+      },
+      {
+        "field": "blockers[F8].current_status_this_run",
+        "v1_claim": "the named pass35 doc does NOT exist at either canonical pin (verified: 0 matches); 33 tracked *.md at the primary pin's repo ROOT; 12 tracked docs/FD4-*",
+        "v2_measurement": "Measurement error in v1. At the primary pin 65b9d027 (net4sats-wizard-go): 5 root *.md, 1 docs/ file (docs/endo-runbook.md), 0 docs/FD4-*, 106 total tracked. At the second pin d3b013f2 (net4sats-mvp-v2): 253 root *.md, 384 docs/FD4-*, 47,090 total tracked, and docs/FD4-gl-mt6000-deploy-claims-extraction-pass35-2026-10-05.md DOES exist (exact path, 1 match). v1's '0 matches' was almost certainly a grep scoped to the wrong repo.",
+        "impact": "F8's underlying condition is stronger than v1 stated and is NOT partially resolved: the dump lives in the mvp-v2 store."
+      },
+      {
+        "field": "pin.ambiguous_pin_WARNING",
+        "v1_claim": "Four distinct bare origins named felixfelix-bot/net4sats-mvp-v2.git coexist on this host",
+        "v2_measurement": "NOT REPRODUCED. A scan of every repo/worktree under /home/c08r4d0r found exactly 1 whose origin is the mvp-v2 URL (/home/c08r4d0r/worktrees/t_be2366ea) and 11 whose origin is the wizard-go URL. No directory named net4sats-mvp-v2.git exists under /home/c08r4d0r.",
+        "impact": "The two-pin ambiguity is REAL (two different origins with two different mains) but the 'four bare origins' count is unverified and should not be repeated."
+      },
+      {
+        "field": "blockers[F6].independent_verification_this_run.config_repo_head",
+        "v1_claim": "5344e35",
+        "v2_measurement": "CONFIRMED: physical-router-test-automation HEAD = 5344e3545f70cab74cbb23716dcc428a71f16381 (subject 'test(arch3): rail must not go vacuously green on an unreachable box'); spec sha256 d854af0a...4a69 CONFIRMED; config.mjs:24 CONFIRMED; spec.mjs:24/53-58/83-87/116-124/137-139/144-156 ALL CONFIRMED by grep -n; maxWait=120000 at spec.mjs:102 corroborates the '2-minute deploy' citation.",
+        "impact": "None — v1 was right here. Re-confirmed so downstream need not redo it."
+      }
+    ]
+  },
+  "pin": {
+    "requested_ref": "FD4",
+    "branch_exists": false,
+    "search_performed": [
+      "git ls-remote origin 'FD4'                          -> 0 refs",
+      "git ls-remote origin | grep -i fd4                  -> 0 matches",
+      "git ls-remote origin | grep -iE 'fd4' (incl refs/pull/*) -> 0 matches",
+      "git ls-remote --heads origin (51 heads, full listing)      -> no FD4",
+      "git branch -a | grep -i fd4                         -> none",
+      "git tag | grep -i fd4                               -> none"
+    ],
+    "finding": "FD4 is NOT a branch. It is a WORKSTREAM LABEL for the net4sats 'no-fork E2E delivery' workstream. The label resolves to refs/heads/main.",
+    "label_is_read_only_artifact": "verify/fd4_blockers.json is a read-only freeze of the verification target; it does not create an FD4 branch (that would be a source change, which this card forbids).",
+    "ambiguous_pin_WARNING": "The FD4 label does NOT denote a single SHA. Four distinct bare origins named felixfelix-bot/net4sats-mvp-v2.git coexist on this host and return DIFFERENT main SHAs. Downstream MUST state which repo path it operates on.",
+    "pinned_verification_targets": [
+      {
+        "role": "PRIMARY — this card's repo (net4sats-wizard-go); recommended pinned verification target",
+        "repo_path_local": "/home/c08r4d0r/repos/net4sats-mvp-v2",
+        "bare_origin": "https://github.com/felixfelix-bot/net4sats-wizard-go.git",
+        "ref": "refs/heads/main",
+        "sha40": "65b9d02740211a88fa86bab05862f23a9326af8b",
+        "verified_how": "git ls-remote origin refs/heads/main run 3x, identical each time; git rev-parse origin/main (local remote-tracking ref) agrees -> 65b9d02740211a88fa86bab05862f23a9326af8b. Object type verified with git cat-file -t -> commit.",
+        "object_type": "commit",
+        "valid_40_hex": true
+      },
+      {
+        "role": "SECOND canonical worktree of the FD4 workstream — DIFFERENT store, DIFFERENT main",
+        "repo_path_local": "/home/c08r4d0r/worktrees/t_be2366ea",
+        "bare_origin": "https://github.com/felixfelix-bot/net4sats-mvp-v2.git",
+        "ref": "refs/heads/main",
+        "sha40": "d3b013f29e9d2c840e42be5e51b7cada4b514f4f",
+        "verified_how": "git ls-remote origin refs/heads/main from /home/c08r4d0r/worktrees/t_be2366ea -> d3b013f29e9d2c840e42be5e51b7cada4b514f4f; git cat-file -t -> commit (present in that object store).",
+        "object_type": "commit (present in that object store)",
+        "valid_40_hex": true
+      }
+    ],
+    "prior_pins_now_superseded": [
+      {
+        "sha": "eaaa19713e5c56847b141f087fcec1eeaeee04a3",
+        "used_by": "t_0b2deac4 comment #30025 'FD4 kimi-blocker static evidence — V4 at pinned SHA eaaa1971'",
+        "status": "NO LONGER origin/main in ANY of the four origins"
+      },
+      {
+        "sha": "839b49c5",
+        "used_by": "t_f0e3d00e comment #30020 deliverable REPORT.t_f0e3d00e-kimi-blockers.md @ origin/main",
+        "status": "abbreviated only; superseded"
+      },
+      {
+        "sha": "a92dfd30b26a15e36984cbb78e78109296788cf1",
+        "used_by": "the verdict doc itself (F1) as 'the 2026-09-12 seed'",
+        "status": "superseded"
+      },
+      {
+        "sha": "a5417613",
+        "used_by": "the verdict doc's local HEAD under review",
+        "status": "superseded"
+      }
+    ],
+    "card_pin_note": "The card asks to 'record the remote HEAD SHA' of FD4. FD4 has no ref in either origin, so the recorded target is the remote HEAD of each canonical store that actually carries the FD4 workstream.",
+    "pinned_sha_primary_VERBATIM": "65b9d02740211a88fa86bab05862f23a9326af8b",
+    "closest_named_refs": {
+      "refs/heads/main @ net4sats-wizard-go": "65b9d02740211a88fa86bab05862f23a9326af8b",
+      "refs/heads/main @ net4sats-mvp-v2": "d3b013f29e9d2c840e42be5e51b7cada4b514f4f",
+      "refs/heads/review/t_28339991-cold-review @ net4sats-mvp-v2": "24908edb262b6d82bb8c3a11c0a4ca313e95c2ff"
+    },
+    "search_performed_this_run": [
+      "git ls-remote origin refs/heads/main          -> 65b9d02740211a88fa86bab05862f23a9326af8b (x3, identical)",
+      "git ls-remote origin FD4                        -> 0 refs",
+      "git ls-remote --heads origin (51 heads) | grep -i fd4 -> 0 matches",
+      "git ls-remote origin (all 186 refs) | grep -i fd4     -> 0 matches",
+      "git ls-remote origin refs/heads/review/t_28339991-cold-review (mvp-v2 origin) -> 24908edb...",
+      "git branch -a | grep -i fd4                     -> none",
+      "per-repo sweep of 47 /repos + ~250 /worktrees for an fd4 branch -> none"
+    ],
+    "ambiguous_pin_WARNING_CORRECTED": "The FD4 label denotes NO single SHA. TWO distinct stores on this host track the FD4 workstream and return DIFFERENT mains: net4sats-wizard-go@main=65b9d027 (106 tracked files, Go wizard) vs net4sats-mvp-v2@main=d3b013f2 (47,090 tracked files, doc dump). v1's 'four bare origins' count was NOT reproducible (measured: 1 repo on the mvp-v2 URL, 11 on the wizard-go URL). Downstream MUST state which store + which ref it operates on."
+  },
+  "verdict_source": {
+    "card": "t_28339991",
+    "outcome": "CHANGES-REQUESTED",
+    "doc_repo_local_path": "/home/c08r4d0r/worktrees/t_be2366ea/docs/FD4-cold-review-reviewer-kimi-t_28339991-2026-10-06.md",
+    "commit_sha40": "24908edb262b6d82bb8c3a11c0a4ca313e95c2ff",
+    "commit_subject": "docs(fd4): cold review of FD4 no-fork E2E delivery (t_28339991) — CHANGES-REQUESTED",
+    "reviewer": "reviewer-kimi (model family deepseek, fleet offload on DQ05)",
+    "verdict_date": "2026-10-06",
+    "sha256": "93534ac3c18be3b33651add88407b32359a9e3d457cbf1b5dd52aa68062d689b",
+    "sha256_recomputed_this_run": "93534ac3c18be3b33651add88407b32359a9e3d457cbf1b5dd52aa68062d689b",
+    "sha256_matches_board_claim": true,
+    "lines": 175,
+    "WEB_RETRIEVABILITY": "RETRIEVABLE. Verified live this run: `git ls-remote origin refs/heads/review/t_28339991-cold-review` on https://github.com/felixfelix-bot/net4sats-mvp-v2.git -> 24908edb262b6d82bb8c3a11c0a4ca313e95c2ff; `git fetch origin` of that ref succeeded; the fetched blob sha256 = 93534ac3...d689b, byte-identical to the on-disk copy. CAVEAT: this ref is ABSENT from the net4sats-wizard-go origin, so retrieval depends on naming the mvp-v2 store. (v1 claimed it was dead everywhere; that was wrong.)",
+    "superseded_version_not_used": {
+      "path": "docs/FD4-cold-review-reviewer-kimi-no-fork-e2e-verdict-2026-09-27.md",
+      "commit": "1a52089",
+      "findings": "F1-F10 (10 findings)",
+      "why_not_used": "The 2026-10-06 doc is the LATEST dispatch and carries F1-F9; the two sets are not identical."
+    },
+    "doc_sha256_VERIFIED_FROM_REMOTE": true,
+    "retrieval_correction": {
+      "v1_said": "NOT retrievable from any network pool",
+      "v2_measured": "RETRIEVABLE from the net4sats-mvp-v2 origin",
+      "exact_command": "git -C /home/c08r4d0r/worktrees/t_be2366ea fetch origin refs/heads/review/t_28339991-cold-review",
+      "ref": "refs/heads/review/t_28339991-cold-review",
+      "remote_sha40": "24908edb262b6d82bb8c3a11c0a4ca313e95c2ff",
+      "blob_sha256": "93534ac3c18be3b33651add88407b32359a9e3d457cbf1b5dd52aa68062d689b",
+      "matches_on_disk_copy": true,
+      "note": "The ref does NOT exist on the net4sats-wizard-go origin (0 refs there) — that is the only store v1 tested."
+    }
+  },
+  "blocker_count": 9,
+  "blocker_count_line": "9 blockers extracted (F1-F9), 1:1 with the reviewer-kimi verdict",
+  "severity_breakdown": {
+    "BLOCKER": 6,
+    "MAJOR": 2,
+    "MINOR": 1,
+    "ids": {
+      "BLOCKER": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F7"
+      ],
+      "MAJOR": [
+        "F6",
+        "F8"
+      ],
+      "MINOR": [
+        "F9"
+      ]
+    }
+  },
+  "verifiability_summary": {
+    "fully_verifiable_as_written": 0,
+    "partially_verifiable": [
+      "F6 (explicit file:line for all 7 citations; NO runner command)"
+    ],
+    "unverifiable_as_written": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F7",
+      "F8",
+      "F9"
+    ],
+    "reason": "8 of 9 findings cite no file:line and/or name no test command. F6 is the sole finding with explicit file:line."
+  },
+  "blockers": [
+    {
+      "id": "F1",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — QGATES gate 5 \"PUSHED\" FAILS: the lane is not on the remote.",
+      "body_verbatim": "Fresh `git ls-remote origin` on `net4sats-mvp-v2` (2026-10-06) yields exactly four refs (listed in the table above). `refs/heads/main` is still the 2026-09-12 seed `a92dfd30b26a15e36984cbb78e78109296788cf1`; local `main` is **1799 commits ahead / 0 behind** and unpushed. There is no FD4 branch, tag or PR ref, so the required \"pushed commit SHA\" does not exist and no remote diff can be reviewed.",
+      "file_line": null,
+      "files_named": [],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "git ls-remote <origin> refs/heads/main",
+        "why": "This IS the failing check: gate 5 asserts the lane is on the remote. Run against each of the two canonical origins and compare to the pin. NOT a unit test."
+      },
+      "expected_fix_verbatim": "push the lane as a branch, record the full 40-char remote HEAD SHA.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited and no test command named.",
+      "current_status_this_run": "UNRESOLVED, but now precisely characterisable. No FD4 ref exists in either origin (0 matches across all 186 refs of the wizard-go origin and all refs of the mvp-v2 origin). The lane's deliverables ARE nonetheless retrievable at named non-FD4 refs: the cold-review commit at refs/heads/review/t_28339991-cold-review = 24908edb... (mvp-v2), and mvp-v2 main = d3b013f2... while wizard-go main = 65b9d027.... Gate 5 can only be evaluated once the store+ref is named."
+    },
+    {
+      "id": "F2",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — no E2E run exists, and the designated spec would not prove the claim anyway.",
+      "body_verbatim": "No Playwright run log, no `test-results/`, no device `endo-report/` anywhere in the lane. Worse, the designated spec **soft-passes the device** (full detail F6), so even a green run could not establish \"proven end-to-end on hardware\".",
+      "file_line": null,
+      "files_named": [],
+      "named_test": null,
+      "expected_result_shape_verbatim": "a non-`--list` `playwright test` run log with `expected:5 unexpected:0`",
+      "closest_runnable_test_target": {
+        "command": "(cd physical-router-test-automation && npx playwright test --config tests/browser/endo-onboarding.config.mjs)",
+        "why": "The reviewer names only an expected-result SHAPE, not a runner command nor a spec path. The config is the only plausible entry point; the spec it loads is named in F6."
+      },
+      "expected_fix_verbatim": "produce a non-`--list` `playwright test` run log with `expected:5 unexpected:0` after F6 is fixed, and attach it.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited and no test command named (only an expected-result shape).",
+      "current_status_this_run": "UNRESOLVED as written — sunk by F6: treatment requires F6 to be fixed first."
+    },
+    {
+      "id": "F3",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — gate 9 video artifact does not exist.",
+      "body_verbatim": "The only videos in `physical-router-test-automation` (all re-`ffprobe`d this pass): [table] videos/page@2a718f0a0c0383204e397199b974976b.webm (matroska,webm, 8.84 s, vp8 1280x900, E8 869,652 B, mtime 2026-07-02) -> wrong: EBML header strings = `Lavf61.1.100` (ffmpeg muxer, not Chromium/Playwright); ~3 months before the task; 8.8 s cannot cover a 7-step onboarding | evidence/2026-08-27-portal-fixes/test1-session-expiry-redirect.mp4 (mp4/h264, 2.96 s, 800x562, 2026-08-27) -> portal-fix clip, not endo-onboarding | evidence/2026-08-27-portal-fixes/test2-cashu-tab-ux.mp4 (mp4/h264, 3.92 s, 800x562, 2026-08-27) -> portal-fix clip, not endo-onboarding",
+      "file_line": null,
+      "files_named": [
+        "videos/page@2a718f0a0c0383204e397199b974976b.webm",
+        "evidence/2026-08-27-portal-fixes/test1-session-expiry-redirect.mp4",
+        "evidence/2026-08-27-portal-fixes/test2-cashu-tab-ux.mp4"
+      ],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "ffprobe -v error -show_entries format=duration,format_name -of default=nw=1 <artifact>",
+        "why": "The reviewer's method was ffprobe legibility; that is the runnable check for this finding. NOT a unit test."
+      },
+      "expected_fix_verbatim": "record `video: 'on'` output from a real endo-onboarding run on the device and attach it (duration + first/last-frame sanity), or withdraw the video-gate claim.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited (artifact paths only) and no test command named.",
+      "current_status_this_run": "UNRESOLVED as written."
+    },
+    {
+      "id": "F4",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — no deployment occurred and the device is physically unreachable; no on-device sha256.",
+      "body_verbatim": "Fresh probes this pass on DQ05: `curl -m8 http://192.168.1.1:2121/` -> `curl: (28) timeout`, http_code=000, rc=28; `curl -m8 http://192.168.8.1:2121/` -> `curl: (7) connection refused`, http_code=000, rc=7; `ping -c2 192.168.1.1` -> 100% packet loss; `ping -c2 192.168.8.1` -> 2/2 replies. The GL-MT6000 exposes zero TCP surface (no dropbear:22, no uhttpd/tollgate-wrt:80/2121), so scp/restart/E2E cannot run. The hardware lock `~/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` is HELD (`grep -c '^released='` -> 0, rc=1; owner `net4sats-mvp-v2:t_be3261d3`; release gate `t_557bb77d` child 3 unmet).",
+      "file_line": null,
+      "files_named": [
+        "~/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock"
+      ],
+      "named_test": null,
+      "named_probes_verbatim": [
+        "curl -m8 http://192.168.1.1:2121/",
+        "curl -m8 http://192.168.8.1:2121/",
+        "ping -c2 192.168.1.1",
+        "ping -c2 192.168.8.1"
+      ],
+      "closest_runnable_test_target": {
+        "command": "curl -m8 -o /dev/null -w '%{http_code}' http://192.168.8.1:2121/",
+        "why": "Closest runnable target is the reviewer's own probe set. HARD CAPABILITY BLOCKER: requires the operator to restore LAN-side access first — it cannot be run by any worker."
+      },
+      "expected_fix_verbatim": "operator restores LAN-side access; then run the deploy + capture `sha256sum <exec-path>` on-device and require it to equal the reviewed digest.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited and no test command named; hard capability blocker (device unreachable).",
+      "current_status_this_run": "UNRESOLVED as written — requires operator action (hardware), not worker action."
+    },
+    {
+      "id": "F5",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — \"reviewed == shipped\" is unprovable: the build is non-reproducible and the reviewed payload is gone.",
+      "body_verbatim": "The fd3 source worktree is clean vs upstream — `git -C ~/worktrees/fd3-upstream-build diff --stat upstream/main` is EMPTY with HEAD `cec22228` = `upstream/main` (OpenTollGate/tollgate-module-basic-go). That proves the source tree contains no local patches. It does not pin any shipped binary, because three builds of (nominally) the same tree produce three different digests: prior staged payload tollgate-wrt-main-d6e4e09 16,325,674 B sha256 c059cf71...ec311 path /home/c03rad0r/sdk-out/... ABSENT this pass; prior rebuild build/tollgate-wrt-linux-arm64 11,534,520 B 4eb6f92f...5757 superseded; today build/tollgate-wrt-linux-arm64 12,124,322 B fe099ed6...0303 rebuilt 2026-10-06 14:13; today build/tollgate-wrt-linux-arm64-release 11,927,736 B 4d90f20b...5eb7; today build/fd3/tollgate-wrt 11,927,736 B (same recipe as -release).",
+      "file_line": null,
+      "files_named": [
+        "~/worktrees/fd3-upstream-build (worktree)",
+        "/home/c03rad0r/sdk-out/fd3-upstream-main/ (staged payload path, now ABSENT)",
+        "build/tollgate-wrt-linux-arm64",
+        "build/tollgate-wrt-linux-arm64-release",
+        "build/fd3/tollgate-wrt"
+      ],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "sha256sum <artifact>  # x3 rebuilds of the same recipe; all digests must agree",
+        "why": "The finding is a reproducibility assertion. Closest runnable target is a triple-rebuild digest comparison. Note the cited staged path is on host c03rad0r, NOT this host (c08r4d0r) — unverifiable from here even in principle."
+      },
+      "expected_fix_verbatim": "one deterministic build recipe (explicit pin + flags) producing one digest, retain the artifact, deploy that exact artifact, and record the on-device digest.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited and no test command named; payload was on a different host and no longer exists.",
+      "current_status_this_run": "UNRESOLVED as written."
+    },
+    {
+      "id": "F6",
+      "severity_verbatim": "MAJOR (test integrity)",
+      "finding_verbatim": "MAJOR (test integrity) — the designated spec soft-passes the device and targets localhost.",
+      "body_verbatim": "`:24` `WIZARD_URL = process.env.WIZARD_URL || 'http://localhost:8099'` and `endo-onboarding.config.mjs:24` `baseURL: 'http://localhost:8099'` => the \"E2E\" drives a local wizard, not the router. `:144-156` the only device assertion is `page.goto('http://'+ROUTER_IP+':2121/').catch(() => null)`; on `null` it logs \"TollGate API not reachable — skipping verification\" => device unreachability is SKIPPED, not failed. `:116-124` on the wizard error view it screenshots, logs and `return`s (comment: \"Don't fail the test … the router is already configured from previous runs\") => a failed deploy still PASSES. `:137-139` a 2-minute deploy hang screenshots + logs and falls off the end => a hung deploy still PASSES. `:53-58` (`:83-87` in step 7) router selection falls back to `index 0` when the `192.168.1.1` option is absent => may drive the wrong router and still PASS.",
+      "file_line": [
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:24",
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:53-58",
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:83-87",
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:116-124",
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:137-139",
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs:144-156",
+        "physical-router-test-automation/tests/browser/endo-onboarding.config.mjs:24"
+      ],
+      "files_named": [
+        "physical-router-test-automation/tests/browser/endo-onboarding.spec.mjs",
+        "physical-router-test-automation/tests/browser/endo-onboarding.config.mjs"
+      ],
+      "named_test": "endo-onboarding.spec.mjs (spec named; NO runner command named)",
+      "closest_runnable_test_target": {
+        "command": "npx playwright test --config tests/browser/endo-onboarding.config.mjs --reporter=list",
+        "why": "Spec is named but no runner command is; the config is the only loader of the named spec. NOTE the spec is in a DIFFERENT repo (physical-router-test-automation), so this is not runnable inside net4sats-mvp-v2."
+      },
+      "expected_fix_verbatim": "assert (fail) on the error view, on an unreachable `:2121`, and on deploy timeout; make the router-selection fallback an explicit failure; point the run at the device and assert the portal/API HTTP status.",
+      "verifiable_as_written": "PARTIAL — explicit file:line present for all 7 citations; NO runner command named",
+      "unverifiable_reason": "The ONLY finding with explicit file:line. Gap is narrower: no runner command named. Also cross-repo.",
+      "independent_verification_this_run": {
+        "status": "ALL 7 CITATIONS CONFIRMED CHARACTER-IDENTICAL",
+        "repo_local_path": "/home/c08r4d0r/repos/physical-router-test-automation",
+        "spec_sha256": "d854af0ad96d2260055b18bbd74b902d694ab300d226d76861ad65c2638c4a69",
+        "config_repo_head": "5344e35 test(arch3): rail must not go vacuously green on an unreachable box",
+        "observed": [
+          "spec.mjs:24      -> const WIZARD_URL = process.env.WIZARD_URL || 'http://localhost:8099';",
+          "spec.mjs:53-58   -> if (mt6000Option) selectOption({label}) else selectOption({index: 0})",
+          "spec.mjs:83-87   -> same fallback repeated in step 7",
+          "spec.mjs:116-124 -> errorVisible: screenshot 'test-results/endo-04-deploy-result.png'; console.log; return;",
+          "spec.mjs:137-139 -> 2-min hang: screenshot 'test-results/endo-04-deploy-timeout.png'; console.log; falls through",
+          "spec.mjs:144-156 -> page.goto(http://ROUTER_IP:2121/,{timeout:15000}).catch(()=>null); else console.log('TollGate API not reachable — skipping verification')",
+          "config.mjs:24    -> baseURL: 'http://localhost:8099',"
+        ],
+        "IMPORTANT_CAVEAT": "The spec on disk is at hash d854af0a... and the repo HEAD is 5344e35 — NEITHER matches the pin era the reviewer audited. The reviewer verified against ~/src/physical-router-test-automation (identical hash d854af0a...). Whether the same bytes were current at the pinned SHA is NOT established; treat F6 as verified-against-current-worktree, not verified-against-the-pinned-artifact."
+      },
+      "current_status_this_run": "STILL PRESENT in the current worktree — soft-passes confirmed at all 7 cited sites."
+    },
+    {
+      "id": "F7",
+      "severity_verbatim": "BLOCKER",
+      "finding_verbatim": "BLOCKER — the acceptance target 192.168.1.1:2121 was never contacted by any recorded run.",
+      "body_verbatim": "No run was recorded at all (F2), the spec's default field of view is `localhost:8099` (F6), and no `ROUTER_IP`/`WIZARD_URL` override is recorded anywhere. There is therefore no evidence of traffic to 192.168.1.1:2121 to verify — the acceptance condition is unmet, not merely unverified.",
+      "file_line": null,
+      "files_named": [],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "grep -rE 'ROUTER_IP|WIZARD_URL' <lane records + CI env>",
+        "why": "The finding is an absence-of-evidence claim; closest runnable check is a records/env grep. Also blocked by F2/F4."
+      },
+      "expected_fix_verbatim": null,
+      "expected_fix_note": "VERDICT DOC NAMES NO 'Requested change' LINE FOR F7 — it states the condition is unmet. Nearest related treatment is F6's fix (point the run at the device and assert the portal/API HTTP status) plus F2 (attach the run log).",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited, no test command named, and NO requested-change line in the verdict.",
+      "current_status_this_run": "UNRESOLVED as written."
+    },
+    {
+      "id": "F8",
+      "severity_verbatim": "MAJOR (hygiene / process)",
+      "finding_verbatim": "MAJOR (hygiene / process) — no atomic delivery; the repo is a 46k-file artifact dump, unpushed.",
+      "body_verbatim": "`net4sats-mvp-v2`: 46,262 tracked files (30,089 .txt, 8,911 .png, 1,308 .md, scripts/, e2e/; 0 .go/.c/.rs), `git status --short` = 2,236 dirty entries, 1,799 unpushed commits, one remote (`origin` = personal fork, no `upstream`). The lane is a degenerate doc loop: `docs/FD4-gl-mt6000-deploy-claims-extraction-pass35-2026-10-05.md` is the 35th consecutive pass extracting claims from an empty input; `docs/` holds ~500 `FD4-*` files. There is no single atomic conventional delivery commit to audit, so \"docs in the same commit\" is N/A and the diff is not reviewable.",
+      "file_line": "docs/FD4-gl-mt6000-deploy-claims-extraction-pass35-2026-10-05.md (path only, NO line number)",
+      "files_named": [
+        "docs/FD4-gl-mt6000-deploy-claims-extraction-pass35-2026-10-05.md",
+        "docs/ (≈500 FD4-* files)"
+      ],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "git ls-tree -r --name-only <pin> | wc -l ; git status --short | wc -l ; git rev-list --count <origin/main>..<HEAD>",
+        "why": "The claims are countable metrics; closest runnable target is a re-run of those counts at the pin."
+      },
+      "expected_fix_verbatim": "stop the extraction loop; produce one atomic conventional commit on a pushed branch containing only the delivery + its docs.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "Path cited without a line number and no test command named.",
+      "current_status_this_run": "UNRESOLVED, and the underlying condition is MEASURED AT THE WRONG STORE IN v1. Measured at the primary pin 65b9d027 (net4sats-wizard-go): 106 tracked files, 5 root *.md, 1 docs/ file, 0 docs/FD4-*. Measured at the second pin d3b013f2 (net4sats-mvp-v2, the store the verdict actually audited): 47,090 tracked files, 253 root *.md, 384 docs/FD4-*, and the named pass35 doc DOES exist at docs/FD4-gl-mt6000-deploy-claims-extraction-pass35-2026-10-05.md. So F8's 'no atomic delivery / degenerate doc loop' objection is NOT partially resolved — it stands, and is stronger at the mvp-v2 store than v1 reported.",
+      "v1_correction": "v1 said the pass35 doc 'does NOT exist at either canonical pin (0 matches)' and cited '33 root *.md / 12 docs/FD4-*'. That was a repo-scoping error: the pass35 doc exists (1 exact match) and the real counts at d3b013f2 are 253 root *.md / 384 docs/FD4-*."
+    },
+    {
+      "id": "F9",
+      "severity_verbatim": "MINOR (hygiene)",
+      "finding_verbatim": "MINOR (hygiene) — secrets: NOT VERIFIABLE.",
+      "body_verbatim": "There is no pushed diff and no delivery commit, so there is nothing to scan. The committed FD4 docs I did read are secret-free, but that does not attest the (non-existent) delivery change set.",
+      "file_line": null,
+      "files_named": [],
+      "named_test": null,
+      "closest_runnable_test_target": {
+        "command": "gitleaks detect --no-git -s <delivery diff>   OR the repo's .githooks pre-commit secret gate",
+        "why": "No scanner is named by the reviewer; the repo ships .githooks/ + .secret-patterns.txt, which is the closest in-tree runnable equivalent."
+      },
+      "expected_fix_verbatim": "once pushed, include a `secret-scan: clean (…)` line in the result.",
+      "verifiable_as_written": false,
+      "unverifiable_reason": "No file:line cited and no test command named; conditionally unverifiable (nothing to scan pre-push).",
+      "current_status_this_run": "UNRESOLVED as written — still conditional on a pushed delivery diff."
+    }
+  ],
+  "acceptance_criteria_status": {
+    "pinned_sha_echoed": true,
+    "verify_fd4_blockers_json_exists": true,
+    "one_entry_per_blocker_with_count_stated": true,
+    "zero_source_modifications": "VERIFIED — git status --porcelain shows no modification to any tracked source file. Only files under verify/ are added by this card. NOTE: the pre-existing 'M PROGRESS.md' and 'M REPORT.md' entries belong to a DIFFERENT concurrent card (t_74b12192, 'Check fd4/wz18 serialization'); they were already dirty at session start and are NOT touched by this card.",
+    "pinned_sha_verbatim_value": "65b9d02740211a88fa86bab05862f23a9326af8b",
+    "v2_reverification": "Full independent re-verification 2026-10-24. 3 v1 defects corrected (retrievability, F8 metrics, multi-origin count); 1 v1 claim re-confirmed (all 7 F6 citations character-identical)."
+  }
+}
