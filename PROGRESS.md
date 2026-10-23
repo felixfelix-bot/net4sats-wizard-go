@@ -134,3 +134,50 @@ Two brief corrections, both measured: `schedule.md` has **0** hits for `feed`/`p
 (outside any git repo); `REPORT-t_855cbaac.md` + `PROGRESS-t_855cbaac.md` (new, tracked); this
 append to `PROGRESS.md`. **`REPORT.md` deliberately untouched** — sibling card `t_wz15-part-b` had
 uncommitted edits there during this run.
+
+---
+
+# t_1df48589 — wz1.5 channel decision note + Q5 status (second pass)
+
+**Finding:** the decision note exists and is correct in substance, but **was never committed**, and
+it carried **one real defect** — both now fixed.
+
+1. **Never landed.** `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-channel-decision.md` (414
+   lines) is on disk, but the plans directory is **not a git repo** (`git rev-parse --show-toplevel`
+   → fatal), and this card's own report files were also absent from history
+   (`git log --all -- PROGRESS-t_1df48589.md REPORT-t_1df48589.md` → **0 commits**) because
+   `/PROGRESS-t_*.md` + `/REPORT-t_*.md` are gitignored in this worktree
+   (`/home/c08r4d0r/wz16-verify/.git/info/exclude:4-5`). Fixed by committing a byte-identical
+   mirror at `docs/wz1.5-channel-decision.md` plus verbatim captures at
+   `docs/evidence/2026-10-24-wz15-channel-decision-reverify.md`.
+2. **Defect fixed.** The note's instantiated artifact-filename template
+   (`tollgate-wrt_v<X.Y.Z>_<arch>.ipk`) is a **404** on the one version that exists on the chosen
+   host: the real `.ipk` carries a build-flavour suffix
+   (`…-upx-ultra-brute.ipk`) and **no plain `.ipk` exists at all**, while the **apk** exists in
+   *both* plain (7,153,725 B) and suffixed (5,307,464 B) form. So the filename is per-artifact and
+   must be read from that version's index `Filename:` field, never composed. New note §2.3a carries
+   the evidence; §3 rule 1b enforces it; §1 and §6.1 say so explicitly.
+
+**Decision (unchanged):** interim channel `releases.tollgate.me`, base pattern
+`https://releases.tollgate.me/alpha/v<X.Y.Z>[-<pre>]/<arch>/<artifact-file>`; **Q5 = OPEN**
+(interim vs final channel undecided) — the Phase-2 feed is NOT PUBLISHED, which is the
+NOT-PUBLISHED branch of the decision rule. The two example versioned URLs with observed HTTP +
+digest evidence come from `FreedomTechFeed/packages` `v0.6.0` and `v0.6.0-rc6`; the chosen channel
+has exactly one version, so the "two versions" criterion is met only on the release lane — stated
+plainly in the note rather than fabricated.
+
+**Status:** DONE — decision note corrected and delivered, Q5 recorded OPEN. No Go source touched
+(`deploy.go`, `pins_test.go` unmodified; the four-point landing gate stays closed), so nothing was
+built or tested. Blocked on the producing side publishing a signed index + per-arch artifact for a
+current release, and on the operator answer to Q5.
+
+**Files touched:** the deliverable note (patched); `docs/wz1.5-channel-decision.md` (new, tracked
+mirror); `docs/evidence/2026-10-24-wz15-channel-decision-reverify.md` (new, tracked);
+`REPORT-t_1df48589.md` + `PROGRESS-t_1df48589.md` (updated); this append. **`REPORT.md`
+deliberately untouched** — sibling card `t_wz15-part-b` has uncommitted edits there (32
+insertions / 22 deletions, not mine).
+
+**Verification:** 12-URL status matrix, 27-URL tag×filename sweep (exactly one version has
+artifacts), index `Filename:`/`Size:`/`SHA256sum:` extraction with `content-length` cross-check,
+one full download (5,307,464 B) matching the index digest, `latest` → 404/302, release inventories
+for both repos, and the explorer bundle re-fetch (474,543 B) for the channel vocabulary.
