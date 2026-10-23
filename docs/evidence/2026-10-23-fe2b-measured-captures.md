@@ -29,7 +29,7 @@ Rootfs images (public, digest-pinned at capture time):
 404 text/html; charset=utf-8                  https://releases.tollgate.me/alpha/v0.6.0/aarch64_cortex-a53/Packages.gz
 404 text/html; charset=utf-8                  https://releases.tollgate.me/alpha/v0.6.0/aarch64_cortex-a53/packages.adb
 404                                            https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/aarch64_cortex-a53/packages.adb
-200 application/gzip (via -L, octet-stream)    https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/SHA256SUMS
+200 application/octet-stream                  https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/SHA256SUMS
 404                                            https://releases.tollgate.me/alpha/v0.5.0-alpha3/aarch64_cortex-a53/Packages.sig
 ```
 
