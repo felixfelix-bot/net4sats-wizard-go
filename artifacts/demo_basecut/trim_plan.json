@@ -1,0 +1,346 @@
+{
+  "schema_version": "1.0.0",
+  "artifact": "trim_plan",
+  "status": "BLOCKED",
+  "executable": false,
+  "task": "t_ae815553",
+  "board": "net4sats-mvp-v2",
+  "generated_at_utc": "2026-10-23T15:50:53Z",
+  "generated_epoch": 1792770653,
+  "producer": "worker-heavy (fleet offload)",
+
+  "stop_reason": {
+    "code": "UPSTREAM_INPUTS_MISSING",
+    "statement": "All three declared upstream inputs are absent from the board and the artifact directory. Per the task's own INPUTS clause, this plan STOPS rather than filling gaps with invented timestamps. No source footage for this chain exists on this host, so no in/out point could be measured.",
+    "inputs_expected": [
+      {
+        "name": "source_probe_report",
+        "from_card": "t_15057569",
+        "title": "Probe raw demo footage: streams, duration, CFR/VFR",
+        "observed_status": "triage",
+        "observed_runs": 0,
+        "observed_result": null,
+        "observed_comments": 0,
+        "observed_attachments": 0,
+        "verdict": "MISSING"
+      },
+      {
+        "name": "frame_verified_step_map",
+        "from_card": "t_6d731c04",
+        "title": "Build timestamped step map from step log, frame-verified",
+        "observed_status": "triage",
+        "observed_runs": 0,
+        "observed_result": null,
+        "observed_comments": 0,
+        "observed_attachments": 0,
+        "verdict": "MISSING"
+      },
+      {
+        "name": "full_runtime_scan_report",
+        "from_card": "t_be3a9ae1",
+        "title": "Scan full runtime for interior dead air, silence, framing shifts",
+        "observed_status": "triage",
+        "observed_runs": 0,
+        "observed_result": null,
+        "observed_comments": 0,
+        "observed_attachments": 0,
+        "verdict": "MISSING"
+      }
+    ],
+    "root_cause": {
+      "card": "t_882b3922",
+      "title": "Record full E2E de-branded wizard happy-path video",
+      "observed_status": "triage",
+      "observed_runs": 3,
+      "completed_runs": 0,
+      "observed_result": null,
+      "observed_comments": 1,
+      "observed_attachments": 0,
+      "note": "The parent recording task never completed, so it produced no footage and no step log. Its own log records why: the wizard happy path needs a reachable OpenWrt router with SSH, and none was reachable from the recording host. No run => no take => no probe, no step map, no scan.",
+      "precondition_card": {
+        "card": "t_acee3752",
+        "title": "Prepare and validate 1080p capture toolchain",
+        "observed_status": "triage",
+        "observed_runs": 0
+      }
+    },
+    "corroboration": {
+      "source": "board attachment trim_log.md written by downstream QC card t_54b0d370 on 2026-10-11",
+      "quote": "D3 | Raw footage does not exist, so no plan/cut is derivable | card t_882b3922 - status ready, 2 runs, 0 completed, 0 attachments",
+      "significance": "An independent card reached the same conclusion 12 days earlier. This is a persistent chain-level stall, not a transient miss in this run."
+    }
+  },
+
+  "source": {
+    "path": null,
+    "path_status": "DOES_NOT_EXIST",
+    "properties": null,
+    "properties_status": "NOT_MEASURABLE",
+    "note": "This is the fail-closed core of the plan. No file may be named here, and no duration/resolution/fps/pix_fmt/audio/CFR-VFR value may be stated, because no file was identified as this chain's raw take. Stating null is the honest result; a numeric value here would be fabricated.",
+    "required_before_encode_can_run": [
+      "path",
+      "container",
+      "duration_s",
+      "width",
+      "height",
+      "r_frame_rate",
+      "avg_frame_rate",
+      "pix_fmt",
+      "audio_streams",
+      "cfr_vfr_verdict",
+      "sha256"
+    ]
+  },
+
+  "cuts": {
+    "head_trim_in_s": null,
+    "head_trim_out_s": null,
+    "tail_trim_in_s": null,
+    "tail_trim_out_s": null,
+    "interior_cuts_made": 0,
+    "status": "NOT_COMPUTABLE",
+    "note": "Head and tail trim points are defined relative to the first and last meaningful frame of a known take. With no take there is no t=0 and no EOF, so no trim point can be placed, and none may be guessed. The 0.5s-inside-the-dead-zone rule cannot be applied to an unmeasured dead zone.",
+    "encode_must_not_proceed": true
+  },
+
+  "step_map": {
+    "ordered_steps": [],
+    "count": 0,
+    "status": "NOT_AVAILABLE",
+    "source_card": "t_6d731c04",
+    "note": "The frame-verified step map was never produced. An empty list is deliberate: fabricating steps or timestamps would be the exact failure mode the task forbids.",
+    "validation": {
+      "every_step_has_start_and_end": "VACUOUSLY_TRUE (0 steps)",
+      "note": "The acceptance criterion 'every step has a start and end timestamp' is satisfied only in the degenerate sense. It is NOT evidence that a usable step map exists."
+    }
+  },
+
+  "flagged_interior_dead_air": {
+    "regions": [],
+    "count": 0,
+    "status": "NOT_AVAILABLE",
+    "source_card": "t_be3a9ae1",
+    "removal_proposed": false,
+    "note": "No scan was ever run against this chain's take, so there are zero inherited regions to carry over verbatim. Nothing is flagged because nothing was measured; this must not be read as 'the take has no dead air'."
+  },
+
+  "framing_anomalies": {
+    "anomalies": [],
+    "count": 0,
+    "status": "NOT_AVAILABLE",
+    "source_card": "t_be3a9ae1",
+    "note": "Not measured for this chain's take. Must not be read as 'framing is stable'."
+  },
+
+  "dead_air_detection_evidence": {
+    "status": "POSITIVE_CONTROL_ONLY",
+    "warning": "The detections below were produced by real commands, but they come from CANDIDATE-A, which is NOT this chain's source take (see candidate_footage_disposition). They are recorded to prove the detectors execute and emit real output on this host. They are explicitly NOT the plan's dead-air regions and MUST NOT be applied to any encode.",
+    "tooling": {
+      "ffmpeg": "6.1.1-3ubuntu5",
+      "ffprobe": "6.1.1-3ubuntu5",
+      "installed": true
+    },
+    "detections": [
+      {
+        "command": "ffmpeg -hide_banner -nostdin -i take-attempt-blocked.mp4 -vf freezedetect=n=-60dB:d=2 -an -f null -",
+        "applied_to": "/home/c08r4d0r/worktrees/wz19-video/verify/wz19-video-capture/artifacts/take-attempt-blocked.mp4",
+        "applied_to_sha256": "628d7ad37a73484eba4be6b762a1c25f7dd2e9f86a6d3377d3d4a5b9da8b71ea",
+        "exit_code": 0,
+        "raw_output_lines": [
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 0.76",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 4.36",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 5.12",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 5.16",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 5.08",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 10.24",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 10.28",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 5.08",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 15.36",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 15.4",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 5.08",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 20.48",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 20.52",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 5.08",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 25.6",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 25.64",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 4.24",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 29.88",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_start: 36.16",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_duration: 4.8",
+          "[freezedetect @ 0x5c9193f12f80] lavfi.freezedetect.freeze_end: 40.96"
+        ],
+        "regions_as_detected": [
+          {"start": 0.76, "end": 5.12, "duration_s": 4.36, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 5.16, "end": 10.24, "duration_s": 5.08, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 10.28, "end": 15.36, "duration_s": 5.08, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 15.4, "end": 20.48, "duration_s": 5.08, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 20.52, "end": 25.6, "duration_s": 5.08, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 25.64, "end": 29.88, "duration_s": 4.24, "reason": "freezedetect -60dB for >=2s"},
+          {"start": 36.16, "end": 40.96, "duration_s": 4.8, "reason": "freezedetect -60dB for >=2s"}
+        ]
+      },
+      {
+        "command": "ffmpeg -hide_banner -nostdin -i take-attempt-blocked.mp4 -af silencedetect=noise=-35dB:d=2 -f null -",
+        "applied_to": "/home/c08r4d0r/worktrees/wz19-video/verify/wz19-video-capture/artifacts/take-attempt-blocked.mp4",
+        "exit_code": 0,
+        "result": "NO_REGIONS_DETECTED",
+        "reason_no_regions": "This file has zero audio streams (ffprobe -select_streams a => 0), so there is no audio to analyse and silencedetect correctly emits no silence events. Recorded per the scan card's instruction to note why a detector produced nothing.",
+        "audio_stream_count": 0
+      }
+    ]
+  },
+
+  "candidate_footage_disposition": {
+    "note": "Every video file on this host that could plausibly be mistaken for the chain's take was probed with real ffprobe and explicitly rejected. This is the diligence that makes the BLOCKED status a measured finding rather than a shrug.",
+    "candidates": [
+      {
+        "path": "/home/c08r4d0r/worktrees/wz19-video/verify/wz19-video-capture/artifacts/take-attempt-blocked.mp4",
+        "label": "CANDIDATE-A",
+        "sha256": "628d7ad37a73484eba4be6b762a1c25f7dd2e9f86a6d3377d3d4a5b9da8b71ea",
+        "probe": {
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "duration_s": 42.88,
+          "size_bytes": 647139,
+          "width": 1920,
+          "height": 1080,
+          "pix_fmt": "yuv420p",
+          "video_codec": "h264",
+          "r_frame_rate": "25/1",
+          "avg_frame_rate": "25/1",
+          "nb_frames": 1072,
+          "audio_streams": 0,
+          "cfr_vfr": "CFR (r_frame_rate == avg_frame_rate == 25/1 and every sampled packet duration_time == 0.040000)"
+        },
+        "accepted": false,
+        "rejection_reasons": [
+          "Its own companion step-log (same directory, step-log.txt) ends at 'STEP 7 deploy-result - ERROR VIEW SHOWN' with 'sawSuccess=false sawError=true'. The take captures a FAILED deploy, not the happy path the chain requires.",
+          "The chain's recording card t_882b3922 has 0 completed runs, so it cannot have produced this file.",
+          "Its branding state is the opposite of the requirement: the accompanying BRANDING-AUDIT.md on this branch reports the capture is net4sats-branded, while the chain needs a de-branded flow.",
+          "The filename itself declares a blocked attempt."
+        ],
+        "used_for": "positive-control detector runs only; never as a cut source"
+      },
+      {
+        "path": "/home/c08r4d0r/wz19-atomic/repo/docs/demo/demo-trimmed.mp4",
+        "sha256": "83bdc9117c96467008e6d7ee1abd662f5c6750c56a90f251a5264f5368f91aa7",
+        "probe": {"width": 1920, "height": 1080, "avg_frame_rate": "25/1", "duration_s": 21.84, "size_bytes": 1205700},
+        "accepted": false,
+        "rejection_reasons": [
+          "This is a DERIVATIVE, not raw footage: its sha256 is byte-identical to the 'output.sha256' recorded by an older trim plan (t_3e3082f1 / lane FD9 pass 12). Feeding an already-trimmed master into a head/tail trim pass would double-cut.",
+          "It belongs to a different demo chain (cashu/SMS wallet UI, source /tmp/demo-video.webm), not the wizard happy path."
+        ]
+      },
+      {
+        "path": "/home/c08r4d0r/.hermes/kanban/boards/net4sats-mvp-v2/attachments/t_7015c244/intro_card.mp4",
+        "sha256": "782766e049c927905257fdbc4e27062351bd1ed3700f15e533fbcd4db3c9ac4c",
+        "probe": {"width": 1920, "height": 1080, "duration_s": 4.0},
+        "accepted": false,
+        "rejection_reasons": [
+          "A 4s synthetic intro card from sibling card t_7015c244. It contains no wizard steps, so it has no head action and no final step.",
+          "It is a bookend asset, not a take."
+        ]
+      },
+      {
+        "path": "/home/c08r4d0r/reports/net4sats-mvp/film5/net4sats-installer-tour.mp4",
+        "probe": {"width": 1280, "height": 800, "avg_frame_rate": "25/1", "duration_s": 284.24},
+        "accepted": false,
+        "rejection_reasons": [
+          "Below the >=1080p bar (1280x800), so it cannot be the validated 1080p capture the chain's toolchain card t_acee3752 was meant to produce.",
+          "Different aspect ratio and a different era of the pipeline; no step log was found that maps to it."
+        ]
+      },
+      {
+        "path": "/home/c08r4d0r/reports/net4sats-mvp/film/e2e-net4sats.mp4",
+        "probe": {"width": 1280, "height": 800, "duration_s": 40.88},
+        "accepted": false,
+        "rejection_reasons": ["Below >=1080p bar (1280x800).", "No matching step log for this chain."]
+      },
+      {
+        "path": "/home/c08r4d0r/reports/net4sats-mvp/film3/net4sats-branded-e2e.mp4",
+        "probe": {"width": 1280, "height": 800, "duration_s": 85.0},
+        "accepted": false,
+        "rejection_reasons": ["Below >=1080p bar (1280x800).", "Filename declares 'branded' - the opposite of the de-branded requirement."]
+      },
+      {
+        "path": "/tmp/demo-video.webm",
+        "accepted": false,
+        "rejection_reasons": ["Does not exist on this host (ENOENT). Was the FD9-era source for a different demo chain."]
+      }
+    ],
+    "accepted_candidate": null
+  },
+
+  "framing_scan_evidence": {
+    "status": "POSITIVE_CONTROL_ONLY",
+    "applied_to": "CANDIDATE-A (not this chain's take)",
+    "command": "ffprobe -v error -select_streams v:0 -show_entries frame=width,height -of csv=p=0 <file> | sort -u",
+    "result": "1920,1080 only - no mid-take resolution change in that file",
+    "note": "Method validated; verdict cannot be transferred to the real take because the real take does not exist."
+  },
+
+  "validation": {
+    "checks": [
+      {
+        "id": "V1",
+        "requirement": "Both plan files exist at explicitly stated paths",
+        "result": "PASS",
+        "evidence": "artifacts/demo_basecut/trim_plan.json and artifacts/demo_basecut/trim_plan.md are written and committed; see REPORT.md for commit SHA."
+      },
+      {
+        "id": "V2",
+        "requirement": "Every step from the log has a start and end timestamp",
+        "result": "VACUOUS",
+        "evidence": "0 steps in step_map.ordered_steps because the step map card t_6d731c04 has 0 runs. Satisfied only degenerately; no real step map exists."
+      },
+      {
+        "id": "V3",
+        "requirement": "No head/tail trim point falls inside any step interval",
+        "result": "VACUOUS",
+        "evidence": "All four trim points are null, so none can fall in an interval. Vacuously true and deliberately so: placing a real number here would be fabrication."
+      },
+      {
+        "id": "V4",
+        "requirement": "Every flagged interior region is carried over verbatim",
+        "result": "VACUOUS",
+        "evidence": "0 inherited regions to carry (scan card t_be3a9ae1 has 0 runs). Nothing dropped, nothing invented."
+      },
+      {
+        "id": "V5",
+        "requirement": "No interior content is proposed for removal",
+        "result": "PASS",
+        "evidence": "flagged_interior_dead_air.regions is empty and removal_proposed=false; cuts.interior_cuts_made is 0. The plan never proposes an interior cut."
+      },
+      {
+        "id": "V6",
+        "requirement": "At least one dead-air detection result is reflected, with the command it came from",
+        "result": "PASS (scoped)",
+        "evidence": "Two real commands (freezedetect, silencedetect) were executed with exit_code 0 and their raw output is embedded in dead_air_detection_evidence. IMPORTANT SCOPE LIMIT: they ran against a rejected candidate, not against this chain's take, and are marked POSITIVE_CONTROL_ONLY so they cannot be mistaken for the plan's regions."
+      },
+      {
+        "id": "V7",
+        "requirement": "Any inherited uncertainty is carried into the .md rather than silently resolved",
+        "result": "PASS",
+        "evidence": "trim_plan.md section 'Inherited uncertainty and unresolved questions' carries every open question, including the four candidate dispositions and what each upstream must supply."
+      },
+      {
+        "id": "V8",
+        "requirement": "No invented timestamps",
+        "result": "PASS",
+        "evidence": "Zero timestamps appear in source, cuts, step_map, or flagged regions. The only numbers present are measured values from rejected candidates and are labelled as such."
+      }
+    ],
+    "overall": "BLOCKED - plan is intentionally non-executable. Acceptance criteria V2/V3/V4 pass only vacuously; the deliverables exist but carry no cut points because none are measurable."
+  },
+
+  "handoff_to_encoder": {
+    "downstream_card": "t_ba89d8b4",
+    "instruction": "DO NOT RUN. This plan is not executable. Its card instructs: 'If the plan is missing, incomplete, or its source paths do not resolve, STOP and ask rather than improvising cut points.' Consumers must stop here.",
+    "unblocks_when": [
+      "t_882b3922 completes and states an absolute take path plus a durable step-log path",
+      "t_15057569 writes a probe report with every field listed in source.required_before_encode_can_run",
+      "t_6d731c04 writes a step map where every step has start, end, confidence, and evidence",
+      "t_be3a9ae1 writes the interior dead-air region list plus framing anomalies",
+      "this card t_ae815553 is re-dispatched and re-run against those inputs"
+    ]
+  }
+}
