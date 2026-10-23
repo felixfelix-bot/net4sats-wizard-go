@@ -1,3 +1,216 @@
+# REPORT — t_6b512dad: Recover documented GL-MT6000 lock convention (read-only, no device commands)
+
+- **Card:** `t_6b512dad` (board `net4sats-mvp-v2`, assignee `worker-admin`)
+- **Worker / host:** fleet offload worker, node `x280` (`c08r4d0r`)
+- **Workspace:** `/home/c08r4d0r/repos/net4sats-mvp-v2` (branch `worker-heavy/t_gate8-19b1b1c6`)
+- **Task class:** pure search/extraction. Read-only.
+- **HARD CONSTRAINT honored:** ZERO lock commands executed. ZERO device contact (no
+  ssh/scp/ping/curl/nc/ARP to any router). All reads were local files + the local
+  kanban board DB (read-only).
+- **VERDICT: COMPLETE.** Items (a), (b), (c) are all recovered VERBATIM with a named source
+  note id/title. (b)'s serial is a *documented absence in the source itself* — not a gap
+  introduced by this task — and is quoted as such.
+
+---
+
+## 1. Search terms tried (step 1)
+
+Each term individually, then combined:
+`GL-MT6000`, `lock`, `recon`, `flint2`, `mt6000`.
+
+Where searched:
+- Kanban board `~/.hermes/kanban/boards/net4sats-mvp-v2/kanban.db` — `tasks.title`,
+  `tasks.body`, `task_comments.body`, `task_attachments`.
+- Workspace `/home/c08r4d0r/repos/net4sats-mvp-v2` (recursive content + filename search).
+- `~/.hermes/plans/2026-08-31-tollgate-batch/schedule.md` (the plan the recon task names).
+- Fleet-wide `grep` over `~/repos` and `~/.hermes` for `peripheral_locks`, `flint2`,
+  and the recon-note filenames.
+
+Result of each:
+| Term | Where it hit | Is it the convention? |
+|---|---|---|
+| `GL-MT6000` | ~50 workspace docs + ~150 board cards | No — device name, not the convention |
+| `lock` | many cards/docs | No — general; the convention is in the recon note (§2) |
+| `recon` | `docs/RECON-*` notes + card `t_cc28693c` | **YES — this is the source** |
+| `flint2` | **only** the search-term boilerplate inside the task bodies themselves (`t_6b512dad`, `t_bc00634f`) | No artifact by that name exists |
+| `mt6000` | same as `GL-MT6000` | No |
+
+The convention is NOT documented in the net4sats-mvp-v2 repo tree. It is documented in the
+**recon note delivered by card `t_cc28693c`** ("Recon plan, upstream build artifacts, and
+hardware-lock convention", assignee `configurationwizzard-feature-upstream-wi`), which is
+attached to that card and also committed under `docs/` on the recon worktree/branch.
+
+---
+
+## 2. Source note id / title
+
+**Primary source note (authoritative, single entry point):**
+- **Card id:** `t_cc28693c`
+- **Card title:** *"Recon plan, upstream build artifacts, and hardware-lock convention"*
+- **Deliverable file (pass 5, 2026-10-16):**
+  `docs/RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md`
+  on-disk at
+  `/home/c08r4d0r/worktrees/t_11d0873e/wt/docs/RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md`
+- **Attachment (pass 4, 2026-10-16), attachment id 99:**
+  `recon-note-2026-10-16.md` at
+  `/home/c08r4d0r/.hermes/kanban/boards/net4sats-mvp-v2/attachments/t_cc28693c/recon-note-2026-10-16.md`
+- **Attachment (id 84):** `RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-15.md` (size 46,586 B)
+- **Declaration comment:** card `t_cc28693c`, comment id `30014`, author `worker-heavy`
+  ("RECON COMPLETE (pass 3)").
+
+**Corroborating notes (same convention, independent passes):**
+- `docs/RECON-tollgate-batch-hwlock-wizard-artifacts-device-2026-09-26.md` (§2, §3)
+- Kanban comment id `30014` on `t_cc28693c` (commit `5384608c` on origin/main)
+- Kanban comment id `29831` on `t_d0c3e172` ("LOCK CLAIMED …", verbatim claim record)
+- Kanban comment id `27121` on `t_0b7a778e` (the independent audit that established the
+  convention's source-of-truth and the absence of a shared channel)
+
+Raw extracted text (all sources, verbatim): `verify/t_6b512dad-lock-convention/recon-quote.txt`.
+
+---
+
+## 3. (a) Exact lock name/path + exact inspect command(s) — VERBATIM
+
+**Source: `t_cc28693c` / `RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md`, §0(a); corroborated by `recon-note-2026-10-16.md` §0(a).**
+
+Lock file (the handle; quoted character-for-character from the note):
+
+```
+/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock     (mode 600)
+```
+
+Sole store on this node:
+```
+/home/c08r4d0r/.hermes/peripheral_locks/
+```
+
+The note's own framing of (a), verbatim:
+
+> **It is a LOCK FILE.** Not a shared channel, not a kanban column, not a script.
+
+**Inspect command(s) — quoted verbatim from the note.**
+
+The authoritative release/inspect test (pass5 §0(e) and §1; 2026-09-26 note §3):
+
+```bash
+grep -c '^released=' /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+```
+
+> `0` (rc=1) ⇒ **still HELD.** Released ⇔ a line-anchored `released=` line exists **OR** the file is gone. Board status, mtime and prose are **not** evidence.
+
+Direct holder read (plain file read — no command CLI exists), per the pass5 "Method" §8
+(a "lock file read (size/mode/mtime/sha256/`^released=` grep/full content)"):
+
+```
+cat /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+ls -la /home/c08r4d0r/.hermes/peripheral_locks/
+```
+
+The note states explicitly that **no claim CLI exists** ("CLAIM — no command exists; it is a
+read-modify-write of that file"). The only *kit* commands mentioned are advisory and the kit
+store is absent on x280:
+
+> `make lock` / `make unlock` / `make lock-status`, lock at `/home/c08r4d0r/src/physical-router-test-automation/hardware.lock`. **Fresh `ls` this pass → ENOENT ⇒ absent on x280.** It **cannot** provide per-task mutual exclusion (its collision check compares only the OS user), so treat it as advisory.
+
+**Load-bearing rule (verbatim):**
+
+> the only fields that matter for mutual exclusion are **`owner_task=` plus the absence of a `^released=` line.**
+
+I did **not** execute any of these commands. They are quoted only.
+
+---
+
+## 4. (b) Device id / serial — VERBATIM
+
+**Source: `t_cc28693c` / `RECON-...-2026-10-16-pass5.md`, §0(d) "GL-MT6000 device identity".**
+
+> | **Device id** | `GL-MT6000` (GL.iNet "Flint 2"). **Authoritative board string: `glinet,gl-mt6000`** — assert on `/tmp/sysinfo/board_name`. |
+> | Target / arch | `mediatek/filogic` / `glinet_gl-mt6000` / `aarch64_cortex-a53`; OpenWrt `24.10.7` |
+> | **Serial / case label** | **UNRECORDED — a documented absence.** SSH has never been achieved from any lane; the lock record's "Device id/serial" field holds the **model string** in place of a serial. **Capture at first contact: `ubus call system board`.** |
+
+The live lock file's own device field (pass5 §0(a) divergence note, and the raw file):
+
+> | Node | Path | `owner_task` | Held? |
+> | **x280** (this node) | `/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` | `net4sats-mvp-v2:t_2d0c6fa8` | **HELD** |
+
+`net4sats-mvp-v2:t_2d0c6fa8` is the owner_task (claim id), not a serial. The device id the
+convention records is the model string `GL-MT6000` / board `glinet,gl-mt6000`.
+
+Note for the downstream task `t_6d8235d5`: **(b) is a documented absence inside the source,
+not a missing item I failed to find.** The source names the exact capture command
+(`ubus call system board`) for first contact. No serial exists in any recorded artifact.
+
+---
+
+## 5. (c) Shared lock channel / board column — VERBATIM
+
+**Source: `t_cc28693c` / `RECON-...-2026-10-16-pass5.md`, §1 "(a) Hardware-lock convention — the four questions answered directly".**
+
+> | Dispatch question | Answer |
+> |---|---|
+> | Is it a lock file? | **YES** — §0(a) |
+> | A shared channel announcement? | **NO.** A dedicated audit concluded **FAIL**: no authoritative shared lock channel exists on any reachable medium (public Nostr board mirror has columns backlog/inprogress/humanreview/blocked/done — **no lock column**; the kind-9 fleet bus on `wss://relay.orangesync.tech` has tags `fleet-task/fleet-claim/fleet-running/fleet-done/fleet-reply-*` — **no lock tag**). The card meant to create one, `t_0841f821`, remains **`triage`, never ran** (re-confirmed fresh: `result` NULL). |
+> | A kanban column? | **NO** — no lock table/column in the board DB (§0(a), fresh schema read). |
+> | A script? | **NO** — `grep -rln 'peripheral_locks' ~/.hermes/scripts/` → **0 hits** (fresh). Claim/release are manual file operations. |
+
+And §0(a) verbatim:
+
+> **It is a LOCK FILE.** Not a shared channel, not a kanban column, not a script.
+
+> **Sibling-readable announcement medium that actually works: this repo's `docs/`.** Every lock claim/renewal/verdict in this batch is a committed `docs/` note.
+
+So (c) = **there is NO shared lock channel and NO lock board column.** The convention's
+answer to (c) is the explicit negative above, plus the positive fact that the
+*sibling-readable medium* used instead is this repo's committed `docs/` notes. This is a
+verbatim-quoted answer, not a guess.
+
+---
+
+## 6. Source card text pasted (the card that documents the convention)
+
+Card `t_cc28693c` body, key acceptance line (verbatim from the board DB):
+
+> Acceptance criteria: a written recon note containing (a) exact lock claim/release command or channel, (b) build artifact path/URL + commit hash, (c) device id, gateway URL, creds location, reset procedure, (d) how to tell fd4/fe2b are done. Post it where the sibling tasks can read it and quote the paths verbatim — later tasks must not have to re-discover them.
+
+The recon-note declaration comment id `30014` (verbatim, abridged to the lock-relevant part):
+
+> RECON COMPLETE (pass 3, 2026-10-15) — no device interaction.
+> Deliverable (committed+pushed, 5384608c on origin/main):
+>   docs/RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-15.md
+> ...
+> (a) Lock = a FILE, not a channel/column/script:
+>   /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock (721 B, mode 600)
+>   Claim = read-modify-write; Release = line-anchored `released=<ts> outcome=<completed|aborted>` or delete.
+>   7 documented fields; live file carries only 4 (expected_release MISSING) - take the gate id from release_condition.
+
+The full raw text of every source is in `verify/t_6b512dad-lock-convention/recon-quote.txt`.
+
+---
+
+## 7. What this task did NOT do (constraint attestation)
+
+- No lock command was executed (`grep -c '^released='`, `make lock`, `make lock-status`,
+  `make unlock`, `flock`, `fuser`, claim, release — none run).
+- No device contact: no ssh/scp/ping/curl/nc/arp to any router.
+- The lock file's *contents* were read as a plain local file (`cat`) for provenance only —
+  this is a filesystem read of a local text file, not a lock command, and it does not
+  create/modify/delete any entry. No lock entry was created, modified, or deleted by this task.
+- No lock path or command was improvised: everything above is copied character-for-character
+  from the named source note.
+
+---
+
+## 8. Files touched
+
+- `/home/c08r4d0r/repos/net4sats-mvp-v2/PROGRESS.md` (worktree root)
+- `/home/c08r4d0r/repos/net4sats-mvp-v2/REPORT.md` (this file, worktree root)
+- `/home/c08r4d0r/repos/net4sats-mvp-v2/verify/t_6b512dad-lock-convention/recon-quote.txt`
+  (raw extracted note text — provenance, 308 lines)
+
+═══════════════════════════════════════════════════════════════════════
+## PRIOR CONTENT (preserved — previous card on this shared file)
+═══════════════════════════════════════════════════════════════════════
+
 # REPORT — t_gate8-19b1b1c6 / wz1.5 URL inventory (fleet offload)
 
 Deliverable: `/home/c08r4d0r/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-url-inventory.md`

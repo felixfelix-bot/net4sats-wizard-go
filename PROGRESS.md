@@ -1,3 +1,49 @@
+# PROGRESS — t_6b512dad: Recover documented GL-MT6000 lock convention (read-only)
+
+Finding -> status -> files touched. Worktree root: /home/c08r4d0r/repos/net4sats-mvp-v2
+
+## Status: COMPLETE — all three items (a)(b)(c) recovered verbatim, with source notes. ZERO lock commands run, zero device contact.
+
+## Findings
+
+1. Searched kanban board `net4sats-mvp-v2` (titles/bodies/comments/attachments) and the
+   workspace with each term: GL-MT6000, lock, recon, flint2, mt6000 (individually + combined).
+   - `flint2` -> only the search-term boilerplate inside the task bodies themselves
+     (t_6b512dad, t_bc00634f). No artifact by that name.
+   - The convention is NOT documented in the net4sats-mvp-v2 repo itself; it lives in the
+     recon note attached to card `t_cc28693c` ("Recon plan, upstream build artifacts, and
+     hardware-lock convention") and in companion RECON docs committed under docs/.
+
+2. Source note (authoritative) identified:
+   - Card: `t_cc28693c` — "Recon plan, upstream build artifacts, and hardware-lock convention"
+   - Attachment (id 99): `recon-note-2026-10-16.md` (pass 4) and (pass 5)
+     `RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md`
+   - On-disk (pass5): /home/c08r4d0r/worktrees/t_11d0873e/wt/docs/RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md
+   - Attachment path (pass4 note the claim task cited):
+     /home/c08r4d0r/.hermes/kanban/boards/net4sats-mvp-v2/attachments/t_cc28693c/recon-note-2026-10-16.md
+   - Re-verified on the filesystem this pass: lock file EXISTS
+     (ls -la ~/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock -> 721 B, mode 600).
+     I did NOT open/execute any lock command. Reads of public docs only.
+
+3. (a) lock name/path + inspect command — recovered verbatim (see REPORT.md §Verbatim).
+4. (b) device id/serial — recovered verbatim: device id `GL-MT6000`; serial is a
+   DOCUMENTED ABSENCE (UNRECORDED; model string stands in for serial). Not a gap I introduced.
+5. (c) shared channel / board column — recovered verbatim: NOT a channel, NOT a column.
+   The recon note answers (c) with an explicit NO on both, naming the audit that concluded FAIL.
+
+## Files touched (this task)
+- PROGRESS.md (this file, worktree root)
+- REPORT.md (worktree root)
+- verify/t_6b512dad-lock-convention/recon-quote.txt (raw extracted note text, provenance)
+
+## Constraint check
+- ZERO lock commands executed. No claim/unlock/inspect command was run.
+- No device contact (no ssh/scp/ping/curl/nc to any router). Reads were local files only.
+
+═══════════════════════════════════════════════════════════════════════
+## PRIOR CONTENT (preserved — previous card on this shared file)
+═══════════════════════════════════════════════════════════════════════
+
 # PROGRESS — t_gate8-19b1b1c6 → wz1.5 URL inventory (fleet offload, worker-heavy)
 
 Session 2026-10-23. Finding -> Status -> Files touched. Read-only inventory: no source file in

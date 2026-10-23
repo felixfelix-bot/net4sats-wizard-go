@@ -1,0 +1,308 @@
+RAW EXTRACTION — GL-MT6000 lock convention (t_6b512dad)
+Source A: card t_cc28693c attachment id=99 recon-note-2026-10-16.md (pass 4), §0 (a)
+Source B: RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-16-pass5.md, §0(a) + §0(d) + §1
+==========================================================================
+--- Source B (pass5), lines 22-94 verbatim ---
+### (a) Hardware-lock convention — exact claim / release  → AC (a)
+
+**It is a LOCK FILE.** Not a shared channel, not a kanban column, not a script. Re-verified this pass:
+
+- `grep -rln 'peripheral_locks' ~/.hermes/scripts/` → **0 hits** ⇒ **no script**.
+- Board DB (fresh `sqlite_master` read) tables are exactly `tasks, task_links, task_comments,
+  sqlite_sequence, task_events, task_runs, task_attachments, kanban_notify_subs` ⇒ **no
+  `hardware`/`lock`/`peripheral`/`device` table ⇒ not a kanban column**.
+
+**Lock file (the handle — do NOT rename):**
+
+```
+/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock     (mode 600)
+```
+
+Sole store on this node: `/home/c08r4d0r/.hermes/peripheral_locks/` (fresh `ls`: `balloon-rx.lock`,
+`balloon-tx.lock`, `e80-rx-x280.lock`, `gl-mt6000-192.168.1.1.lock`, `tg-bench.lock`).
+
+**CLAIM — no command exists; it is a read-modify-write of that file.**
+
+```bash
+# 1. scan the fleet event ledgers for a competing active lane
+#    /home/c08r4d0r/.hermes/state/fleet-private/events-dq05.jsonl
+#    /home/c08r4d0r/.hermes/bot/peers/events-cobrador.jsonl
+# 2. then WRITE (read-modify-write) the lock file with the required fields below,
+#    preserving the previous owner verbatim on a prior_holder= line.
+```
+
+**Required fields — the convention names 7:**
+
+`owner_task` · `device` · `claim_ts` · `expected_release` · `release_condition` ·
+`conflicts_checked` · `prior_holder`
+
+`owner_task` is written `<repo>:<task id>`, e.g. `net4sats-mvp-v2:t_2d0c6fa8`.
+
+> ⚠ **DIVERGENCE — the live file does NOT carry all 7.** Verified again this pass: the x280 file
+> carries `owner_task`, `device`, `claim_ts`, `release_condition`, plus extras (`lock_id`,
+> `lock_file`, `device_addr`, `holder`, `acquire_timestamp`, `acquired_epoch`, `session`, `pid`,
+> `phase`), and is **missing `expected_release`, `conflicts_checked`, `prior_holder`**. A later task
+> needing an expected release time must take the **release-gate task id out of `release_condition`**.
+
+**RELEASE — exact, line-anchored, no command:**
+
+```bash
+# either APPEND this line to the same file:
+#     released=<UTC ts> outcome=<completed|aborted>
+# or DELETE the file.
+```
+
+Prose occurrences of the word "released" inside `release_condition` do **not** count. The test is
+`^released=` (line-anchored).
+
+**Load-bearing rule:** the only fields that matter for mutual exclusion are **`owner_task=` plus the
+absence of a `^released=` line.**
+
+**⚠ TWO live lock files for this one device, on two nodes, unsynchronised** (§5, unchanged):
+
+| Node | Path | `owner_task` | Held? |
+|---|---|---|---|
+| **x280** (this node) | `/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` | `net4sats-mvp-v2:t_2d0c6fa8` | **HELD** |
+| **dq05** (fleet peer) | `dq05:/home/c03rad0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` | `net4sats-mvp-v2:t_be3261d3` | **HELD** **[cited: pass 4 §5]** |
+
+A later task must read the store **on its own node**. Same reservation, same release gate, recorded
+twice — not two competing claimants.
+
+**Second, older store (advisory only):** the prta kit — `make lock` / `make unlock` /
+`make lock-status`, lock at `/home/c08r4d0r/src/physical-router-test-automation/hardware.lock`.
+**Fresh `ls` this pass → ENOENT ⇒ absent on x280.** It **cannot** provide per-task mutual exclusion
+(its collision check compares only the OS user), so treat it as advisory.
+
+**Sibling-readable announcement medium that actually works: this repo's `docs/`.** Every lock
+claim/renewal/verdict in this batch is a committed `docs/` note. This pass adds another.
+
+
+--- Source B (pass5), lines 146-157 verbatim (device identity table) ---
+### (d) GL-MT6000 device identity  → AC (c)
+
+| Field | Value |
+|---|---|
+| **Device id** | `GL-MT6000` (GL.iNet "Flint 2"). **Authoritative board string: `glinet,gl-mt6000`** — assert on `/tmp/sysinfo/board_name`. |
+| Target / arch | `mediatek/filogic` / `glinet_gl-mt6000` / `aarch64_cortex-a53`; OpenWrt `24.10.7` |
+| **Serial / case label** | **UNRECORDED — a documented absence.** SSH has never been achieved from any lane; the lock record's "Device id/serial" field holds the **model string** in place of a serial. **Capture at first contact: `ubus call system board`.** |
+| **SSID / wireless baseline** | **UNRECORDED (no repo value) — the one device fact with zero records.** Post-reset the code-confirmed baseline is SSID **`OpenWrt`, open, radio0+radio1** (`tmbg-830/src/wireless_gateway_manager/radios_test.go:60,73`). **Capture live: `uci show wireless; iwinfo`.** |
+| **Gateway URL** | **Two documented defaults, decide deliberately:** `192.168.1.1` = **vanilla OpenWrt / post-factory-reset** (also U-Boot recovery); `192.168.8.1` = **GL.iNet stock firmware**. The lock *filename* keeps `192.168.1.1` for store uniqueness and is **not** evidence of the live address. Post-deploy the LAN IP is **randomized by design** (`95-random-lan-ip`) — re-read the wizard success screen. |
+| **Endpoints** | `:80` uhttpd main→net4sats admin · `:8080` LuCI · `:8090` net4sats admin panel · `:2121` TollGate API (`:2121/health`) · `:2050` nodogsplash portal · `:2051` portal SPA · **`http://localhost:8099` = the wizard UI on the fleet HOST, not the router** |
+| **Admin creds location** | **There is no secret store.** Bench values are *published test values*, not secrets. Detail in the paragraph directly below this table. |
+| **Factory-reset procedure** | 1. **PREFERRED** (clean wizard-eligible state): `ssh root@<router-ip> 'firstboot -y && reboot'` — post-reset: LAN `192.168.1.1`, root secret cleared, SSID `OpenWrt` open, `:8090` admin gone. 2. **TollGate-only rollback** (keeps OpenWrt config): `ssh root@<router-ip> '/etc/init.d/tollgate-wrt stop; apk del tollgate-wrt'`. 3. **Hardware button**: 10-second hold (**NOT lane-verified**; button location documented only by analogy to the MT3000) — verify state with `ubus call system board` + `uci show wireless`. |
+
+--- Source B (pass5), lines 189-198 verbatim (release test / how to tell fd4-feb2 done) ---
+### (e) How to tell fd4 / fe2b are done  → AC (d)
+
+**The authoritative release test (the only one):**
+
+```bash
+grep -c '^released=' /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+```
+
+`0` (rc=1) ⇒ **still HELD.** Released ⇔ a line-anchored `released=` line exists **OR** the file is
+gone. Board status, mtime and prose are **not** evidence.
+
+--- Source B (pass5), lines 211-223 verbatim ((c) the four questions answered directly) ---
+## 1. (a) Hardware-lock convention — the four questions answered directly
+
+| Dispatch question | Answer |
+|---|---|
+| Is it a lock file? | **YES** — §0(a) |
+| A shared channel announcement? | **NO.** A dedicated audit concluded **FAIL**: no authoritative shared lock channel exists on any reachable medium (public Nostr board mirror has columns backlog/inprogress/humanreview/blocked/done — **no lock column**; the kind-9 fleet bus on `wss://relay.orangesync.tech` has tags `fleet-task/fleet-claim/fleet-running/fleet-done/fleet-reply-*` — **no lock tag**). The card meant to create one, `t_0841f821`, remains **`triage`, never ran** (re-confirmed fresh: `result` NULL). |
+| A kanban column? | **NO** — no lock table/column in the board DB (§0(a), fresh schema read). |
+| A script? | **NO** — `grep -rln 'peripheral_locks' ~/.hermes/scripts/` → **0 hits** (fresh). Claim/release are manual file operations. |
+
+**Claim/release command summary (there is no CLI):** claim = read-modify-write the lock file after a
+ledger scan; release = append `released=<UTC ts> outcome=<completed|aborted>` or delete the file.
+Kit alternative (advisory, and on this node the store is absent): `make lock PHASE="..."` /
+`make unlock` / `make lock-status` in `/home/c08r4d0r/src/physical-router-test-automation`.
+
+--- Source A (pass4 note), lines 21-93 verbatim, §0 (a) ---
+## 0. THE ANSWER — every required fact, verbatim, with the path to quote
+
+### (a) Hardware-lock convention — exact claim / release
+
+**It is a LOCK FILE.** Not a shared channel, not a kanban column, not a script. Confirmed again this
+pass: `grep -rln 'peripheral_locks' ~/.hermes/scripts/` → **0 hits** (no script); the board DB has
+**no** `hardware`/`lock`/`peripheral`/`device` table (tables are `tasks, task_links, task_comments,
+task_events, task_runs, task_attachments, kanban_notify_subs, sqlite_sequence`).
+
+**Lock file (the handle; do NOT rename):**
+
+```
+/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock     (mode 600)
+```
+
+Sole store on this node: `/home/c08r4d0r/.hermes/peripheral_locks/`
+
+**CLAIM — no command exists; it is a read-modify-write of that file.**
+
+```bash
+# 1. scan the fleet event ledgers for a competing active lane
+#    /home/c08r4d0r/.hermes/state/fleet-private/events-dq05.jsonl
+#    /home/c08r4d0r/.hermes/bot/peers/events-cobrador.jsonl
+# 2. then WRITE (read-modify-write) the lock file with the required fields below,
+#    preserving the previous owner verbatim on a prior_holder= line.
+```
+
+**Required fields — the convention names 7:**
+
+`owner_task` · `device` · `claim_ts` · `expected_release` · `release_condition` ·
+`conflicts_checked` · `prior_holder`
+
+`owner_task` is written `<repo>:<task id>`, e.g. `net4sats-mvp-v2:t_2d0c6fa8`.
+
+> ⚠ **DIVERGENCE — the live file does NOT carry all 7.** The x280 file has only 4 of them
+> (`owner_task`, `device`, `claim_ts`, `release_condition`) plus extras (`lock_id`, `lock_file`,
+> `device_addr`, `holder`, `acquire_timestamp`, `acquired_epoch`, `session`, `pid`, `phase`), and is
+> **missing `expected_release`, `conflicts_checked`, `prior_holder`**. A later task needing
+> `expected_release` must instead take the **release-gate task id from `release_condition`**.
+
+**RELEASE — exact, line-anchored, no command:**
+
+```bash
+# either APPEND this line to the same file:
+#     released=<UTC ts> outcome=<completed|aborted>
+# or DELETE the file.
+```
+
+Prose occurrences of the word "released" inside `release_condition` do **not** count. The test is
+`^released=` (line-anchored).
+
+**Load-bearing rule:** the only fields that matter for mutual exclusion are `owner_task=` **plus the
+absence of a `released=` line.**
+
+**⚠ There are TWO live lock files for this one device, on two nodes, unsynchronised** (§5):
+
+| Node | Path | `owner_task` | Held? |
+|---|---|---|---|
+| **x280** (this node) | `/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` | `net4sats-mvp-v2:t_2d0c6fa8` | **HELD** |
+| **dq05** (fleet peer) | `dq05:/home/c03rad0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` | `net4sats-mvp-v2:t_be3261d3` | **HELD** |
+
+A later task must read the store **on its own node**. They are the same reservation for the same
+release gate, recorded twice; they are not two competing claimants.
+
+**Second, older store (advisory only):** the prta kit, `make lock` / `make unlock` / `make lock-status`
+(`Makefile:637/662/671`), lock at `/home/c08r4d0r/src/physical-router-test-automation/hardware.lock`.
+**ABSENT on this node ⇒ unlocked.** It **cannot** provide per-task mutual exclusion (its collision
+check compares only the OS user — `Makefile:638-649`), so treat it as advisory.
+
+**Sibling-readable announcement medium that actually works: this repo's `docs/`.** Every lock
+claim/renewal/verdict in this batch is a committed `docs/` note.
+
+### (b) Upstream (non-endo) wizard build artifact — `feature/upstream-wifi-scan`
+
+--- Source C: 2026-09-26 RECON §2 (a) + §3 release test, lines 54-102 verbatim ---
+## 2. (a) Hardware-lock convention — exact claim/release
+
+- **Mechanism: a lock FILE.** Not a shared channel, not a kanban column, not a
+  script. Repo-wide search finds no tooling; the claiming task rewrites the file
+  itself. *[cited §1 of the 2026-09-25 recon note + fresh store inspection §3]*
+- **Sole lock store:** `/home/c03rad0r/.hermes/peripheral_locks/`
+  (holds only `balloon-rx.lock`, `balloon-tx.lock` (unrelated, 0 B) + this file).
+- **Lock file (handle; do NOT rename):**
+  `/home/c03rad0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock`
+  (mode 600; name uses the STALE task-spec IP `192.168.1.1` — live addr is
+  `192.168.8.1`; store-wide uniqueness is what matters).
+- **Required fields (exact keys, all present in the current file):**
+  - `owner_task=<repo>:<task id>` — e.g. `net4sats-mvp-v2:t_be3261d3`
+  - `device=<model + fw + addr>`
+  - `claim_ts=<UTC ISO + unix>`
+  - `expected_release=<event + stale-review date>`
+  - `release_condition=<who releases, how>`
+  - `conflicts_checked=<ledger scan evidence>`
+  - `prior_holder=<previous owner verbatim, preserved on claim>`
+
+**CLAIM procedure (exact):** scan the two fleet event ledgers for conflicting
+active lanes, then **rewrite the lock file** with all seven fields, preserving
+the prior holder verbatim on a `prior_holder=` line. No command exists — it is a
+read-modify-write of the file. Ledgers to scan:
+`/home/c03rad0r/.hermes/state/fleet-private/events-dq05.jsonl`
+`/home/c03rad0r/.hermes/bot/peers/events-cobrador.jsonl`
+
+**RELEASE procedure (exact):** the releasing task **appends**
+`released=<UTC ts> outcome=<completed|aborted>` to the lock file **or deletes
+the file**, and notes the release in its lane doc.
+
+Do **not** rename the file, force-clear, or steal a live claim. There is no
+second medium (kanban boards have **no** hardware/lock table — verified: tables
+are `tasks, task_links, task_comments, task_events, task_runs, task_attachments,
+kanban_notify_subs`). The sibling-readable **announcement** medium is this repo's
+`docs/` (this note is committed there).
+
+---
+
+## 3. (d) Current holders (fd4 / fe2b) + how to detect release
+
+### Authoritative release test (the only one)
+
+```
+grep -c '^released=' /home/c03rad0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+```
+`0` (rc=1) ⇒ **still HELD**.  Released ⇔ a line-anchored `released=` line exists
+**OR** the file is gone. (Prose mentions of the word "released" inside
+`release_condition`/`prior_holder` do **not** count — must be line-anchored.)
+
+--- Source D: kanban card t_cc28693c comment id=30014 (RECON COMPLETE) verbatim ---
+RECON COMPLETE (pass 3, 2026-10-15) — no device interaction.
+
+Deliverable (committed+pushed, 5384608c on origin/main):
+  docs/RECON-tollgate-batch-plan-artifacts-hwlock-device-2026-10-15.md
+Full report + progress at worktree root: REPORT.t_cc28693c-recon-2026-10-15.md, PROGRESS.t_cc28693c-recon-2026-10-15.md
+Both attached to this card (att 83 report, att 84 recon note).
+
+(a) Lock = a FILE, not a channel/column/script:
+  /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock (721 B, mode 600)
+  Claim = read-modify-write; Release = line-anchored `released=<ts> outcome=<completed|aborted>` or delete.
+  7 documented fields; live file carries only 4 (expected_release MISSING) - take the gate id from release_condition.
+  Kit store A (make lock/unlock, Makefile:53,637,662) is unlocked on x280; its collision check is user-only so it cannot give per-task exclusion.
+(b) Upstream feature/upstream-wifi-scan artifact NOT on x280. Recorded ipk (c03rad0r) sha256 d3aa5d3a..., code tip d6ceba1, upstream tip 46af18d1, reachable release URL v1.0.3-alpha tarball re-verified in the kit. No flashing tooling for this artifact.
+(c) GL-MT6000 / board glinet,gl-mt6000; gateway 192.168.8.1 stock vs 192.168.1.1 vanilla; serial unrecorded by design; creds = ~/.ssh/id_ed25519 + published bench values, NO secret store; reset = ssh root@192.168.8.1 firstboot -y && reboot. Correction: config/routers.json does not exist at all.
+(d) fd4 holds via t_2d0c6fa8 (x280 store, released=0); fe2b t_53879c67 never held it.
+  Release test: grep -c ^released= <lock> == 0 => HELD. Kanban done is NOT release (gate_tick demotes to blocked).
+
+NEW this pass: dq05 store read FIRST-HAND (previously only cited) - 4,939 B, sha256 c5eedce6..., released_count=0 => also HELD, owner t_be3261d3, untouched since 2026-10-06. TWO live lock files, one device, unsynchronised.
+
+This card is triage (worker-immutable) - manager must promote. recon tier needs review_artifact + secrets_clean; both attached/recorded.
+
+secret-scan: clean
+
+--- Source E: kanban card t_d0c3e172 comment id=29831 (LOCK CLAIMED) verbatim ---
+LOCK CLAIMED — deliverable for t_d0c3e172:
+
+- Lock handle/name: `hardware.lock` — absolute path `/home/c03rad0r/physical-router-test-automation/hardware.lock` (canonical store per Makefile:53 `HARDWARE_LOCK := hardware.lock` + AGENTS.md:1475,1495)
+- Claim operation: `make lock PHASE='…'` (Makefile:637) → rc=0, "Router hardware lock acquired"
+- Claim timestamp (UTC ISO-8601): 2026-10-12T07:33:17Z
+- Expected release time: 2026-10-14T07:33:17Z (48 h estimate — flash-prep + 4 h WZ1.8 budget + margin; actual release is event-driven per the release condition)
+- Owner task id: t_be3261d3 (claimed on its behalf by t_d0c3e172)
+- Device id: GL-MT6000 (LAN 192.168.1.1 — device-declared; probe-net address 10.16.107.1) — exactly as recorded in readiness recon note §1
+- Release condition (verbatim, contains literal t_557bb77d): "released only after run task t_557bb77d child 3 (Playwright + video run that consumes the device) reports completion, or on explicit abort"
+
+Freeness confirmed before claim (3 sources): audit t_0b7a778e (no lock anywhere, no fd4/fe2b holder; fd4 card t_1b39bf44=done, fe2b card t_53879c67=done), readiness note readiness-gl-mt6000-wz1.8.md B3/B4, and live pre-claim check (`make lock-status` → unlocked; bench flock free; no in-flight router processes). The 93-day-old orphan lock in ~/physical-router-test-automation-wt (phase PR#170) is a different worktree, stale past the 2 h threshold, operator-owned — left untouched per kit rule.
+
+Where persisted (sibling-readable):
+1. Lock store entry itself (extended schema): owner_task, device, claim_timestamp, expected_release_time, release_condition, claimed_by_task keys appended to the native make-lock schema (the exact owner/release-field defects audit t_0b7a778e listed).
+2. Claim record file: /home/c03rad0r/.hermes/kanban/boards/net4sats-mvp-v2/workspaces/t_593cebad/lock-claim-record.md (all facts + freeness evidence).
+
+Device untouched — bookkeeping only. Announcement to the shared channel is t_0841f821's step; recon-note append is t_8b3d148d's step — both should read the claim record above.
+
+--- Source F: live lock file (read-only, NOT a lock command) ---
+$ ls -la /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+-rw------- 1 c08r4d0r c08r4d0r 721 Oct 14 07:38 /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+$ cat /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock  (plain file read)
+# GL-MT6000 hardware lock (fleet peripheral-lock store)
+# acquired by fleet offload task t_2d0c6fa8; NOT released (release is the E2E task's job)
+lock_id=gl-mt6000-192.168.1.1.lock
+lock_file=/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+device=GL-MT6000
+device_addr=192.168.1.1
+holder=t_2d0c6fa8
+owner_task=net4sats-mvp-v2:t_2d0c6fa8
+claim_ts=2026-10-14T05:38:34Z
+acquire_timestamp=2026-10-14T05:38:34Z
+acquired_epoch=1791956314
+session=c08r4d0r@x280
+pid=2174746
+phase=FD4 preflight — acquire and hold hardware lock for FD4 deploy + E2E video run (task t_2d0c6fa8)
+release_condition=released ONLY after the E2E/run task (t_557bb77d child 3, Playwright + video) reports completion or explicit abort
