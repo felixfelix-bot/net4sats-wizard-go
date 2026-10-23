@@ -1,0 +1,32 @@
+=== fe2b_feed_check.sh — FE2b acceptance gate (TDD baseline; RED is the expected start) ===
+router    : 192.168.1.1
+feed_line : src/gz tollgate https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages
+feed_url  : https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages
+transport : auto (requested)
+host      : x280  date: 2026-10-23T05:21:05Z
+
+--- A0: a transport to the device works ---
+      using transport: serial
+PASS  A0 transport=serial answered from device (glinet,gl-mt6000)
+      board: glinet,gl-mt6000
+--- A1: tollgate-wrt is installed ---
+PASS  A1 tollgate-wrt installed
+      tollgate-wrt - 0.6.0_rc6-r1
+--- A2: tollgate-wrt ORIGIN is the feed, not a local file path ---
+FAIL  A2[O1] origin is the feed: a LOCAL staged tollgate package is present (install was file-based, not feed-based)
+      local artifact: /tmp/tollgate-wrt.ipk
+FAIL  A2[O2] origin is the feed: no tollgate index in /var/opkg-lists/ (nothing to have installed from)
+--- A3: the tollgate-wrt service is running ---
+      binary: -rwxr-xr-x    1 root     root      13557944 Oct 21 23:32 [1;32m/usr/bin/tollgate-wrt[m
+PASS  A3 tollgate-wrt running (/etc/init.d/tollgate-wrt reports RUNNING; S95tollgate-wrt enabled)
+--- A4: :2122 health returns 2xx ---
+FAIL  A4 :2122 health HTTP 000 (expected 2xx)
+--- A5: portal returns HTTP 200 ---
+FAIL  A5 portal HTTP 404 at :2051/nonexistent.html (expected 200)
+      note: :2051/ returns 403 by design (no index.html; listing disabled) — not asserted
+--- A6: the src/gz feed index is fetchable (precondition of A2) ---
+FAIL  A6 feed index fetchable: HTTP 404 at https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages (no index -> nothing to install from)
+
+=== RESULT: 3 passed, 5 failed ===
+FE2b NOT SATISFIED — this is the expected TDD RED baseline before the feed install.
+EXIT=1
