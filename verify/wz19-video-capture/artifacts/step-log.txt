@@ -1,0 +1,14 @@
+2026-10-23T05:22:52.258Z STEP 1 start — navigate to wizard root
+2026-10-23T05:22:53.843Z STEP 2 discovery — waiting for /api/scan to populate router select
+2026-10-23T05:23:17.078Z STEP 2 discovery — routers offered: [{"value":"192.168.2.1","text":"192.168.2.1 — unknown unknown"},{"value":"192.168.2.30","text":"192.168.2.30 — unknown unknown"},{"value":"192.168.2.130","text":"192.168.2.130 — unknown unknown"},{"value":"192.168.2.121","text":"192.168.2.121 — unknown unknown"},{"value":"192.168.2.2","text":"192.168.2.2 — unknown unknown"}]
+2026-10-23T05:23:17.078Z STEP 3 config — select router 192.168.2.30
+2026-10-23T05:23:17.931Z STEP 3 config — enter router password
+2026-10-23T05:23:18.455Z STEP 4 config — upstream mode WAN (default, visible)
+2026-10-23T05:23:19.157Z STEP 5 config — enter Lightning payout address
+2026-10-23T05:23:19.875Z STEP 6 advanced — open <details> to show optional settings
+2026-10-23T05:23:21.757Z STEP 6 ready-state — deploy button {"disabled":false,"text":"Deploy net4sats"}
+2026-10-23T05:23:21.757Z STEP 7 deploy — clicking deploy button
+2026-10-23T05:23:26.382Z STEP 7 deploy-progress — ["○Verifying SSH access to router...○Checking firmware version...○Setting root password...○Configuring upstream connection...○Installing net4sats package + patching backend...○Branding captive portal as net4sats...○Deploying net4sats captive portal...○Installing net4sats admin panel...○Configuring Lightning address...○Restarting services...○Running health check..."]
+2026-10-23T05:23:27.057Z STEP 7 deploy-result — ERROR VIEW SHOWN. detail="Cannot connect to router via SSH"
+2026-10-23T05:23:27.057Z STEP 7 deploy-log tail — ""
+2026-10-23T05:23:31.058Z END take — sawSuccess=false sawError=true

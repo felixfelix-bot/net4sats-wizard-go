@@ -1,0 +1,7 @@
+net4sats
+
+Bitcoin WiFi — Setup your router in 60 seconds
+
+Setup failed
+
+Cannot connect to router via SSH
