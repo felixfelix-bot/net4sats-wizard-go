@@ -248,18 +248,41 @@ secret-like token.
 
 ## 7. Commit and push
 
-Reported from observed output at the time of writing — see the closing lines of
-this report for verification.
+Two commits, both conventional, both pushed to
+`origin/worker-heavy/t_gate8-19b1b1c6`:
+
+| SHA | subject | files |
+|---|---|---|
+| `681ed99` | `docs(install): document GL-MT6000 feed consumption` | 5 files, +1074 |
+| `2edfa0b` | `docs(install): correct the SHA256SUMS probe content-type` | 1 file |
+
+The second is a one-line accuracy fix inside the evidence file: the capture line
+claimed `application/gzip` for a URL `curl` reports as
+`application/octet-stream`. Correcting an evidence file's own transcript is not
+a second logical change to the deliverable — the doc set landed atomically in
+`681ed99`; `2edfa0b` repairs a transcription error in it.
+
+Observed push output:
 
 ```
-docs(install): document GL-MT6000 feed consumption
+7961d02..681ed99  HEAD -> worker-heavy/t_gate8-19b1b1c6
+681ed99..2edfa0b  HEAD -> worker-heavy/t_gate8-19b1b1c6
 ```
 
-Files in the commit:
+Verified after push:
+
+```
+local  HEAD: 2edfa0b1c3757f9949d0b17eabe421db42fca602
+remote ref : 2edfa0b1c3757f9949d0b17eabe421db42fca602  == local HEAD
+git ls-tree -r origin/worker-heavy/t_gate8-19b1b1c6 -> docs/feed-install.md present
+```
+
+The first commit contains:
 `docs/feed-install.md`, `docs/evidence/2026-10-23-fe2b-measured-captures.md`,
 `README.md`, plus task-scoped `PROGRESS-t_d41ef5b5.md` / `REPORT-t_d41ef5b5.md`
 (added with `git add -f`: the shared `.git/info/exclude` outside this worktree
-blocks root `PROGRESS*`/`REPORT*`).
+blocks root `PROGRESS*`/`REPORT*`). No source file, no config, no formatting
+churn. Pre-commit `cred-gate` reported clean on both commits.
 
 ## 8. What remains (upstream of this card, not doc gaps)
 
