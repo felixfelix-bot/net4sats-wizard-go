@@ -8,6 +8,31 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Test-network mints are no longer injected into every deploy.** The deploy
+  step used to merge two `testnut` (Cashu test-network) mints into
+  `config.json` `accepted_mints` unconditionally. Those mints issue worthless
+  test ecash, so a production router accepting them lets a client pay with
+  value the operator cannot redeem. The production set is now unconditional and
+  the test set is added **only** when the wizard is started with
+  `--test-mode`:
+
+  ```sh
+  ./net4sats-wizard --test-mode   # test router: testnut mints included
+  ./net4sats-wizard               # default: production mints only
+  ```
+
+  Test mode is a **process-level** switch, not a request field: the wizard's
+  HTTP API is reachable by anything running on the host, and a request-supplied
+  flag would let a single `POST /api/deploy` opt itself into test mints.
+  `TestDeployRequestHasNoTestModeField` enforces that. The streamed deploy log
+  names the mints it wrote and calls out the test set when it is active.
+
+  Guards: `TestNoTestnutMintsWithoutTestMode`,
+  `TestDefaultMintsIncludeTestnutOnlyUnderFlag`, `TestConfigCommandGatesTestnut`
+  and `TestParseOptionsTestMode` (`defaults_test.go`), verified RED before the
+  fix; the jq round-trip in `security_hardening_test.go` now asserts both the
+  off and on cases against a real `jq`.
+
 - **Internal operator context removed from every shipped surface.** The wizard
   is intended to be donated/handed over, so the operator's private working
   context has no business in it. Removed: a personal laptop model and first name

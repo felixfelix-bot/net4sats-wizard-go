@@ -76,7 +76,7 @@ func TestRemoteCommandsNeverInterpolatePayloads(t *testing.T) {
 		{"sta-ssid-sink", func(p string) string { return staSetupScript(p, "benign-key") }, false},
 		{"sta-key-sink", func(p string) string { return staSetupScript("benign-ssid", p) }, false},
 		{"lnurl-sink", func(string) string { return lnIdentCommand() }, true},
-		{"mint-sink", func(string) string { return cfgConfigCommand(0, "0.9000", "0.1000") }, true},
+		{"mint-sink", func(string) string { return cfgConfigCommand(0, "0.9000", "0.1000", false) }, true},
 	}
 
 	for _, b := range builders {
@@ -118,7 +118,7 @@ func TestVulnerableConstructionsAreGone(t *testing.T) {
 		{"passwd", passwdCommand("x"), []string{"base64 -d", "passwd root"}},
 		{"sta", staSetupScript("x", "y"), []string{`ssid="$sta_ssid"`, `key="$sta_key"`}},
 		{"lnurl", lnIdentCommand(), []string{"cat > /tmp/lnaddr.val", "--rawfile la /tmp/lnaddr.val"}},
-		{"mint", cfgConfigCommand(0, "0.9000", "0.1000"), []string{"cat > /tmp/mint.val", "--rawfile mu /tmp/mint.val"}},
+		{"mint", cfgConfigCommand(0, "0.9000", "0.1000", false), []string{"cat > /tmp/mint.val", "--rawfile mu /tmp/mint.val"}},
 	}
 	for _, c := range checks {
 		for _, want := range c.want {
@@ -130,7 +130,7 @@ func TestVulnerableConstructionsAreGone(t *testing.T) {
 
 	if strings.Contains(passwdCommand("x"), "--arg") ||
 		strings.Contains(lnIdentCommand(), "--arg la") ||
-		strings.Contains(cfgConfigCommand(0, "0.9000", "0.1000"), "--arg mu") {
+		strings.Contains(cfgConfigCommand(0, "0.9000", "0.1000", false), "--arg mu") {
 		t.Errorf("old jq --arg / echo -e interpolation present in commands")
 	}
 }
@@ -293,7 +293,7 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 
 	sample := `{"margin":0,"profit_share":[{"identity":"owner","factor":0.9},{"identity":"developer","factor":0.1}],"accepted_mints":[{"url":"https://existing.example/mint","min_balance":0}]}`
 
-	run := func(t *testing.T, mint string) mintDoc {
+	run := func(t *testing.T, testMode bool, mint string) mintDoc {
 		t.Helper()
 		dir := t.TempDir()
 		valFile := filepath.Join(dir, "mint.val")
@@ -308,7 +308,7 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 			"--argjson", "m", "5",
 			"--argjson", "of", "0.8500",
 			"--argjson", "df", "0.1500",
-			"--argjson", "dm", defaultMints,
+			"--argjson", "dm", defaultMintsJSON(testMode),
 			"--rawfile", "mu", valFile,
 			cfgJQProgram, src).CombinedOutput()
 		if err != nil {
@@ -331,7 +331,7 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 	}
 
 	t.Run("benign mint", func(t *testing.T) {
-		doc := run(t, "https://mint.example.com")
+		doc := run(t, false, "https://mint.example.com")
 		if doc.Margin != 5 {
 			t.Errorf("margin = %d, want 5 (host-side math unchanged)", doc.Margin)
 		}
@@ -347,23 +347,37 @@ func TestCfgConfigCommandJQRoundTrip(t *testing.T) {
 		if chosen != 1 {
 			t.Errorf("chosen mint appears %d times, want exactly 1", chosen)
 		}
-		if !hasMint(doc, "https://mint.coinos.io") || !hasMint(doc, "https://testnut.cashu.space") {
-			t.Error("default mints not added")
+		if !hasMint(doc, "https://mint.coinos.io") {
+			t.Error("default production mints not added")
+		}
+		// Without --test-mode the test-network mints must not reach config.json.
+		if hasMint(doc, "https://testnut.cashu.space") {
+			t.Error("testnut mint injected without --test-mode")
 		}
 		if !hasMint(doc, "https://existing.example/mint") {
 			t.Error("pre-existing mint dropped")
 		}
 	})
 
+	t.Run("test mode adds testnut mints", func(t *testing.T) {
+		doc := run(t, true, "")
+		if !hasMint(doc, "https://testnut.cashu.space") || !hasMint(doc, "https://nofee.testnut.cashu.space") {
+			t.Error("--test-mode did not add the testnut mints")
+		}
+		if !hasMint(doc, "https://mint.coinos.io") {
+			t.Error("--test-mode dropped the production mints")
+		}
+	})
+
 	t.Run("attack payload mint is inert data", func(t *testing.T) {
-		doc := run(t, attackPayloads[1])
+		doc := run(t, false, attackPayloads[1])
 		if !hasMint(doc, attackPayloads[1]) {
 			t.Error("payload mint not stored verbatim as url data")
 		}
 	})
 
 	t.Run("empty mint still updates config", func(t *testing.T) {
-		doc := run(t, "")
+		doc := run(t, false, "")
 		if doc.Margin != 5 {
 			t.Errorf("margin = %d, want 5 — empty mint must not break the update (jq program gates on $mu != \"\")", doc.Margin)
 		}

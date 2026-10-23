@@ -534,7 +534,7 @@ func handleDeploy(w http.ResponseWriter, r *http.Request) {
 	jobs[jobID] = job
 	jobsMutex.Unlock()
 
-	go runDeployment(job, req)
+	go runDeployment(job, req, serverOptions)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"job_id": jobID})
@@ -615,6 +615,15 @@ func allRadiosUp(statusJSON string) bool {
 }
 
 func main() {
+	opts, err := parseOptions(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "net4sats-wizard: "+err.Error())
+		os.Exit(2)
+	}
+	// Process-level switches are read by the deploy path, not the request, so
+	// a client cannot opt itself into test mints.
+	serverOptions = opts
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scan", handleScan)
 	mux.HandleFunc("/api/wifi-scan", handleWifiScan)
@@ -627,6 +636,9 @@ func main() {
 
 	addr := listenAddress()
 	fmt.Printf("net4sats wizard running on http://%s\n", addr)
+	if opts.testMode {
+		fmt.Println("TEST MODE: testnut test-network mints WILL be added to deployed routers.")
+	}
 	fmt.Println("Open this URL in your browser to set up a router.")
 	fmt.Println("To serve on other interfaces, set WIZARD_BIND (e.g. WIZARD_BIND=0.0.0.0:8099).")
 	log.Fatal(http.ListenAndServe(addr, handler))

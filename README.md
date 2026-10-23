@@ -73,6 +73,20 @@ routers on your LAN and deploys net4sats over SSH.
 6. After ~30 seconds: connect to the `net4sats-portal` WiFi and open any
    website — the captive portal appears with payment options.
 
+### Test mode (test routers only)
+
+By default a deploy configures only **production** Cashu mints. Starting the
+wizard with `--test-mode` additionally accepts the `testnut` test-network mints,
+which is what you want when exercising a router with test ecash and never what
+you want on a router taking real payments:
+
+```sh
+./net4sats-wizard --test-mode
+```
+
+Test mode is a command-line switch on purpose: it is read by the process, not
+sent in the `/api/deploy` request, so a web page cannot turn it on.
+
 ## What the wizard does
 
 The deployment runs 9 steps over SSH:

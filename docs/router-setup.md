@@ -88,7 +88,19 @@ Example: `you@walletofsatoshi.com`
 The router supports multiple mints:
 - coinos.io
 - minibits.cash
-- testnut.cashu.exchange
+- lnserver.com
+- macadamia.cash
+- westernbtc.com
+- kashu.me
+- cubabitcoin.org
+
+The `testnut` test-network mints are **not** configured by default. They are
+added only when the wizard is started with `--test-mode`, which you want on a
+test router and never on one taking real payments:
+
+```sh
+./net4sats-wizard --test-mode
+```
 
 Price is set to **1 sat per 21 MB** by default.
 

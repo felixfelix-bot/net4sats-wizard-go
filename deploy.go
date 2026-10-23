@@ -139,19 +139,59 @@ func lnIdentCommand() string {
 		"rm -f /tmp/lnaddr.val"
 }
 
-// defaultMints is the idempotent mint set pushed into config.json
-// (7 production + 2 testnut zero-fee).
-const defaultMints = `[
+// Mint sets pushed into config.json. The split is by network, not by
+// preference: testnut mints issue test-network ecash that is worth nothing, so
+// a client paying with it on a production router hands the operator value they
+// cannot redeem. That is why the test set is opt-in (see testMode) instead of
+// being merged into every deploy as it used to be.
+//
+// min_balance / payout_interval_seconds on the test mints are set to values
+// that effectively disable payouts to them; they exist so a test router can
+// accept test payments, not so they can settle.
+const productionMints = `[
     {"url":"https://mint.coinos.io","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.minibits.cash/Bitcoin","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.lnserver.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.macadamia.cash","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://mint.westernbtc.com","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://kashu.me","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
-    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
+    {"url":"https://mint.cubabitcoin.org","min_balance":64,"balance_tolerance_percent":10,"payout_interval_seconds":60,"min_payout_amount":128,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
+  ]`
+
+const testnutMints = `[
     {"url":"https://nofee.testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0},
     {"url":"https://testnut.cashu.space","min_balance":0,"balance_tolerance_percent":0,"payout_interval_seconds":999999,"min_payout_amount":999999,"price_per_step":1,"price_unit":"sats","min_purchase_steps":0}
   ]`
+
+// defaultMint is one entry of a mint set, used only to splice the two
+// compile-time JSON constants above into a single array.
+type defaultMint map[string]any
+
+// defaultMintsJSON returns the mint array pushed into config.json. Test-network
+// mints are included ONLY when the wizard was started with --test-mode, so an
+// ordinary deploy can never put unredeemable test ecash in front of a paying
+// client. Both inputs are compile-time constants, so a decode failure is a
+// programming error and panics rather than shipping a half-written mint set.
+func defaultMintsJSON(testMode bool) string {
+	parse := func(raw string) []defaultMint {
+		var mints []defaultMint
+		if err := json.Unmarshal([]byte(raw), &mints); err != nil {
+			panic("invalid compile-time mint constant: " + err.Error())
+		}
+		return mints
+	}
+
+	mints := parse(productionMints)
+	if testMode {
+		mints = append(mints, parse(testnutMints)...)
+	}
+
+	out, err := json.Marshal(mints)
+	if err != nil {
+		panic("marshal default mints: " + err.Error())
+	}
+	return string(out)
+}
 
 // cfgJQProgram rewrites config.json: margin, owner/developer profit
 // shares, operator mint and default-mint additions ($m/$of/$df/$dm via
@@ -175,12 +215,16 @@ const cfgJQProgram = `.margin=$m | ` +
 // (--argjson); the operator's mint URL is piped over SSH stdin by the
 // caller into /tmp/mint.val and consumed via --rawfile — it never enters
 // the command string.
-func cfgConfigCommand(margin int, ownerFactor, devFactor string) string {
+//
+// testMode is passed straight through to defaultMintsJSON: it is the ONLY
+// route by which test-network mints reach a router, so this signature makes
+// the decision explicit at every call site instead of implicit in a constant.
+func cfgConfigCommand(margin int, ownerFactor, devFactor string, testMode bool) string {
 	return "cat > /tmp/mint.val && " +
 		"jq --argjson m " + strconv.Itoa(margin) + " " +
 		"--argjson of " + ownerFactor + " " +
 		"--argjson df " + devFactor + " " +
-		"--argjson dm '" + defaultMints + "' " +
+		"--argjson dm '" + defaultMintsJSON(testMode) + "' " +
 		"--rawfile mu /tmp/mint.val '" + cfgJQProgram + "' " +
 		"/etc/tollgate/config.json > /tmp/cfg.tmp 2>&1 && " +
 		"mv /tmp/cfg.tmp /etc/tollgate/config.json && echo 'config updated' || echo 'no config'; " +
@@ -204,8 +248,52 @@ func deploySteps() []Step {
 	}
 }
 
+// options holds the process-level switches. They are deliberately NOT part of
+// deployRequest: the wizard's HTTP API is reachable by anything running on the
+// host, and a request-supplied switch would let a single POST opt itself into
+// test-network mints. Test mode is therefore chosen on the command line, by the
+// person running the wizard.
+type options struct {
+	testMode bool
+}
+
+// serverOptions is set once in main() from the parsed command line. The zero
+// value (test mode off) is the safe default for tests and any embedding.
+var serverOptions options
+
+// parseOptions parses the wizard's command-line switches. Only the standard
+// library is used (no flag package) so parsing stays testable with explicit
+// argument slices. Unknown arguments are an error rather than being ignored:
+// silently dropping `--testmode` (a plausible typo) would leave an operator
+// believing test mints were enabled when they were not.
+func parseOptions(args []string) (options, error) {
+	var opts options
+	for _, arg := range args {
+		name, value, hasValue := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		trimmed := strings.TrimLeft(arg, "-")
+		if trimmed == arg || name == "" {
+			return opts, fmt.Errorf("unexpected argument %q (the wizard takes switches only: --test-mode)", arg)
+		}
+		switch name {
+		case "test-mode":
+			if hasValue {
+				on, err := strconv.ParseBool(value)
+				if err != nil {
+					return opts, fmt.Errorf("--test-mode: %q is not a boolean", value)
+				}
+				opts.testMode = on
+				continue
+			}
+			opts.testMode = true
+		default:
+			return opts, fmt.Errorf("unknown switch %q (the wizard takes switches only: --test-mode)", arg)
+		}
+	}
+	return opts, nil
+}
+
 // runDeployment executes the full deployment sequence.
-func runDeployment(job *Job, req deployRequest) {
+func runDeployment(job *Job, req deployRequest, opts options) {
 	client := sshConnect(req.IP, req.Password)
 	if client == nil && req.Password != "" {
 		// If password auth failed, try key auth
@@ -788,7 +876,9 @@ func runDeployment(job *Job, req deployRequest) {
 	lnOut := sshUploadPipe(client, []byte(req.LNURL), lnIdentCommand())
 
 	// 8b: Write margin + profit_share to config.json.
-	// Also ensure 9 default mints (7 production + 2 testnut zero-fee) are present (idempotent).
+	// Also ensure the default production mints are present (idempotent).
+	// Test-network mints are added only under --test-mode — see
+	// defaultMintsJSON.
 	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
 	// The operator's mint URL travels over SSH stdin into /tmp/mint.val
 	// (see cfgConfigCommand).
@@ -796,14 +886,14 @@ func runDeployment(job *Job, req deployRequest) {
 	margin := clamp(req.Margin, 0, 100)
 	ownerFactor := strconv.FormatFloat(1.0-float64(devSplit)/100.0, 'f', 4, 64)
 	devFactor := strconv.FormatFloat(float64(devSplit)/100.0, 'f', 4, 64)
-	cfgOut := sshUploadPipe(client, []byte(req.Mint), cfgConfigCommand(margin, ownerFactor, devFactor))
+	cfgOut := sshUploadPipe(client, []byte(req.Mint), cfgConfigCommand(margin, ownerFactor, devFactor, opts.testMode))
 
 	if strings.Contains(lnOut, "identities updated") {
 		job.addLog("identities.json: lightning_address=" + req.LNURL + " for owner")
 	}
 	if strings.Contains(cfgOut, "config updated") {
 		job.addLog("config.json: margin=" + strconv.Itoa(margin) + "%, payout share=" + strconv.Itoa(devSplit) + "% (profit_share updated)")
-		job.addLog("config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin, testnut x2)")
+		job.addLog("config.json: mints configured (" + mintLogSummary(opts.testMode) + ")")
 	}
 
 	// 8c: Default mints already injected in 8b above (accepted_mints array).
@@ -1195,6 +1285,17 @@ func extractIPKFilename(html string, pkgName string) (string, error) {
 func isFilenameByte(b byte) bool {
 	return b == '.' || b == '-' || b == '_' ||
 		(b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}
+
+// mintLogSummary names the mints that were configured, for the streamed deploy
+// log. The test set is called out explicitly so an operator reading the log can
+// tell whether test mints went onto the router.
+func mintLogSummary(testMode bool) string {
+	summary := "coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin"
+	if testMode {
+		summary += ", testnut x2 (--test-mode)"
+	}
+	return summary
 }
 
 func truncate(s string, maxLen int) string {
