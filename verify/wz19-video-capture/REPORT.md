@@ -266,6 +266,33 @@ commit `0bb28d5` (pushed; remote sha verified equal to local):
 **No source file was modified. No router was flashed. Nothing was uploaded. No
 happy path was faked, and no synthetic or mockup footage was produced.**
 
+## Verification evidence (this lane's own work)
+
+Full detail in `verify/wz19-video-capture/VERIFICATION.md`; raw JSON in `artifacts/`.
+
+- **`hermes verify` -> `ok: true`** (build exit 0, `go test ./...` exit 0, readiness
+  HTTP 200 on `http://127.0.0.1:8099/`). The first run reported `ok: false` purely
+  because the detector guessed port **8000** while the wizard binds **8099**; the
+  app's own stdout in that same record says `running on http://127.0.0.1:8099`.
+  Confirmed by re-running `--phase start --port 8099` -> `ok: true`, HTTP 200, and
+  then fixing the recipe. The failing run is kept at
+  `artifacts/verify-first-run-port-mismatch.json` rather than deleted.
+- **Recipe pinned:** `.hermes/environment.json` now sets `port: 8099` with the reason,
+  so the next lane does not rediscover it.
+- **Cache defeated:** `go test -count=1 ./...` -> `ok net4sats-wizard 57.082s`, exit 0
+  (`artifacts/gotest-count1.log`).
+- **`node --check capture.cjs` -> SYNTAX OK.**
+- **Reproducibility:** the take was re-run on a second clean Xvfb display (`:98`).
+  Same 5 routers in the same order, same 11-step list, same `Deploy net4sats` ready
+  state, same terminal error view, and branding in **78/81 (96.3 %)** frames vs
+  **83/86 (96.5 %)** in run 1 — last-frame OCR text byte-identical.
+
+**What this proves:** build + full suite green, app boots and serves, capture
+toolchain valid and deterministic.
+**What it does NOT prove, and I am not claiming:** that the de-branded happy path
+works. A green build/test/readiness run says nothing about branding or about a
+deploy that dies at step 1. The gate stays open.
+
 ## Fleet writeback
 
 - **Comment posted** to card `t_8b5cf200` on board `net4sats-mvp-v2`

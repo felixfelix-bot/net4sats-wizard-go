@@ -1,0 +1,11 @@
+{
+  "name": "Go project (net4sats wizard)",
+  "kind": "go",
+  "bootstrap": [],
+  "build": ["go build ./..."],
+  "test": ["go test ./..."],
+  "start": "go run .",
+  "port": 8099,
+  "readinessPath": "/",
+  "evidence": ["Detected go.mod", "port pinned to 8099: the wizard binds 127.0.0.1:8099 (main.go defaultListenAddr), not the detector's 8000 guess"]
+}
