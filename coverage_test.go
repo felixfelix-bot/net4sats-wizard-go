@@ -11,8 +11,15 @@ func TestSshRunFunction(t *testing.T) {
 	// Test that sshRun is called indirectly through sshIdentify
 	// This is a simple smoke test to ensure the function exists and doesn't crash
 	// when called with empty credentials
-
-	firmware, vendor, model := sshIdentify("192.168.1.1", "")
+	//
+	// The probe target must be one that can never be a live router, or this test
+	// silently inherits whatever the host's LAN looks like: it used to dial
+	// 192.168.1.1, which on the lab bench is a running QEMU OpenWrt VM with an
+	// empty root password, so the "empty credentials yield empty results"
+	// assertion failed there. 255.255.255.255 is never a unicast SSH host and
+	// the kernel rejects the connect immediately (ENETUNREACH), so the dial
+	// returns nil without waiting out the 10s ssh timeout.
+	firmware, vendor, model := sshIdentify("255.255.255.255", "")
 	// Result will be empty strings, but the function should not panic
 	if len(firmware) != 0 || len(vendor) != 0 || len(model) != 0 {
 		t.Errorf("sshIdentify with empty credentials should return empty strings, got firmware=%q, vendor=%q, model=%q", firmware, vendor, model)
