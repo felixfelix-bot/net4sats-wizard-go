@@ -266,11 +266,24 @@ commit `0bb28d5` (pushed; remote sha verified equal to local):
 **No source file was modified. No router was flashed. Nothing was uploaded. No
 happy path was faked, and no synthetic or mockup footage was produced.**
 
+## Fleet writeback
+
+- **Comment posted** to card `t_8b5cf200` on board `net4sats-mvp-v2`
+  (`hermes kanban --board net4sats-mvp-v2 comment t_8b5cf200 ...`) — confirmed by
+  the CLI: `Comment added to t_8b5cf200`.
+- **`hermes kanban block` was REFUSED**: `cannot block t_8b5cf200`. The card sits in
+  `triage` and is not claimed by this lane, so the block transition is not permitted
+  from here. I did **not** force it. The blocker therefore lives in the card comment
+  and in this report; a card owner or the orchestrator must apply the status change.
+  Card status at hand-off remains `triage` (verified by `hermes kanban show`).
+- No card status, assignee, or gate field was altered by this lane.
+
 ## Explicitly NOT claimed
 
 - No gate PASS. Criterion 3 fails and criterion 2 is unmet.
 - No PR, no comment, no video attachment, no upload.
 - No merge, no flash, no deploy success.
+- No card status transition — the `block` call was refused and reported as such.
 - A prior sibling lane's "WZ1.9 demo video" (`docs/demo/demo-trimmed.mp4` on
   `wz19-video-evidence`) is **not** the wizard: OCR of it shows the **Cashu.me**
   wallet onboarding and an SMS mockup containing the literal text *"mockup invoice /
