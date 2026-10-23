@@ -86,11 +86,28 @@ deliverable.
 
 ## Git state
 
-**No commit, no push, and none is claimed.** Deliberate: the brief's death-proofing rule applies to
-work that mutates the repo, and this task's only artifact is a plan document outside the repo.
-Committing would have swept foreign-workspace material — `origin` here is
-`felixfelix-bot/net4sats-wizard-go`, while every sibling card's `PROGRESS-t_*`/`REPORT-t_*` in this
-worktree root documents `net4sats-mvp-v2`. Observed facts:
+**No source commit** (read-only task), but the two task-scoped report files **are committed and
+pushed** — observed, not assumed:
+
+```
+commit 7c5cbdc  docs(wz1.5): t_gate8-19b1b1c6 — exhaustive URL inventory (26 actionable rows, 146 leave-alone)
+        PROGRESS-t_gate8-19b1b1c6.md | 68 +++++++
+        REPORT-t_gate8-19b1b1c6.md   | 134 +++++++++
+push    c56ce38..7c5cbdc  HEAD -> worker-heavy/t_gate8-19b1b1c6   (origin)
+verify  git ls-remote origin refs/heads/worker-heavy/t_gate8-19b1b1c6 -> 7c5cbdc7cf88ae11f65f6bdd25402295f8aab8b5
+        git rev-parse HEAD                                             -> 7c5cbdc7cf88ae11f65f6bdd25402295f8aab8b5   (equal)
+```
+
+Staged explicitly by path (`git add -f PROGRESS-t_gate8-19b1b1c6.md REPORT-t_gate8-19b1b1c6.md`);
+`git diff --cached --name-only` confirmed exactly those two files before committing — the sibling's
+in-flight `deploy.go`/`defaults_test.go`/`index.html` edits were never staged. (That sibling committed
+them itself as `c56ce38` mid-session, so they no longer appear in `git status`.) The pre-commit
+cred-gate passed: `clean (30 literals checked, mode=staged)`.
+
+Remaining `git status --short`: `?? .hermes/` and `?? verify/wz16-e2e-gate/` only — both pre-existing,
+neither mine.
+
+Observed facts:
 
 * `git branch --show-current` → `worker-heavy/t_gate8-19b1b1c6`; `HEAD = 15f5d29` at inventory time
   and `fea18ff` at report time — the branch moved **twice** under me (`15f5d29` → `fea18ff`) as
