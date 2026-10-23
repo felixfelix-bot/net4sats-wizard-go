@@ -36,6 +36,13 @@ and [Semantic Versioning](https://semver.org/).
   branding) and the `felixfelix-bot/...` release URLs (live artifact pins —
   renaming them breaks the install; a pin migration is separate upstream work).
 
+  A rename has two halves, so a second guard covers the half a content scan
+  cannot see: **`TestNoInternalProcessNamedFiles`** fails if any published file
+  *name* still carries internal detail. It exists because the first attempt at
+  the runbook rename committed only the new path and left the old filename
+  published; the guard was verified to fail on that exact state and pass once
+  the stale file was removed.
+
 - **Retired control name removed from the remaining operator-visible copy.**
   The previous de-branding pass neutralised the advanced control's *hint* but
   left the control's own **label** reading `Dev split`, the deploy-log line
