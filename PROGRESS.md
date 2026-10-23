@@ -109,3 +109,27 @@ DONE — read-only adjudication + a deletion experiment on a throwaway copy
 - `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-url-inventory.part-b.md` — the deliverable
 - `PROGRESS.md` (this file) + `REPORT.md` — appended, not overwritten (shared with other cards)
 - No repo source file touched; no test/build state changed; not merged with part A.
+
+---
+
+# t_855cbaac — Phase-2 feed publication status
+
+**Finding:** Phase-2 feed **NOT PUBLISHED** — no fetchable feed index at any host the project
+names. Every opkg/apk index path 404s except a stale, **unsigned** `v0.5.0-alpha3` alpha index on
+`releases.tollgate.me` (`last-modified: Wed, 01 Jul 2026 19:52:40 GMT`; `Packages.sig` and
+`keys/tollgate-testing.pem` both 404). What exists is a per-asset **release lane**,
+`FreedomTechFeed/packages` `v0.6.0` (2026-10-21, 26 assets, signed manifest verified this run) —
+artifacts, not a feed. Candidate base for the downstream decision:
+`https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/` (asset-only; cannot express
+a `src/gz` line; two minors behind the current `felixfelix-bot` pins).
+
+Two brief corrections, both measured: `schedule.md` has **0** hits for `feed`/`phase.?2`
+(337 lines — the term is defined in `feed-freedomtech/docs/per-arch-release-assets.md:4`), and
+`deploy.go` at HEAD has **zero** `blossom2`/`orangesync` references (all three constants are
+`felixfelix-bot`; blossom survives only in history, `11f63e7:deploy.go:42`).
+
+**Status:** DONE — read-only probe, no repo source changed, no build/test applicable.
+**Files touched:** deliverable `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-phase2-feed-status.md`
+(outside any git repo); `REPORT-t_855cbaac.md` + `PROGRESS-t_855cbaac.md` (new, tracked); this
+append to `PROGRESS.md`. **`REPORT.md` deliberately untouched** — sibling card `t_wz15-part-b` had
+uncommitted edits there during this run.
