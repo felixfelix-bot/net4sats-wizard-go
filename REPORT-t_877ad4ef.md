@@ -199,3 +199,14 @@ wrong verdicts — they are recorded because they are the trap for the next lane
   `fe2b_feed_check.sh` + evidence attachments, against host `10.17.171.1`. This run is the
   re-run against the current bench (`192.168.1.1`, serial-only); the script here supersedes
   that version.
+
+## 9. Post-ship verification (after the final commit)
+
+- Committed script bytes == on-disk bytes:
+  `git show HEAD:scripts/fe2b_feed_check.sh | sha256sum` and `sha256sum scripts/fe2b_feed_check.sh`
+  both `44f2148d7caf9cf1c4e45aa0180e9bb2e292f6825a33fbd6d35ea403d18f42cb`.
+- The **committed** script was re-run against the live device: exit **1**,
+  `5 passed, 3 failed`, and the PASS/FAIL lines are `diff`-identical to the committed
+  baseline file `verify/fe2b-baseline/red-run-2026-10-23.txt` ("MATCHES COMMITTED BASELINE").
+  So the shipped artefact, not just a working copy, produces the documented RED baseline.
+- `sh -n scripts/fe2b_feed_check.sh` clean. `shellcheck` not installed on this host.
