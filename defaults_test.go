@@ -21,7 +21,58 @@ var (
 
 	// advancedOpenRE bounds the collapsed Advanced section.
 	advancedOpenRE = regexp.MustCompile(`(?s)<details[^>]*class="advanced"[^>]*>`)
+
+	// tagStripRE removes every tag, leaving only readable copy.
+	tagStripRE = regexp.MustCompile(`(?s)<[^>]*>`)
 )
+
+// TestDevSplitDefaultIsZero pins the payout-share default to 0.
+//
+// The default is a policy value, not a cosmetic one: whatever the slider is
+// preseeded with is what an operator who never opens Advanced settings sends to
+// POST /api/deploy, and therefore what lands in the router's config.json
+// profit_share. A non-zero preseed routes a share of every operator's payments
+// away without them ever choosing it, so the default must be the no-op value and
+// any other share must be an explicit opt-in.
+func TestDevSplitDefaultIsZero(t *testing.T) {
+	ui := string(indexHTML)
+
+	input := devsplitInputRE.FindString(ui)
+	if input == "" {
+		t.Fatal(`could not find the payout-share slider tag (id="devsplit")`)
+	}
+	if !strings.Contains(input, `value="0"`) {
+		t.Errorf(`payout-share slider is not preseeded with value="0": %s`, input)
+	}
+	if strings.Contains(input, `value="10"`) {
+		t.Errorf("payout-share slider still carries the old non-zero default: %s", input)
+	}
+
+	// The readout is what the operator actually reads next to the label, so it
+	// has to agree with the slider position.
+	readout := regexp.MustCompile(`(?s)<span[^>]*id="devsplit-val"[^>]*>[^<]*</span>`).FindString(ui)
+	if readout == "" {
+		t.Fatal(`could not find the payout-share readout (id="devsplit-val")`)
+	}
+	if !strings.Contains(readout, ">0%<") {
+		t.Errorf("payout-share readout does not show the 0%% default: %s", readout)
+	}
+
+	// A hint that documents a default the operator never sees is worse than no
+	// hint at all. The hint contains an inline <code> tag, so it is read up to
+	// the closing </div> and stripped of markup before matching.
+	hint := regexp.MustCompile(`(?s)Optional share of payments routed to the developer payout address.*?</div>`).FindString(ui)
+	if hint == "" {
+		t.Fatal("payout-share hint is gone")
+	}
+	hintText := tagStripRE.ReplaceAllString(hint, " ")
+	if !strings.Contains(hintText, "Default 0%") {
+		t.Errorf("payout-share hint does not document the 0%% default: %q", hintText)
+	}
+	if strings.Contains(hintText, "Default 10%") {
+		t.Errorf("payout-share hint still documents the retired 10%% default: %q", hintText)
+	}
+}
 
 // TestDevSplitSliderIsAdvancedOnly asserts the payout-share slider is rendered
 // inside the collapsed Advanced settings section, and that it still spans the

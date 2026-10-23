@@ -8,6 +8,24 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Payout-share default is now `0%`, and no share is routed unless the
+  operator sets one.** The advanced payout-share control was preseeded with
+  `10`, so an operator who never opened Advanced settings silently routed a
+  tenth of every payment to the developer payout address — they had to notice
+  the control and move it to opt *out*. The slider now starts at `0` (label,
+  readout and hint all say `0%`), so the default sends the full share to the
+  operator and any other value is a deliberate choice. The control itself is
+  unchanged: it still spans `0–50` and is still the only thing that populates
+  `config.json` `profit_share`.
+
+  This is the wizard's own downstream default. It does not touch any upstream
+  (unbranded) default, and the `devSplit` wire field, the `devsplit` /
+  `devsplit-val` DOM ids and the persisted `developer` identity name are all
+  kept, so existing clients and already-deployed `config.json` files keep
+  working. Guard: `TestDevSplitDefaultIsZero` plus
+  `TestDevSplitSliderIsAdvancedOnly` (`defaults_test.go`), both verified RED
+  against the old markup before the fix.
+
 - **Test-network mints are no longer injected into every deploy.** The deploy
   step used to merge two `testnut` (Cashu test-network) mints into
   `config.json` `accepted_mints` unconditionally. Those mints issue worthless
