@@ -261,7 +261,59 @@ were completed against the fail-closed plan.
 
 ---
 
-## 10. Scope and hygiene
+## 12. Workspace verification (`hermes verify`)
+
+The workspace-level recipe was run, not assumed.
+
+**First attempt failed for an environment reason, not a code reason:**
+
+```
+$ hermes verify --json
+{"recipe":"Go project","ok":false,"phases":[{"phase":"build",
+ "command":"go build ./...","exitCode":127,"duration":0.001,"ok":false,
+ "outputTail":"/bin/sh: 1: go: not found\n"}]}
+```
+
+`go` is installed at `/usr/local/go/bin/go` (`go version go1.22.12 linux/amd64`) but is not on
+the non-login PATH this agent shell gets. With it exported:
+
+```
+$ export PATH=/usr/local/go/bin:$PATH
+$ hermes verify --json
+{"recipe":"Go project","ok":true,"phases":[
+  {"phase":"build","command":"go build ./...","exitCode":0,"duration":0.146,"ok":true},
+  {"phase":"test","command":"go test ./...","exitCode":0,"duration":40.738,"ok":true,
+   "outputTail":"ok  \tnet4sats-wizard\t40.357s\n"}],
+ "readiness":{"url":"http://127.0.0.1:8099/","ready":true,"statusCode":200,
+  "duration":1.025,"error":null},
+ "source":"manifest"}                                              exit 0
+```
+
+**build PASS, test PASS (`ok net4sats-wizard 40.357s`), readiness PASS (HTTP 200 on :8099).**
+
+This exercises the Go wizard app, which is *not* code this task touched — the deliverables here
+are data artifacts plus a standalone Python validator, and there is no Go code in them. The run
+confirms the shared worktree was not left broken, which is the relevant guarantee; it is not
+evidence that the cut plan has cut points, because it does not.
+
+The task's own verifier was re-run after the build:
+
+```
+$ python3 artifacts/demo_basecut/validate_trim_plan.py
+21/21 assertions passed
+RESULT: PASS — plan is coherent and provably non-executable (fail-closed).   [exit 0]
+```
+
+### Post-run state
+
+`HEAD` advanced to `520b5df` (an unrelated sibling commit: "retire 'Dev split' control name
+from remaining user-facing copy") stacked above mine. Both of my commits remain ancestors of
+`HEAD`, and `git status --short artifacts/demo_basecut/` is empty, so the committed artifacts
+are byte-identical to disk. Local `HEAD` == `origin/worker-heavy/t_gate8-19b1b1c6`.
+
+---
+
+## 13. Scope and hygiene
 
 - Read-only analysis. No media created, modified, or written.
 - No secrets read, printed, or written. Only video metadata, board state, and hashes.
