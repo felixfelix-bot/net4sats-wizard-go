@@ -122,7 +122,8 @@ func sshWriteFile(client *ssh.Client, remotePath string, content []byte) error {
 //
 // Retained helper: the live deploy path uploads the portal with sshDeployFS
 // (deploy.go step 6a). Kept because the two branches that still carry this
-// symbol must not diverge further; see worker-heavy/t_d6e354a6-lint notes.
+// symbol must not diverge further; removing it is an owner decision, not a
+// lint cleanup.
 //
 //nolint:unused // dead helper retained on purpose; deprecation is an owner decision, not a lint fix
 func sshDeployPortal(client *ssh.Client, fs embed.FS, rootDir string) error {

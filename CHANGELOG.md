@@ -8,6 +8,34 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Internal operator context removed from every shipped surface.** The wizard
+  is intended to be donated/handed over, so the operator's private working
+  context has no business in it. Removed: a personal laptop model and first name
+  used as machine labels in `discover.go`'s discovery comments; an internal
+  kanban card id + branch name in `ssh.go`'s retained-helper comment; an
+  internal handover process name in `deploy.go` and `deploy_test.go`; an
+  internal decision-gate id in this file; and the public `README.md` link text.
+
+  The operator runbook is renamed from its old handover-derived filename to
+  **`docs/router-setup.md`** (with the README link updated in the same commit),
+  because the filename itself carried an internal process name onto a public doc
+  path.
+
+  No behaviour changed — every edit on the Go side is a comment; the discovery
+  candidate IP list, the pinned download URLs and the deploy logic are byte-identical.
+
+  The regression guard is `TestNoInternalProcessLeaksOnShippedSurfaces`
+  (`debrand_internal_test.go`). It scans the embedded UI, the packaged
+  `portal/`/`admin/`/`rpcd/` trees, the non-test Go sources and the docs for the
+  internal-detail family, and was verified RED (8 distinct leaks reported) before
+  any fix and GREEN after, plus a negative control that re-injected the retired
+  wording and confirmed the guard fails.
+
+  Deliberately retained, and recorded in the audit note rather than silently
+  "fixed": the `10.47.41.1` probe candidate (functional discovery data, not
+  branding) and the `felixfelix-bot/...` release URLs (live artifact pins —
+  renaming them breaks the install; a pin migration is separate upstream work).
+
 - **Retired control name removed from the remaining operator-visible copy.**
   The previous de-branding pass neutralised the advanced control's *hint* but
   left the control's own **label** reading `Dev split`, the deploy-log line
@@ -15,8 +43,8 @@ and [Semantic Versioning](https://semver.org/).
   "dev split" in two places. All three now read **payout share** — the wording
   the hint already used. No behaviour changed: the slider, its `0–50` range, its
   `10%` default and the `profit_share` factors it writes are untouched, so the
-  resolved FELIX Q3 gate (`Q3=B`, upstream default stays as-is) is not
-  re-litigated here.
+  already-decided upstream-default question (`Q3=B`, upstream default stays
+  as-is) is not re-litigated here.
 
   The regression guard now covers the surfaces it previously missed:
   `TestNoSplitWordingInVisibleCopy` strips `<script>`/`<style>` bodies and all

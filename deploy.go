@@ -22,7 +22,7 @@ const (
 	net4satsPackage = "net4sats"
 	// tollgate-wrt .ipk download URL (OpenWrt <= 24.10 back-compat).
 	//
-	// Fallback strategy (Endo handover):
+	// Fallback strategy (upstream-first, fork as interim):
 	//   Primary  — OpenTollGate/tollgate-module-basic-go upstream releases
 	//              (https://github.com/OpenTollGate/tollgate-module-basic-go/releases)
 	//   Fallback — felixfelix-bot fork releases for the v0.6.1-post-merge tag

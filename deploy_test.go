@@ -10,9 +10,9 @@ import (
 // (either the upstream OpenTollGate org or its felixfelix-bot fork).
 //
 // This guards against accidentally reverting to a stale or wrong repo, and
-// documents the Endo-handover fallback strategy: upstream OpenTollGate is the
-// primary source; the felixfelix-bot fork is the fallback for the
-// v0.6.1-post-merge tag until an equivalent upstream release exists.
+// documents the upstream-first policy: upstream OpenTollGate is the primary
+// source; the felixfelix-bot fork is the fallback for the v0.6.1-post-merge tag
+// until an equivalent upstream release exists.
 //
 // (SW4a) The nft-enforce overlay URL is gone — those rules ship inside the
 // ipk — and the full set of pinned URL constants, plus a live HTTP 200 check
