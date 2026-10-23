@@ -8,6 +8,27 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The stale Minibits/DLEQ workaround copy is gone from the mint selector.**
+  The hint under the mint preference control still read "Minibits temporarily
+  removed (DLEQ keyset rotation bug)", and `deploy.go` still carried a matching
+  comment, long after the underlying July workaround (which dropped Minibits
+  from the default mint set) had been reversed. Both were dangling references to
+  a backend bug in a third-party Cashu library, and neither belongs in a
+  front-end that is meant to carry no per-mint special-casing.
+
+  No behaviour changed: Minibits was already a listed production mint, the jq
+  filter that once dropped it is not in the deploy program, and the emitted
+  `config.json` is byte-identical. This removes copy and a comment only.
+
+  The real bug — DLEQ proofs verified against the mint's *current* keyset
+  instead of the keyset named by `proof.Id` — is fixed upstream in
+  `gonuts-tollgate` v0.13.0 (`cashu/nuts/nut12.VerifyProofsDLEQWithKeysets`,
+  which groups proofs by `proof.Id`), the version the TollGate backend pins.
+  Because the fix ships there, no wizard-side workaround is warranted and none
+  is reintroduced. Guards: `TestNoMintIsFilteredFromConfigCommand` and
+  `TestNoMinibitsDleqCopyInVisibleUI` (`defaults_test.go`), both verified RED
+  against the pre-fix state.
+
 - **Payout-share default is now `0%`, and no share is routed unless the
   operator sets one.** The advanced payout-share control was preseeded with
   `10`, so an operator who never opened Advanced settings silently routed a

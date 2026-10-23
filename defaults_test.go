@@ -257,6 +257,51 @@ func TestDeployRequestHasNoTestModeField(t *testing.T) {
 	}
 }
 
+// TestNoMintIsFilteredFromConfigCommand pins the general mint path: no mint may
+// be dropped by name. A previous revision rewrote .accepted_mints with a
+// per-mint regex filter (`.url | test("minibits") | not`) to work around a
+// keyset-rotation bug; that fix belongs in the backend, not the wizard, and the
+// wizard must not special-case any single mint again.
+//
+// The jq program legitimately uses select(...) for profit_share and for URL
+// de-duplication, so this test targets the filtering construct specifically —
+// a regex test against the mint URL — rather than the word "select".
+func TestNoMintIsFilteredFromConfigCommand(t *testing.T) {
+	for _, banned := range []string{`.url | test(`, `test("minibits"`, `| test(`} {
+		if strings.Contains(cfgJQProgram, banned) {
+			t.Errorf("config jq program still filters mints by URL pattern (%q): %s", banned, cfgJQProgram)
+		}
+	}
+
+	// The general path: every production mint — Minibits included — survives
+	// into the emitted command, so a filter that silently dropped one could not
+	// pass. This is the assertion that would have caught the original removal.
+	cmd := cfgConfigCommand(0, "1.0000", "0.0000", false)
+	for _, u := range productionMintURLs {
+		if !strings.Contains(cmd, u) {
+			t.Errorf("production mint %s missing from the config command (a mint is being filtered)", u)
+		}
+	}
+	for _, u := range testnutMintURLs {
+		if strings.Contains(cmd, u) {
+			t.Errorf("test mint %s leaked into a default deploy", u)
+		}
+	}
+}
+
+// TestNoMinibitsDleqCopyInVisibleUI keeps the de-branding removal in place: the
+// mint selector used to tell operators Minibits was "temporarily removed (DLEQ
+// keyset rotation bug)". That is a backend concern, and the backend fix has
+// shipped, so no brand-specific workaround copy may reappear in the UI.
+func TestNoMinibitsDleqCopyInVisibleUI(t *testing.T) {
+	text := strings.ToLower(visibleText(string(indexHTML)))
+	for _, banned := range []string{"minibits", "dleq"} {
+		if strings.Contains(text, banned) {
+			t.Errorf("operator-visible UI still carries brand-specific mint copy %q: %s", banned, text)
+		}
+	}
+}
+
 func containsURL(hay []string, needle string) bool {
 	for _, h := range hay {
 		if h == needle {

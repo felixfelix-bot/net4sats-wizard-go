@@ -878,8 +878,9 @@ func runDeployment(job *Job, req deployRequest, opts options) {
 	// 8b: Write margin + profit_share to config.json.
 	// Also ensure the default production mints are present (idempotent).
 	// Test-network mints are added only under --test-mode — see
-	// defaultMintsJSON.
-	// Does NOT strip minibits (DLEQ keyset rotation bug fixed in gonuts v0.11.1).
+	// defaultMintsJSON. No mint is filtered out here: the mint set is exactly
+	// the compile-time constants, so every production mint reaches config.json
+	// and no per-mint special-casing lives in the wizard.
 	// The operator's mint URL travels over SSH stdin into /tmp/mint.val
 	// (see cfgConfigCommand).
 	devSplit := clamp(req.DevSplit, 0, 50)
