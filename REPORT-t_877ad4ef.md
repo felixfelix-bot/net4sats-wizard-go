@@ -210,3 +210,37 @@ wrong verdicts — they are recorded because they are the trap for the next lane
   baseline file `verify/fe2b-baseline/red-run-2026-10-23.txt` ("MATCHES COMMITTED BASELINE").
   So the shipped artefact, not just a working copy, produces the documented RED baseline.
 - `sh -n scripts/fe2b_feed_check.sh` clean. `shellcheck` not installed on this host.
+
+## 10. Post-ship verification of the repo (`hermes verify`)
+
+The canonical recipe was run and now passes, build -> test -> boot/readiness:
+
+| Phase | Command | Result |
+|---|---|---|
+| build | `go build ./...` | exit 0 |
+| test | `go test ./...` | exit 0 — `ok net4sats-wizard 59.8s` (**full suite green**, incl. `TestSshRunFunction`, which the FE2b preflight lane had recorded as red) |
+| boot + readiness | wizard started, polled | HTTP **200** |
+
+Two harness notes, because both nearly produced a false verdict:
+
+1. **`go` is not on PATH** in this session (`/usr/local/go/bin/go`); every `go` command
+   needs `export PATH=$PATH:/usr/local/go/bin`. Without it the recipe's phases cannot run
+   at all.
+2. **The recipe's readiness poll defaulted to `:8000` while the wizard binds `:8099`**, so
+   the first run reported `ready: false` with connection-refused even though build and test
+   passed. `:8099` was also **held by a sibling offload lane** (worker-heavy's WZ1.9 wizard
+   server, pid 583866), so a `--port 8099` run could have been satisfied by *their* process
+   rather than mine — that result was discarded as ambiguous, not reported as a pass.
+   Readiness was instead proven on **`:8098`, confirmed free beforehand**, with
+   `WIZARD_BIND=127.0.0.1:8098` for the start phase only:
+   `{"ready": true, "statusCode": 200, "outputTail": "net4sats wizard running on http://127.0.0.1:8098"}`.
+3. `WIZARD_BIND` must **not** be exported for the test phase: two tests assert the default
+   bind (`TestMainFunctionStructure`, `TestListenAddress` expect `127.0.0.1:8099`), so a
+   global override makes them fail. That failure was my contamination, reproduced and then
+   removed by scoping the override to the start phase — hence `--phase build --phase test`
+   separately from `--phase start`.
+
+Repo-level change in this card is only `scripts/fe2b_feed_check.sh` (+ the two evidence
+captures and the two task-scoped docs). The other files touched this session are host
+scratch, outside the repo: `~/.local/state/tg-bench/probe_ports.py`,
+`~/.local/state/tg-bench/serial_run.py`, `/tmp/*.sh`, `/tmp/t_helper.py`.
