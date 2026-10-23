@@ -85,7 +85,7 @@ The deployment runs 9 steps over SSH:
 | 4 | Configure upstream | WiFi STA mode or WAN passthrough |
 | 5 | Install net4sats | `apk add net4sats` (pulls tollgate + nodogsplash) |
 | 6 | Brand portal | Sets gateway name to `net4sats` |
-| 7 | Configure Lightning | Sets your Lightning address, dev split (0 = keep the full share), margin, mint |
+| 7 | Configure Lightning | Sets your Lightning address, payout share (0 = keep the full share), margin, mint |
 | 8 | Restart services | Restarts `tollgate-wrt` + `nodogsplash` |
 | 9 | Health check | Verifies TollGate API responding on `:2121` |
 
@@ -119,7 +119,7 @@ GOOS=windows GOARCH=amd64 go build -o dist/net4sats-wizard-windows-amd64.exe .
 
 - **[Setup guide (step by step)](https://github.com/net4sats/net4sats.github.io/pull/1)** —
   full walkthrough with screenshots, troubleshooting, and advanced settings
-  (dev split, margin, mint selection)
+  (payout share, margin, mint selection)
 - **[Admin panel guide](https://github.com/net4sats/net4sats.github.io/pull/1)** —
   using the configurationwizzard admin dashboard after deployment (dashboard,
   WiFi, devices, settings, wallet, identity)

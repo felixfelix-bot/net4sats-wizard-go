@@ -2,6 +2,8 @@ package main
 
 import (
 	"io/fs"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -67,6 +69,86 @@ func TestNoRevenueShareBrandingInShippedUI(t *testing.T) {
 		if err != nil {
 			t.Fatalf("walk %s: %v", root.name, err)
 		}
+	}
+}
+
+// bannedSplitTerms returns the lower-cased display wording of the retired
+// control name. The identifiers (the devSplit wire field, the devsplit DOM ids)
+// are retained, so these needles only apply to operator-visible text: the
+// guard strips markup before matching.
+//
+// Like bannedRevenueShareTerms, the needles are assembled from fragments so a
+// repo-wide grep for the retired wording stays clean.
+func bannedSplitTerms() []string {
+	dev := "de" + "v"
+	split := "spl" + "it"
+	return []string{
+		dev + " " + split,
+		dev + "-" + split,
+		dev + split,
+	}
+}
+
+// visibleText strips <script>/<style> bodies and every tag, and with them every
+// attribute value, so only the copy an operator can actually read is returned.
+// This is what keeps the retained `devsplit` DOM ids — and the inline JS that
+// reads them by id — from tripping a display-wording guard.
+func visibleText(html string) string {
+	body := scriptRE.ReplaceAllString(html, " ")
+	return tagRE.ReplaceAllString(body, " ")
+}
+
+var (
+	tagRE    = regexp.MustCompile(`(?s)<[^>]*>`)
+	scriptRE = regexp.MustCompile(`(?is)<(script|style)\b[^>]*>.*?</(script|style)>`)
+)
+
+// TestNoSplitWordingInVisibleCopy pins the user-visible control name. The
+// label used to read "Dev split" while the hint beneath it had already been
+// neutralised, so the retired name survived in the one place every operator
+// looks. Markup is stripped first: the devsplit / devsplit-val ids are
+// deliberate identifiers, not copy.
+func TestNoSplitWordingInVisibleCopy(t *testing.T) {
+	for _, term := range append(bannedSplitTerms(), bannedRevenueShareTerms()...) {
+		if strings.Contains(strings.ToLower(visibleText(string(indexHTML))), term) {
+			t.Errorf("operator-visible wizard copy still uses retired control name %q", term)
+		}
+	}
+}
+
+// TestReadmeUsesNeutralPayoutWording keeps the operator-facing README in step
+// with the UI. Docs ship in the same commit as the copy, so the doc must not
+// name the control by its retired name either.
+func TestReadmeUsesNeutralPayoutWording(t *testing.T) {
+	readme, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	lower := strings.ToLower(string(readme))
+	for _, term := range append(bannedSplitTerms(), bannedRevenueShareTerms()...) {
+		if strings.Contains(lower, term) {
+			t.Errorf("README.md still uses retired control name %q", term)
+		}
+	}
+	if !strings.Contains(lower, "payout share") {
+		t.Error("README.md no longer names the setting in neutral wording (want \"payout share\")")
+	}
+}
+
+// TestDeployLogUsesNeutralPayoutWording covers the deploy log line, which is
+// shipped copy: it is streamed to the operator's terminal during a run. It used
+// to echo the raw devSplit field name.
+func TestDeployLogUsesNeutralPayoutWording(t *testing.T) {
+	src, err := os.ReadFile("deploy.go")
+	if err != nil {
+		t.Fatalf("read deploy.go: %v", err)
+	}
+	body := string(src)
+	if !strings.Contains(body, `%, payout share=`) {
+		t.Error("deploy log line no longer names the setting in neutral wording (want `%, payout share=`)")
+	}
+	if strings.Contains(body, `devSplit="`) {
+		t.Error("deploy log line still echoes the devSplit field name instead of user-facing wording")
 	}
 }
 

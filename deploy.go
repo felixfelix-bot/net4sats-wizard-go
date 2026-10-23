@@ -802,7 +802,7 @@ func runDeployment(job *Job, req deployRequest) {
 		job.addLog("identities.json: lightning_address=" + req.LNURL + " for owner")
 	}
 	if strings.Contains(cfgOut, "config updated") {
-		job.addLog("config.json: margin=" + strconv.Itoa(margin) + "%, devSplit=" + strconv.Itoa(devSplit) + "% (profit_share updated)")
+		job.addLog("config.json: margin=" + strconv.Itoa(margin) + "%, payout share=" + strconv.Itoa(devSplit) + "% (profit_share updated)")
 		job.addLog("config.json: mints configured (coinos, minibits, lnserver, macadamia, westernbtc, kashu, cubabitcoin, testnut x2)")
 	}
 

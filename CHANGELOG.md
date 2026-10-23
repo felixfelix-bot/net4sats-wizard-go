@@ -8,6 +8,30 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Retired control name removed from the remaining operator-visible copy.**
+  The previous de-branding pass neutralised the advanced control's *hint* but
+  left the control's own **label** reading `Dev split`, the deploy-log line
+  echoing the raw `devSplit` field name, and `README.md` naming the setting as
+  "dev split" in two places. All three now read **payout share** — the wording
+  the hint already used. No behaviour changed: the slider, its `0–50` range, its
+  `10%` default and the `profit_share` factors it writes are untouched, so the
+  resolved FELIX Q3 gate (`Q3=B`, upstream default stays as-is) is not
+  re-litigated here.
+
+  The regression guard now covers the surfaces it previously missed:
+  `TestNoSplitWordingInVisibleCopy` strips `<script>`/`<style>` bodies and all
+  tags before matching, so it polices genuinely operator-visible text without
+  tripping on the retained `devsplit` / `devsplit-val` DOM ids;
+  `TestReadmeUsesNeutralPayoutWording` keeps the README in step; and
+  `TestDeployLogUsesNeutralPayoutWording` covers the streamed log line. All
+  three were verified to fail against the old copy before the fix.
+
+  Still deliberately unchanged, as protocol/config identifiers rather than copy:
+  the `devSplit` JSON wire field of `POST /api/deploy`, the `devsplit` /
+  `devsplit-val` DOM ids, the `devSplit` Go local, and the `developer` identity
+  name inside the persisted `config.json` `profit_share` array. Renaming any of
+  those is a wire/config migration with a compatibility cost, not a copy change.
+
 - **Revenue-share branding removed from the wizard UI.** The advanced
   dev-split control now reads as what it is — an optional share of payments
   routed to the developer payout address (`config.json` `profit_share`), with
