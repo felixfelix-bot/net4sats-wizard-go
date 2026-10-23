@@ -1,0 +1,27 @@
+host: Linux x280 7.0.0-38-generic #38~24.04.4-Ubuntu SMP PREEMPT_DYNAMIC Mon Sep 14 16:37:11 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+go:   go version go1.22.12 linux/amd64
+lint: golangci-lint has version 1.61.0 built with go1.23.1 from a1d6c560 on 2024-09-09T17:44:42Z
+actionlint: v1.7.7
+
+=== actionlint .github/workflows/ci.yml
+$ actionlint -no-color .github/workflows/ci.yml
+exit_code=0
+
+=== go build ./...
+$ go build ./...
+exit_code=0
+
+=== go vet ./...
+$ go vet ./...
+exit_code=0
+
+=== go test ./... -race -count=1
+$ go test ./... -race -count=1
+exit_code=0
+--- output ---
+ok  	net4sats-wizard	60.980s
+
+=== golangci-lint run
+$ golangci-lint run
+exit_code=0
+
