@@ -145,9 +145,9 @@ that expects to write a `src/gz` line is working against a mechanism that has ne
 2. **Is anything published?** Yes — `FreedomTechFeed/packages` `v0.6.0`, 2026-10-21, 26 assets,
    signed manifest verified this run.
 3. **Candidate base URL:** `https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/`
-   (asset-only, immutable per tag, digest-verified). Two minors *behind* the wizard's current
-   `felixfelix-bot` pins (`v0.7.0-alpha10` / `v0.6.1-post-merge`), so adopting it is a downgrade
-   unless the fork's assets are promoted upstream first.
+   — asset-only, immutable per tag, digest-verified. It sits on the 0.6.0 line while the wizard
+   pins `v0.7.0-alpha10` / `v0.6.1-post-merge` from the `felixfelix-bot` fork, so adopting it is a
+   downgrade unless the fork's assets are promoted upstream first.
 4. **Rejected candidates:** `releases.tollgate.me` (stale unsigned index, key 404),
    `freedomtechfeed.github.io` (404, no Pages), `blossom2.orangesync.tech` (up, no feed paths),
    `blossom.net4sats.com` / `feed.net4sats.com` / `*.tollgate.me` (NO-DNS).

@@ -121,7 +121,8 @@ names. Every opkg/apk index path 404s except a stale, **unsigned** `v0.5.0-alpha
 `FreedomTechFeed/packages` `v0.6.0` (2026-10-21, 26 assets, signed manifest verified this run) —
 artifacts, not a feed. Candidate base for the downstream decision:
 `https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/` (asset-only; cannot express
-a `src/gz` line; two minors behind the current `felixfelix-bot` pins).
+a `src/gz` line; sits on the 0.6.0 line while the wizard pins `v0.7.0-alpha10` /
+`v0.6.1-post-merge` from the fork).
 
 Two brief corrections, both measured: `schedule.md` has **0** hits for `feed`/`phase.?2`
 (337 lines — the term is defined in `feed-freedomtech/docs/per-arch-release-assets.md:4`), and
