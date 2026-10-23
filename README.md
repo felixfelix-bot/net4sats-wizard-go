@@ -139,6 +139,9 @@ GOOS=windows GOARCH=amd64 go build -o dist/net4sats-wizard-windows-amd64.exe .
   WiFi, devices, settings, wallet, identity)
 - **[Router setup runbook](docs/router-setup.md)** — operator-facing setup
   guide tested on a live GL-MT6000
+- **[Feed install](docs/feed-install.md)** — installing `tollgate-wrt` from a
+  package feed (apk on 25.12.x, opkg on 24.10.x), upgrade, rollback, and how to
+  prove the install came from the feed rather than a local file
 
 ## Prerequisites
 
