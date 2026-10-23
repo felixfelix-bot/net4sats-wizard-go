@@ -2,7 +2,21 @@ package main
 
 import (
 	"testing"
+	"time"
 )
+
+// sshProbeUnroutableIP is an RFC 5737 TEST-NET-1 documentation address. It is
+// not routable on any real network, so a TCP dial to it always fails and
+// sshIdentify() short-circuits to its "no connection" return path.
+//
+// The previous version of TestSshRunFunction dialled 192.168.1.1 — the default
+// LAN gateway of an OpenWrt router, i.e. exactly the device this wizard
+// targets. On a bench host that actually has such a router wired up (port 22
+// open, empty root password or a key in ~/.ssh), sshConnect() really
+// authenticated and sshIdentify() returned the router's real firmware/model,
+// so the test asserted a property of the host's network instead of a property
+// of the code and failed intermittently.
+const sshProbeUnroutableIP = "192.0.2.1"
 
 func TestSshRunFunction(t *testing.T) {
 	// This tests sshRun indirectly by testing the functions that call it
@@ -12,10 +26,19 @@ func TestSshRunFunction(t *testing.T) {
 	// This is a simple smoke test to ensure the function exists and doesn't crash
 	// when called with empty credentials
 
-	firmware, vendor, model := sshIdentify("192.168.1.1", "")
+	// Belt and braces: TEST-NET-1 is expected to be unroutable, but if this
+	// host can somehow reach it (a fake-IP/proxy DNS setup, a netns test rig,
+	// a VPN that blackhole-routes 0.0.0.0/0 into a live lab) then any host is
+	// reachable and the assertion below would again be checking the network
+	// rather than the code. Skip instead of reporting a bogus failure.
+	if tcpProbe(sshProbeUnroutableIP, 22, 500*time.Millisecond) {
+		t.Skipf("SSH port 22 on %s is reachable from this host; skipping smoke test that assumes an unreachable target", sshProbeUnroutableIP)
+	}
+
+	firmware, vendor, model := sshIdentify(sshProbeUnroutableIP, "")
 	// Result will be empty strings, but the function should not panic
 	if len(firmware) != 0 || len(vendor) != 0 || len(model) != 0 {
-		t.Errorf("sshIdentify with empty credentials should return empty strings, got firmware=%q, vendor=%q, model=%q", firmware, vendor, model)
+		t.Errorf("sshIdentify against unreachable %s with empty credentials should return empty strings, got firmware=%q, vendor=%q, model=%q", sshProbeUnroutableIP, firmware, vendor, model)
 	}
 }
 
