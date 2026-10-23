@@ -240,3 +240,108 @@ and none is held by a live hardware process.
   read-only lock-convention search — both explicitly device-free.
 - **No hold. FE2b hardware/feed work will not collide with fd4/wz18.**
   (Separately, obey the FE2a precondition gate — see commit 6d75819.)
+
+---
+
+# REPORT — WZ1.5 part A: exhaustive inventory of unofficial artifact-URL tokens
+
+Task: grep the ENTIRE repo (not just `deploy.go`) for `orangesync`, `blossom2`,
+`felixfelix-bot`, `releases.tollgate.me` (case-insensitive) and tabulate every hit with a
+fixed classification. Deliverable:
+`~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-url-inventory.part-a.md`.
+Part A only — the URL-constant analysis (part B) and the synthesis are other tasks.
+
+## 1. What was measured
+
+Worktree `/home/c08r4d0r/repos/net4sats-mvp-v2`, branch `worker-heavy/t_gate8-19b1b1c6`,
+`HEAD = ed3e548`.
+
+| command | result |
+|---|---|
+| `grep -rniE 'orangesync\|blossom2\|felixfelix-bot\|releases\.tollgate\.me' . --exclude-dir=.git` | 163 text lines / 45 files + 1 binary notice |
+| same with `--exclude=net4sats-wizard` (the ledger's input) | 163 |
+| `git grep -nIi -e orangesync -e blossom2 -e felixfelix-bot -e releases.tollgate.me` | 134 |
+| `strings net4sats-wizard \| grep -cEi '<tokens>'` | 2 (`felixfelix-bot`, compiled `deploy.go` string table) |
+
+Per token (matching lines / raw occurrences / tracked-only lines):
+
+- `orangesync` — 17 / 17 / 16
+- `blossom2` — 3 / 3 / 2
+- `felixfelix-bot` — 89 / 92 / 63
+- `releases.tollgate.me` — 59 / 59 / 58
+- total — **163** lines / 171 occurrences / 139 tracked token-lines
+
+The columns exceed the line total because 5 lines carry two tokens
+(`PROGRESS-t_gate8-19b1b1c6.md:13`, `PROGRESS-t_deabf3d6.md:23`, `REPORT-t_deabf3d6.md:74`,
+`REPORT-t_gate8-19b1b1c6.md:8`, `REPORT-t_gate8-19b1b1c6.md:31`); `git grep`'s 134 = 139 − 5.
+
+## 2. Reconciliation (the brief's step 2)
+
+`grep -rniE` is strictly broader than `git grep`, and the difference is fully explained:
+
+- 163 − 134 = **29 lines**, all in `.git/info/exclude`'d task logs. The exclude file is
+  `/home/c08r4d0r/wz16-verify/.git/info/exclude` (a *shared* git dir — this is a linked
+  worktree), and it hides `/PROGRESS-t_*.md` and `/REPORT-t_*.md`. That is why 10 files with
+  hits are invisible to `git grep` but present on disk. Nothing else was hidden by
+  `.gitignore` except the build binary.
+- The tracked subset reproduced per token by my sweep (16 / 2 / 63 / 58) is **identical** to
+  `git grep`'s per-token counts, so there is no unexplained residual in either direction.
+- No docs live outside the worktree: `docs/` is inside it, and no hit references a path
+  outside it.
+- Sibling worktrees of the same git dir were counted but deliberately not inventoried
+  (wz16-pass6 158, wz16-verify 116, wz-e2e-gate-r3 60, wz-e2e-gate 41, wizard-fix 37,
+  wz-e2e-gate-r2 39, wz19-atomicity 18, wz19-base 16, wz19-video 18, wz-ci-atomic/repo 18).
+  The brief scopes this to "the ENTIRE repo from the git root", i.e. this worktree.
+
+## 3. Classification outcome
+
+| class | lines | where |
+|---|---|---|
+| (a) URL to replace with official channel | **15** | `deploy.go` 28,34,43,47,50,63 · `deploy_test.go` 10,14,38,40,43 · `pins_test.go` 54,59 · `docs/router-setup.md` 192,193 |
+| (b) unused constant to delete | **0** | — |
+| (c) see-also/documentation link to move | **4** | `docs/feed-install.md` 27,28,29,34 |
+| (d) unrelated / leave alone | **144** | task logs 128 · evidence captures 12 · CHANGELOG 1 · feed-install transcript 1 · pins_test guard 1 · verify recon quote 1 |
+
+Why (b) is empty: none of the four tokens appears in a declaration of an unused constant.
+`tollgateOSURL` — the one dead constant this area ever had — is gone; it survives only as a
+forbidden-identifier regression guard (`pins_test.go:45-49`), so that line is (d). The three
+live constants carrying the token (`tollgatePkgURL`, `tollgatePkgURLApk`, `configwizURL`) are
+all referenced from `deploy.go` and asserted by the pin tests.
+
+Why so much (d): `felixfelix-bot` is *also* the name of this repo's git remote, so every
+report header and push transcript matches; `orangesync` is always the fleet Nostr relay host
+(`relay.orangesync.tech`, HTTP 502 since ~2026-10-12), never an artifact; `blossom2` appears
+only in branding-census lines; `releases.tollgate.me` in logs and evidence files is recorded
+probe output, not a shipped reference.
+
+## 4. Constraints handed to the synthesis/implementation task
+
+- `pins_test.go:59` mirrors `deploy.go:43` — repinning one without the other turns
+  `TestTollgatePkgURLPinsExistingAsset` RED.
+- `deploy.go:67` `artifactPins` is keyed by the URL string, so a repin without a refreshed
+  digest makes `verifyArtifactPin` fail closed (by design).
+- `deploy_test.go:40` accepts *either* owner, so an owner swap does not fail that guard.
+- `pins_test.go:120` only registers constants whose name ends in `URL`, which is why
+  `tollgatePkgURLApk` is outside `expectedPinnedURLConsts`/`liveCheckPins`. Any new pin must
+  keep the `…URL` suffix or it escapes the live-200 registry.
+- `docs/feed-install.md:272` (class d) is a copy-pasteable feed line inside a measured-failure
+  transcript; if the host is retired, annotate the fence rather than editing the capture.
+
+## 5. Verification of the deliverable (not a self-report)
+
+The generator (`~/.hermes/plans/2026-08-31-tollgate-batch/wz15-tools/gen_report.py`) refuses to
+emit a document if any hit is unclassified. After writing, the following were run against the
+file itself:
+
+- 163 table rows parsed, 7 cells each, **0 malformed**.
+- Row set vs a **fresh** live grep: **0 missing, 0 extra, 0 duplicates**.
+- Every `exact line` cell reversed (`&#124;` -> `|`) compared to the actual source bytes at
+  that path/line: **163/163 identical, 0 mismatches**.
+- Generator kept **outside** the repo so the document cannot match its own token list (the
+  first draft, placed in `verify/`, pushed the count from 163 to 190 — caught and removed).
+
+## 6. Bottom line
+
+Every occurrence of the four tokens in this worktree is in the table; the actionable set is
+19 lines (15 (a) + 4 (c)) across 6 files; the rest is internal logs and captured evidence that
+must not be rewritten.
