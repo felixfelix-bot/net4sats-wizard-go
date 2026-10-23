@@ -6,7 +6,7 @@ import (
 )
 
 // TestDownloadURLsPointToTollgateRepo verifies that the tollgate package
-// download URL used by the wizard targets the tollgate-module-basic-go project
+// download URLs used by the wizard target the tollgate-module-basic-go project
 // (either the upstream OpenTollGate org or its felixfelix-bot fork).
 //
 // This guards against accidentally reverting to a stale or wrong repo, and
@@ -17,58 +17,59 @@ import (
 // (SW4a) The nft-enforce overlay URL is gone — those rules ship inside the
 // ipk — and the full set of pinned URL constants, plus a live HTTP 200 check
 // for each, is enforced in pins_test.go.
+//
+// (feat/auto-detect-arch) The per-arch download URLs now live in the
+// tollgateArchAssets map in arch.go, keyed by OpenWrt tuple. This test checks
+// every declared asset (both .ipk and .apk) across every arch entry so a future
+// repin or new-arch addition can't point at a non-tollgate repo.
 func TestDownloadURLsPointToTollgateRepo(t *testing.T) {
-	cases := map[string]string{
-		"tollgatePkgURL": tollgatePkgURL,
-	}
-
-	for name, url := range cases {
-		t.Run(name, func(t *testing.T) {
-			// 1. Must not be empty.
+	for arch, asset := range tollgateArchAssets {
+		for name, url := range map[string]string{"IPK": asset.IPK, "APK": asset.APK} {
 			if url == "" {
-				t.Fatalf("%s is empty", name)
+				continue // no published asset yet — not checked
 			}
-
-			// 2. Must be a GitHub URL.
-			if !strings.HasPrefix(url, "https://github.com/") {
-				t.Errorf("%s = %q: must be an https://github.com URL", name, url)
-			}
-
-			// 3. Must reference the tollgate-module-basic-go repo, either via the
-			//    upstream OpenTollGate org or the felixfelix-bot fork (fallback).
-			ownerOk := strings.Contains(url, "OpenTollGate/") ||
-				strings.Contains(url, "felixfelix-bot/")
-			repoOk := strings.Contains(url, "tollgate-module-basic-go")
-			if !ownerOk {
-				t.Errorf("%s = %q: owner must be OpenTollGate (primary) or felixfelix-bot (fallback)", name, url)
-			}
-			if !repoOk {
-				t.Errorf("%s = %q: must reference tollgate-module-basic-go", name, url)
-			}
-
-			// 4. Must be a release download URL, not e.g. a branch archive.
-			if !strings.Contains(url, "/releases/download/") {
-				t.Errorf("%s = %q: must be a GitHub release download URL", name, url)
-			}
-		})
+			t.Run(arch+"_"+name, func(t *testing.T) {
+				// 1. Must be a GitHub URL.
+				if !strings.HasPrefix(url, "https://github.com/") {
+					t.Errorf("[%s] %s = %q: must be an https://github.com URL", arch, name, url)
+				}
+				// 2. Must reference the tollgate-module-basic-go repo, either
+				//    via upstream or the felixfelix-bot fork (fallback).
+				ownerOk := strings.Contains(url, "OpenTollGate/") ||
+					strings.Contains(url, "felixfelix-bot/")
+				repoOk := strings.Contains(url, "tollgate-module-basic-go")
+				if !ownerOk {
+					t.Errorf("[%s] %s = %q: owner must be OpenTollGate (primary) or felixfelix-bot (fallback)", arch, name, url)
+				}
+				if !repoOk {
+					t.Errorf("[%s] %s = %q: must reference tollgate-module-basic-go", arch, name, url)
+				}
+				// 3. Must be a release download URL, not e.g. a branch archive.
+				if !strings.Contains(url, "/releases/download/") {
+					t.Errorf("[%s] %s = %q: must be a GitHub release download URL", arch, name, url)
+				}
+			})
+		}
 	}
 }
 
-// TestTollgatePkgURLAssetName verifies the .ipk asset exists in the URL and
-// targets the aarch64_cortex-a53 architecture the routers use. This catches
-// typos introduced when bumping release tags/asset names (the v0.6.1-post-merge
-// asset is named differently from the v0.5.0-e2e-test one).
+// TestTollgatePkgURLAssetName verifies the aarch64 .ipk asset (the fallback
+// source the wizard publishes) exists in the URL and references the
+// tollgate-wrt binary. This catches typos introduced when bumping release
+// tags/asset names. The architecture-correctness of asset selection is
+// covered by TestArchAssetsMatchDetectedArch + TestSelectPkgURL in arch_test.go.
 func TestTollgatePkgURLAssetName(t *testing.T) {
+	ipk := tollgateArchAssets["aarch64_cortex-a53"].IPK
 	// Must end with the .ipk extension.
-	if !strings.HasSuffix(tollgatePkgURL, ".ipk") {
-		t.Errorf("tollgatePkgURL = %q: must end with .ipk", tollgatePkgURL)
+	if !strings.HasSuffix(ipk, ".ipk") {
+		t.Errorf("aarch64 .ipk asset = %q: must end with .ipk", ipk)
 	}
-	// Must target the router's architecture.
-	if !strings.Contains(tollgatePkgURL, "aarch64_cortex-a53") {
-		t.Errorf("tollgatePkgURL = %q: must target aarch64_cortex-a53", tollgatePkgURL)
+	// Must target the arch tuple it is keyed under.
+	if !strings.Contains(ipk, "aarch64_cortex-a53") {
+		t.Errorf("aarch64 .ipk asset = %q: must target aarch64_cortex-a53", ipk)
 	}
 	// Must reference the tollgate-wrt binary, not some other asset.
-	if !strings.Contains(tollgatePkgURL, "tollgate-wrt") {
-		t.Errorf("tollgatePkgURL = %q: must reference the tollgate-wrt binary", tollgatePkgURL)
+	if !strings.Contains(ipk, "tollgate-wrt") {
+		t.Errorf("aarch64 .ipk asset = %q: must reference the tollgate-wrt binary", ipk)
 	}
 }
