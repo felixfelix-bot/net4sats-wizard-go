@@ -94,8 +94,7 @@ func bannedSplitTerms() []string {
 // This is what keeps the retained `devsplit` DOM ids — and the inline JS that
 // reads them by id — from tripping a display-wording guard.
 func visibleText(html string) string {
-	body := scriptRE.ReplaceAllString(html, " ")
-	return tagRE.ReplaceAllString(body, " ")
+	return tagRE.ReplaceAllString(scriptRE.ReplaceAllString(html, " "), " ")
 }
 
 var (
@@ -103,17 +102,31 @@ var (
 	scriptRE = regexp.MustCompile(`(?is)<(script|style)\b[^>]*>.*?</(script|style)>`)
 )
 
+// retiredNames is every retired user-facing name: the fund phrasing and the
+// control's old label. Identifiers (the devSplit wire field, the devsplit DOM
+// ids) are deliberately absent — they are retained.
+func retiredNames() []string {
+	return append(bannedRevenueShareTerms(), bannedSplitTerms()...)
+}
+
+// assertNoRetiredName fails if surface still carries any retired name.
+func assertNoRetiredName(t *testing.T, surface string, body []byte) {
+	t.Helper()
+	lower := strings.ToLower(string(body))
+	for _, term := range retiredNames() {
+		if strings.Contains(lower, term) {
+			t.Errorf("%s still uses retired wording %q", surface, term)
+		}
+	}
+}
+
 // TestNoSplitWordingInVisibleCopy pins the user-visible control name. The
 // label used to read "Dev split" while the hint beneath it had already been
 // neutralised, so the retired name survived in the one place every operator
 // looks. Markup is stripped first: the devsplit / devsplit-val ids are
 // deliberate identifiers, not copy.
 func TestNoSplitWordingInVisibleCopy(t *testing.T) {
-	for _, term := range append(bannedSplitTerms(), bannedRevenueShareTerms()...) {
-		if strings.Contains(strings.ToLower(visibleText(string(indexHTML))), term) {
-			t.Errorf("operator-visible wizard copy still uses retired control name %q", term)
-		}
-	}
+	assertNoRetiredName(t, "operator-visible wizard copy", []byte(visibleText(string(indexHTML))))
 }
 
 // TestReadmeUsesNeutralPayoutWording keeps the operator-facing README in step
@@ -124,14 +137,9 @@ func TestReadmeUsesNeutralPayoutWording(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read README.md: %v", err)
 	}
-	lower := strings.ToLower(string(readme))
-	for _, term := range append(bannedSplitTerms(), bannedRevenueShareTerms()...) {
-		if strings.Contains(lower, term) {
-			t.Errorf("README.md still uses retired control name %q", term)
-		}
-	}
-	if !strings.Contains(lower, "payout share") {
-		t.Error("README.md no longer names the setting in neutral wording (want \"payout share\")")
+	assertNoRetiredName(t, "README.md", readme)
+	if !strings.Contains(strings.ToLower(string(readme)), "payout share") {
+		t.Error(`README.md no longer names the setting in neutral wording (want "payout share")`)
 	}
 }
 
