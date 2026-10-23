@@ -49,9 +49,23 @@ not recur for the next lane.
  "source":"manifest"}
 ```
 
-### Cache defeated — fresh full suite
+### Cache defeated — fresh full suite (the regression-capable proof)
 
-`go test -count=1 ./...` (no cache) — see `artifacts/gotest-count1.log`.
+The recipe's `go test ./...` can return `(cached)`, and a cached result cannot detect
+a regression — so a separate uncached run is the evidence that actually counts:
+
+```
+$ go test -count=1 ./...
+ok  	net4sats-wizard	60.934s
+UNCACHED_EXIT=0
+```
+
+I attempted to pin `-count=1` into `.hermes/environment.json` so the recorded run
+would always be uncached. **That write was refused by the protected-file guard**
+("write to protected agent-instruction file(s) … approval prompt timed out"), and I
+did not retry it via another path. The manifest therefore still reads
+`go test ./...`; the uncached run above stands as the real evidence, and pinning the
+flag remains a follow-up (see REMAINING in REPORT.md).
 
 ## 2. `capture.cjs` syntax gate
 

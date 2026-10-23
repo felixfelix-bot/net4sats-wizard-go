@@ -246,7 +246,11 @@ Re-running it against a de-branded, reachable head is a config change, not new w
    head; convert webm -> mp4 (H.264) + gif fallback; re-run the OCR audit
    (`ffmpeg -vf fps=2` -> `tesseract` per frame) and require **0** branding hits.
 5. Evidence naming must stay honest (`take-*` not `gate-*`) until step 4 passes.
-6. Still do **not** post the video anywhere — attachment remains a later task.
+6. **Pin `-count=1` into `.hermes/environment.json`** (needs a human/consented write —
+   the protected-file guard refused it from this lane). Until then the recorded
+   `hermes verify` test phase may report `(cached)`, so rely on the explicit
+   `go test -count=1 ./...` run as the regression-capable evidence.
+7. Still do **not** post the video anywhere — attachment remains a later task.
 
 ---
 
@@ -279,8 +283,11 @@ Full detail in `verify/wz19-video-capture/VERIFICATION.md`; raw JSON in `artifac
   `artifacts/verify-first-run-port-mismatch.json` rather than deleted.
 - **Recipe pinned:** `.hermes/environment.json` now sets `port: 8099` with the reason,
   so the next lane does not rediscover it.
-- **Cache defeated:** `go test -count=1 ./...` -> `ok net4sats-wizard 57.082s`, exit 0
-  (`artifacts/gotest-count1.log`).
+- **Cache defeated:** `go test -count=1 ./...` -> `ok net4sats-wizard 60.934s`, exit 0
+  (`artifacts/gotest-count1.log`). This is the run that actually counts: the
+  manifest's `go test ./...` can return `(cached)`, and a cached result cannot detect
+  a regression. I tried to pin `-count=1` into `.hermes/environment.json`; that write
+  was **refused by the protected-file guard** and I did not retry it via another path.
 - **`node --check capture.cjs` -> SYNTAX OK.**
 - **Reproducibility:** the take was re-run on a second clean Xvfb display (`:98`).
   Same 5 routers in the same order, same 11-step list, same `Deploy net4sats` ready
