@@ -70,3 +70,17 @@ Finding -> Status -> Files touched. Written 2026-10-23.
    into another workstream.
    Status: DONE.
    Files touched: none (branch-side).
+
+10. Finding: The card reads `blocked` (reason `fleet-offload:x280`, set by the
+    manager 05:12:42) — the offload harness parks its own card while the work
+    runs off-node. Not a failure from this task. `request-review` is refused in
+    that state, so the deliverable is recorded as a card comment instead.
+    Status: RECORDED, not fought.
+    Files touched: none.
+
+11. Finding: The card's workspace_path points at workspaces/t_53879c67 (a
+    DIFFERENT card's directory) and branch_name is empty; a prior 2026-10-12
+    completion of this same card exists against host 10.17.171.1. Brief paths
+    were fiction again; the real worktree is repos/net4sats-mvp-v2.
+    Status: CONFIRMED against the board DB before working.
+    Files touched: none.

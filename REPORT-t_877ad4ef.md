@@ -186,3 +186,16 @@ wrong verdicts — they are recorded because they are the trap for the next lane
 - The board's FE2b consumption card (t_53879c67) remains **blocked**, and A6 shows why: there
   is no feed index to consume. This script does not by itself unblock it — it defines what
   "unblocked" must look like.
+- **Card state**: t_877ad4ef reads `blocked` with reason `fleet-offload:x280`, set by the
+  manager at 05:12:42 — i.e. the offload harness parks its own card while the work runs
+  off-node. That is not a failure signal from this task, and I did not fight it: the
+  deliverable summary is recorded as a card comment instead. `request-review` is refused
+  while the card is in that state ("task is not in running/ready").
+- **Brief-vs-reality on paths**: the card's `workspace_path` points at
+  `.../workspaces/t_53879c67` — a *different* card's directory, and `branch_name` is empty.
+  The real worktree is `/home/c08r4d0r/repos/net4sats-mvp-v2`. I worked the repo named in
+  the brief and the branch I created, not the card's stale workspace pointer.
+- A prior completion of this same card exists (2026-10-12) with its own
+  `fe2b_feed_check.sh` + evidence attachments, against host `10.17.171.1`. This run is the
+  re-run against the current bench (`192.168.1.1`, serial-only); the script here supersedes
+  that version.
