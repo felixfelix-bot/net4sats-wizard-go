@@ -19,7 +19,7 @@ exit_code=0
 $ go test ./... -race -count=1
 exit_code=0
 --- output ---
-ok  	net4sats-wizard	60.980s
+ok  	net4sats-wizard	61.345s
 
 === golangci-lint run
 $ golangci-lint run
