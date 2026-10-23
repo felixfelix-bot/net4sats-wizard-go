@@ -85,7 +85,7 @@ The deployment runs 9 steps over SSH:
 | 4 | Configure upstream | WiFi STA mode or WAN passthrough |
 | 5 | Install net4sats | `apk add net4sats` (pulls tollgate + nodogsplash) |
 | 6 | Brand portal | Sets gateway name to `net4sats` |
-| 7 | Configure Lightning | Sets your Lightning address, dev split, margin, mint |
+| 7 | Configure Lightning | Sets your Lightning address, dev split (0 = keep the full share), margin, mint |
 | 8 | Restart services | Restarts `tollgate-wrt` + `nodogsplash` |
 | 9 | Health check | Verifies TollGate API responding on `:2121` |
 

@@ -6,6 +6,23 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Revenue-share branding removed from the wizard UI.** The advanced
+  dev-split control now reads as what it is — an optional share of payments
+  routed to the developer payout address (`config.json` `profit_share`), with
+  the documented 0 opt-out. The retired marketing phrasing is gone from the
+  embedded UI, the packaged portal/admin HTML, the code comments describing the
+  `devSplit` field, and this changelog; a regression test
+  (`debrand_copy_test.go`) fails the build if it comes back.
+
+  Unchanged on purpose: the `devSplit` JSON wire field of `POST /api/deploy`,
+  the `devsplit` / `devsplit-val` DOM ids, the `devSplit` local in `deploy.go`,
+  and the `developer` identity name inside the persisted `config.json`
+  `profit_share` array (also used in `security_hardening_test.go` fixtures).
+  Renaming any of those is a protocol/config migration, not a copy change, and
+  is tracked separately rather than slipped into this commit.
+
 ### Fixed
 
 - **Root shell-injection sinks closed.** All five deploy-command sinks
