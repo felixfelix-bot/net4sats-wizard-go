@@ -230,10 +230,18 @@ flag, config key, or API parameter that changes the generated word count.
 4. **`go-bip39` is marked `// indirect`** in `src/go.mod:115` while being imported
    directly at `identity.go:137`. Whether that marker is stale is unresolved; it does
    not affect the pinned version, which is explicit.
-5. **Pushes could not be verified.** `git ls-remote origin` succeeded early in the
-   session (`HEAD` = `65b9d02740211a88fa86bab05862f23a9326af8b`) but failed on retry with
-   `Could not resolve host: github.com`. The commit for this report is created locally;
-   see §6 for the observed push outcome.
+5. **Push verified after a transient DNS outage.** `github.com` failed to resolve
+   mid-session (`Could not resolve host: github.com`, 3 consecutive `getent` failures),
+   which blocked the first push attempt. DNS recovered on retry; the push then succeeded:
+
+   ```
+   To https://github.com/felixfelix-bot/net4sats-wizard-go.git
+      15f5d29..02598dd  worker-heavy/t_gate8-19b1b1c6 -> worker-heavy/t_gate8-19b1b1c6
+   ```
+
+   Independently confirmed by `git ls-remote origin refs/heads/worker-heavy/t_gate8-19b1b1c6`
+   → `02598dd5f96d94685047d0fd35c2c00c92b61f8c`, byte-identical to local `HEAD`.
+   `origin/HEAD` remains `65b9d027...` (that is `main`, a different branch — not a mismatch).
 
 ---
 

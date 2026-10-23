@@ -73,5 +73,10 @@ in /tmp. Full report: `REPORT-t_e75c5cd6.md` at this worktree root.
 
 8. Deliverables written: `REPORT-t_e75c5cd6.md` (full report) and this file.
    Committed with `git add -f` (both are covered by `.git/info/exclude`, which lists
-   `/PROGRESS-t_*.md` and `/REPORT-t_*.md` as local-only). Push outcome recorded in the
-   commit follow-up note below rather than asserted here.
+   `/PROGRESS-t_*.md` and `/REPORT-t_*.md` as local-only). Commit `02598dd`, 2 files,
+   +328 lines. The repo pre-commit hook ran and reported
+   `cred-gate: clean (30 literals checked, mode=staged)`.
+   Pushed and verified: `15f5d29..02598dd -> origin/worker-heavy/t_gate8-19b1b1c6`,
+   and `git ls-remote` returns `02598dd5f96d94685047d0fd35c2c00c92b61f8c`, matching local
+   HEAD exactly. (The first push attempt failed on a transient `Could not resolve host:
+   github.com`; DNS recovered and the retry succeeded.)
