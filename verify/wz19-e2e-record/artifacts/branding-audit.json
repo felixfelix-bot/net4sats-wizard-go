@@ -1,0 +1,651 @@
+{
+ "source": "e2e-3feadb9.mp4",
+ "fps": 2,
+ "frames": 107,
+ "branded": 84,
+ "verdict": "FAIL",
+ "frames_detail": [
+  {
+   "frame": 1,
+   "t": 0.0,
+   "net4sats": false,
+   "text": "net4sais Shoo WiFi \u2014 Setup your rower in 60 seconas ) Scanning for routers on your network."
+  },
+  {
+   "frame": 2,
+   "t": 0.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Cc Scanning for routers on your network..."
+  },
+  {
+   "frame": 3,
+   "t": 1.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds LY Scanning for routers on your network..."
+  },
+  {
+   "frame": 4,
+   "t": 1.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds + Scanning for routers on your network..."
+  },
+  {
+   "frame": 5,
+   "t": 2.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ( Scanning for routers on your network..."
+  },
+  {
+   "frame": 6,
+   "t": 2.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds \u2014s Scanning for routers on your network..."
+  },
+  {
+   "frame": 7,
+   "t": 3.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ~N Scanning for routers on your network..."
+  },
+  {
+   "frame": 8,
+   "t": 3.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds u Scanning for routers on your network..."
+  },
+  {
+   "frame": 9,
+   "t": 4.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds 7) Scanning for routers on your network..."
+  },
+  {
+   "frame": 10,
+   "t": 4.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds cr Scanning for routers on your network..."
+  },
+  {
+   "frame": 11,
+   "t": 5.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds SS Scanning for routers on your network..."
+  },
+  {
+   "frame": 12,
+   "t": 5.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 13,
+   "t": 6.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ( Scanning for routers on your network..."
+  },
+  {
+   "frame": 14,
+   "t": 6.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds \u2014S Scanning for routers on your network..."
+  },
+  {
+   "frame": 15,
+   "t": 7.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ~N Scanning for routers on your network..."
+  },
+  {
+   "frame": 16,
+   "t": 7.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds u Scanning for routers on your network..."
+  },
+  {
+   "frame": 17,
+   "t": 8.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 18,
+   "t": 8.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds rr Scanning for routers on your network..."
+  },
+  {
+   "frame": 19,
+   "t": 9.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds _\u2014 Scanning for routers on your network..."
+  },
+  {
+   "frame": 20,
+   "t": 9.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds 5) Scanning for routers on your network..."
+  },
+  {
+   "frame": 21,
+   "t": 10.0,
+   "net4sats": true,
+   "text": "net4sats Bhtooin WiFi \u2014 Setup your router in 60 seconas ( Scanning for routers an your network."
+  },
+  {
+   "frame": 22,
+   "t": 10.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds y Scanning for routers on your network..."
+  },
+  {
+   "frame": 23,
+   "t": 11.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds =~ Scanning for routers on your network..."
+  },
+  {
+   "frame": 24,
+   "t": 11.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds < Scanning for routers on your network..."
+  },
+  {
+   "frame": 25,
+   "t": 12.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds )) Scanning for routers on your network..."
+  },
+  {
+   "frame": 26,
+   "t": 12.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds cr Scanning for routers on your network..."
+  },
+  {
+   "frame": 27,
+   "t": 13.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Ww Scanning for routers on your network..."
+  },
+  {
+   "frame": 28,
+   "t": 13.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds B) Scanning for routers on your network..."
+  },
+  {
+   "frame": 29,
+   "t": 14.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ( Scanning for routers on your network..."
+  },
+  {
+   "frame": 30,
+   "t": 14.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds 7 Scanning for routers on your network..."
+  },
+  {
+   "frame": 31,
+   "t": 15.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ~ Scanning for routers on your network..."
+  },
+  {
+   "frame": 32,
+   "t": 15.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds u Scanning for routers on your network..."
+  },
+  {
+   "frame": 33,
+   "t": 16.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 34,
+   "t": 16.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds rc Scanning for routers on your network..."
+  },
+  {
+   "frame": 35,
+   "t": 17.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds So Scanning for routers on your network..."
+  },
+  {
+   "frame": 36,
+   "t": 17.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 37,
+   "t": 18.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds G Scanning for routers on your network..."
+  },
+  {
+   "frame": 38,
+   "t": 18.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds 4 Scanning for routers on your network..."
+  },
+  {
+   "frame": 39,
+   "t": 19.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ~\\ Scanning for routers on your network..."
+  },
+  {
+   "frame": 40,
+   "t": 19.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds S Scanning for routers on your network..."
+  },
+  {
+   "frame": 41,
+   "t": 20.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 42,
+   "t": 20.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds cr Scanning for routers on your network..."
+  },
+  {
+   "frame": 43,
+   "t": 21.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds _\u2014 Scanning for routers on your network..."
+  },
+  {
+   "frame": 44,
+   "t": 21.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 45,
+   "t": 22.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ( Scanning for routers on your network..."
+  },
+  {
+   "frame": 46,
+   "t": 22.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds y; Scanning for routers on your network..."
+  },
+  {
+   "frame": 47,
+   "t": 23.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Scanning for routers on your network..."
+  },
+  {
+   "frame": 48,
+   "t": 23.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds \u2018 Scanning for routers on your network..."
+  },
+  {
+   "frame": 49,
+   "t": 24.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 50,
+   "t": 24.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds G Scanning for routers on your network..."
+  },
+  {
+   "frame": 51,
+   "t": 25.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds i Scanning for routers on your network..."
+  },
+  {
+   "frame": 52,
+   "t": 25.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ~\\ Scanning for routers on your network..."
+  },
+  {
+   "frame": 53,
+   "t": 26.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ( Scanning for routers on your network..."
+  },
+  {
+   "frame": 54,
+   "t": 26.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ? Scanning for routers on your network..."
+  },
+  {
+   "frame": 55,
+   "t": 27.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Scanning for routers on your network..."
+  },
+  {
+   "frame": 56,
+   "t": 27.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds ) Scanning for routers on your network..."
+  },
+  {
+   "frame": 57,
+   "t": 28.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection ) | WIFI Repeater Lightning add"
+  },
+  {
+   "frame": 58,
+   "t": 28.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection ) | WIFI Repeater Lightning add"
+  },
+  {
+   "frame": 59,
+   "t": 29.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection ) | WiFi Repeater Lightning add"
+  },
+  {
+   "frame": 60,
+   "t": 29.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection ) | WiFi Repeater Lightning add"
+  },
+  {
+   "frame": 61,
+   "t": 30.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection ) | WIFI Repeater Lightning add"
+  },
+  {
+   "frame": 62,
+   "t": 30.5,
+   "net4sats": false,
+   "text": "Bheoin WIFI \u2014 Setup your rourer m BO seconas \u2018Select your router 192,168.2.1 \u2014 unknown unknown, \u00a5 Router passwort Router pessword (leave blank an iesh reset) Upstream connection WiFi Repeater Liphining address * you@wall"
+  },
+  {
+   "frame": 63,
+   "t": 31.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. \u2019 Router password. Router password (leave blank on fresh reset) Upstream connection (wan cetnemen) | ( WiFi Repeat"
+  },
+  {
+   "frame": 64,
+   "t": 31.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. \u2019 Router password. Router password (leave blank on fresh reset) | wr pet Lightning address * you@wallet.app or Inu"
+  },
+  {
+   "frame": 65,
+   "t": 32.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. \u2019 Router password. Router password (leave blank on fresh reset) | wr pet Lightning address * you@wallet.app or Inu"
+  },
+  {
+   "frame": 66,
+   "t": 32.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. \u2019 Router password. Router password (leave blank on fresh reset) | wr pet Lightning address * you@wallet.app or Inu"
+  },
+  {
+   "frame": 67,
+   "t": 33.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WiFi Repeater Li"
+  },
+  {
+   "frame": 68,
+   "t": 33.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WiFi Repeater Li"
+  },
+  {
+   "frame": 69,
+   "t": 34.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. \u2019 Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WIFI Repeater Li"
+  },
+  {
+   "frame": 70,
+   "t": 34.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WIFI Repeater Li"
+  },
+  {
+   "frame": 71,
+   "t": 35.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WIFI Repeater Li"
+  },
+  {
+   "frame": 72,
+   "t": 35.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WiFi Repeater Li"
+  },
+  {
+   "frame": 73,
+   "t": 36.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WIFI Repeater Li"
+  },
+  {
+   "frame": 74,
+   "t": 36.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Select your router 192.168.2.1 \u2014 unknown unknown. v Router password Router password (leave blank on fresh reset) Upstream connection WAN (Ethernet) WIFI Repeater Li"
+  },
+  {
+   "frame": 75,
+   "t": 37.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Deploying net4sats..."
+  },
+  {
+   "frame": 76,
+   "t": 37.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Deploying net4sats..."
+  },
+  {
+   "frame": 77,
+   "t": 38.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 78,
+   "t": 38.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 79,
+   "t": 39.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 80,
+   "t": 39.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 81,
+   "t": 40.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 82,
+   "t": 40.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 83,
+   "t": 41.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 84,
+   "t": 41.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 85,
+   "t": 42.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 86,
+   "t": 42.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 87,
+   "t": 43.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 88,
+   "t": 43.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 89,
+   "t": 44.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 90,
+   "t": 44.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 91,
+   "t": 45.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 92,
+   "t": 45.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 93,
+   "t": 46.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 94,
+   "t": 46.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 95,
+   "t": 47.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 96,
+   "t": 47.5,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 97,
+   "t": 48.0,
+   "net4sats": false,
+   "text": ""
+  },
+  {
+   "frame": 98,
+   "t": 48.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 99,
+   "t": 49.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 100,
+   "t": 49.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 101,
+   "t": 50.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 102,
+   "t": 50.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 103,
+   "t": 51.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 104,
+   "t": 51.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 105,
+   "t": 52.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 106,
+   "t": 52.5,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  },
+  {
+   "frame": 107,
+   "t": 53.0,
+   "net4sats": true,
+   "text": "net4sats Bitcoin WiFi \u2014 Setup your router in 60 seconds Setup failed Cannot connect to router via SSH"
+  }
+ ]
+}

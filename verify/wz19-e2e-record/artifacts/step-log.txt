@@ -1,0 +1,18 @@
+t=+0.28s	START	navigating to http://127.0.0.1:8199
+t=+2.01s	DISCOVER	scan view visible: "Scanning for routers on your network"
+t=+2.01s	TITLE	"net4sats — Router Setup"
+t=+2.02s	H1	"net4sats"
+t=+29.49s	DISCOVER_DONE	7 routers: [{"value":"192.168.2.1","label":"192.168.2.1 — unknown unknown"},{"value":"192.168.2.38","label":"192.168.2.38 — unknown unknown"},{"value":"192.168.2.2","label":"192.168.2.2 — unknown unknown"},{"value":"192.168.2.30","label":"192.168.2.30 — unknown unknown"},{"value":"192.168.2.130","label":"192.168.2.130 — unknown unknown"},{"value":"192.168.78.1","label":"192.168.78.1 — unknown unknown"},{"value":"192.168.2.121","label":"192.168.2.121 — unknown unknown"}]
+t=+31.00s	CONNECT	selected router 192.168.2.1
+t=+31.72s	CONNECT_PW	password field filled (len=0)
+t=+33.11s	UPLINK	WAN selected (class="radio-card selected")
+t=+34.45s	PAYOUTS	lnurl=demo@getalby.com
+t=+35.86s	ADVANCED_OPEN	details.advanced open=true
+t=+36.83s	ADVANCED_CLOSE	details.advanced open=false
+t=+37.28s	GATING	{"disabled":false,"text":"Deploy net4sats"}
+t=+37.34s	DEPLOY_CLICKED	deploy button clicked
+t=+38.54s	DEPLOY_STEPS	11 steps: ["○Verifying SSH access to router...","○Checking firmware version...","○Setting root password...","○Configuring upstream connection...","○Installing net4sats package + patching backend...","○Branding captive portal as net4sats...","○Deploying net4sats captive portal...","○Installing net4sats admin panel...","○Configuring Lightning address...","○Restarting services...","○Running health check..."]
+t=+48.87s	TERMINAL	terminal view = error
+t=+50.71s	TERMINAL_TEXT	"Setup failed Cannot connect to router via SSH Try again"
+t=+50.72s	DEPLOY_STATUSES	[{"text":"○Verifying SSH access to router...","cls":"step"},{"text":"○Checking firmware version...","cls":"step"},{"text":"○Setting root password...","cls":"step"},{"text":"○Configuring upstream connection...","cls":"step"},{"text":"○Installing net4sats package + patching backend...","cls":"step"},{"text":"○Branding captive portal as net4sats...","cls":"step"},{"text":"○Deploying net4sats captive portal...","cls":"step"},{"text":"○Installing net4sats admin panel...","cls":"step"},{"text":"○Configuring Lightning address...","cls":"step"},{"text":"○Restarting services...","cls":"step"},{"text":"○Running health check...","cls":"step"}]
+t=+53.72s	HOLD_END	holding terminal frame for legibility

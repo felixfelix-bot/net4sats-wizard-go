@@ -1,0 +1,98 @@
+{
+  "wizard_url": "http://127.0.0.1:8199",
+  "router": "192.168.2.1",
+  "lnurl": "demo@getalby.com",
+  "terminal": "error",
+  "terminalText": "Setup failed Cannot connect to router via SSH Try again",
+  "stepList": [
+    "○Verifying SSH access to router...",
+    "○Checking firmware version...",
+    "○Setting root password...",
+    "○Configuring upstream connection...",
+    "○Installing net4sats package + patching backend...",
+    "○Branding captive portal as net4sats...",
+    "○Deploying net4sats captive portal...",
+    "○Installing net4sats admin panel...",
+    "○Configuring Lightning address...",
+    "○Restarting services...",
+    "○Running health check..."
+  ],
+  "statuses": [
+    {
+      "text": "○Verifying SSH access to router...",
+      "cls": "step"
+    },
+    {
+      "text": "○Checking firmware version...",
+      "cls": "step"
+    },
+    {
+      "text": "○Setting root password...",
+      "cls": "step"
+    },
+    {
+      "text": "○Configuring upstream connection...",
+      "cls": "step"
+    },
+    {
+      "text": "○Installing net4sats package + patching backend...",
+      "cls": "step"
+    },
+    {
+      "text": "○Branding captive portal as net4sats...",
+      "cls": "step"
+    },
+    {
+      "text": "○Deploying net4sats captive portal...",
+      "cls": "step"
+    },
+    {
+      "text": "○Installing net4sats admin panel...",
+      "cls": "step"
+    },
+    {
+      "text": "○Configuring Lightning address...",
+      "cls": "step"
+    },
+    {
+      "text": "○Restarting services...",
+      "cls": "step"
+    },
+    {
+      "text": "○Running health check...",
+      "cls": "step"
+    }
+  ],
+  "options": [
+    {
+      "value": "192.168.2.1",
+      "label": "192.168.2.1 — unknown unknown"
+    },
+    {
+      "value": "192.168.2.38",
+      "label": "192.168.2.38 — unknown unknown"
+    },
+    {
+      "value": "192.168.2.2",
+      "label": "192.168.2.2 — unknown unknown"
+    },
+    {
+      "value": "192.168.2.30",
+      "label": "192.168.2.30 — unknown unknown"
+    },
+    {
+      "value": "192.168.2.130",
+      "label": "192.168.2.130 — unknown unknown"
+    },
+    {
+      "value": "192.168.78.1",
+      "label": "192.168.78.1 — unknown unknown"
+    },
+    {
+      "value": "192.168.2.121",
+      "label": "192.168.2.121 — unknown unknown"
+    }
+  ],
+  "title": "net4sats — Router Setup",
+  "h1": "net4sats"
+}
