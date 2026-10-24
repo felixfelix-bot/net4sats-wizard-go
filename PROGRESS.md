@@ -283,3 +283,34 @@ pasted verbatim from `REPORT-t_a8b5fcae.md` §4 (committed `303c76e`) and is NOT
 device measurement by this card. Flash/re-image is OUTSTANDING and owned by the tollgate flow
 owner — the smoke card requires a sysupgrade image (factory/initramfs does not apply).
 Status: STATED in note §5.
+
+## t_gate8 recon — 7-step wizard flow enumeration (2026-10-24)
+
+Finding: the 7-step wizard flow (Discover -> Connect -> Uplink -> Payouts ->
+Advanced -> Deploy -> Live) is **NOT IMPLEMENTED** in this repo. `index.html`
+is a flat 5-view form (`#scan-view`, `#select-view`, `#deploy-view`,
+`#success-view`, `#error-view`) with Discover/Connect/Uplink/Payouts/Advanced
+controls merged into one card. `grep -c data-testid index.html` = 0; 0 of 7
+`step-*` containers; 2 `<h2>`s neither of which is a step heading; 0
+Next/Continue/Skip buttons; no step-component files exist anywhere.
+
+The 7 steps exist only as a declared contract in a deliberately RED spec in a
+DIFFERENT repo: `physical-router-test-automation/tests/browser/
+generic-wizard-7step.spec.mjs` + `wizard-flow.mjs` (the step registry).
+
+Brief deviations (stated, not worked around): worktree `configurationwizzard`
+and branch `feature/upstream-wifi-scan` do not exist on this host
+(`configurationwizzard` is a kanban board name); the onboarding Playwright spec
+is not in this repo. Did not switch worktrees/branches.
+
+Advanced optionality: marked optional only by `optional: true` in the step
+model and the `<summary>Advanced settings (optional)</summary>` disclosure
+label. **No skip control is implemented** (`/skip/i` matches nothing).
+
+Status: COMPLETE. Deliverable `docs/recon-wizard-steps.md` (426 lines) with
+per-step tables and file:line citations; full report
+`REPORT-t_gate8-recon-7step.md`.
+
+Files touched: `docs/recon-wizard-steps.md` (new), `REPORT-t_gate8-recon-7step.md`
+(new), `PROGRESS.md` (this appended section). No spec and no component file
+modified — read-only recon, as briefed.
