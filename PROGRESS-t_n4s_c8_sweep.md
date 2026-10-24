@@ -104,3 +104,69 @@ Net effect: after the closes in F6, EVERY branch/commit from every PR in this
 sweep is reachable from a durable, already-pushed tag on a fork where this
 account holds admin. Nothing depends on GitHub retaining `refs/pull/*`.
 
+## F6 — Criterion #3 read-back PASSES ⇒ closes are honest, not premature
+
+The checklist gates the whole sweep on "criterion #3 read-back passes —
+archiving before replacements proven removes the only working install path".
+Measured today, all three legs:
+
+    net4sats/installer exists, main, pushed_at 2026-10-24, not archived
+    https://raw.githubusercontent.com/net4sats/installer/main/install.sh  -> HTTP 200
+    install.sh header: selects a brand, forwards argv to the UPSTREAM launcher,
+      verifies vendor/ against scripts/upstream-launcher.sha256 before executing
+      any byte, and states it contains "no discovery, SSH/trust, deploy, feed
+      resolution, flashing, identity derivation or pricing"  (AGENTS.md-compliant)
+    pins.tsv (the pin manifest, DATA) + every pin resolves on the remote:
+      net4sats-pin/installer-comfast        b042a2396425  == recorded  ✓
+      net4sats-pin/installer-gateway-domain a72a4f6698f7  == recorded  ✓
+      net4sats-pin/installer-rebrand-gutter 049b68918684  == recorded  ✓
+      net4sats-pin/module-ssid-bang         41ada96054bd  == recorded  ✓
+      launcher sha256 pin present: 6595640e29e4...
+
+Status → the replacement install path is proven live and pinned BEFORE anything
+is closed/archived, which is exactly the ordering the checklist demands.
+
+## F7 — PR closes performed (the part this identity CAN do)
+
+Closing your OWN PR is author-scoped and needs no repo write, so these went
+through. Closes verified by reading `state`/`closedAt` back:
+
+    net4sats-wizard-go #32  -> CLOSED 2026-10-24T05:54:09Z
+    net4sats-wizard-go #33  -> CLOSED 2026-10-24T05:53:59Z
+    net4sats-wizard-go #34  -> CLOSED 2026-10-24T05:53:45Z
+    (net4sats-wizard-go #35 was ALREADY closed 2026-10-16 — no action owed)
+
+Each carry a full rationale on the PR: withdrawal-with-the-repo, the measured
+branch/tag preservation SHAs, and — importantly — an HONEST statement that the
+diff did NOT already land on main (verified: `cors_write_path_test.go` absent
+from main; main differs from each head in ~197-198 files). "Superseded" here
+means superseded-by-architecture, not already-merged. A follow-up comment on #32
+corrects my own mislabeling of the work as "business logic" (AGENTS.md makes this
+repo a zero-logic thin wrapper).
+
+Status → DONE. Commented, not merged, branch preserved.
+
+## F8 — net4sats-feed PR #1: CANNOT merge (repo write), escalated on the PR
+
+PR #1 is OPEN/MERGEABLE/CLEAN but merging needs repo write, which the account
+lacks. A blocking comment was posted to the PR (comment id 6380613573) carrying
+the evidence, and the branch is tag-preserved (F5).
+
+Re-measured the harm it fixes, on `main` today, rather than trusting the PR body:
+
+    files/etc/uci-defaults/95-net4sats-feed:6  FEED_URL="https://blossom.net4sats.com/feed"
+    install-net4sats.sh:10                     NET4SATS_FEED=".../feed/net4sats"
+    README.md:16,20                            same host, two snippets
+    getent hosts blossom.net4sats.com          -> NXDOMAIN (curl: could not resolve)
+
+So the uci-defaults script appends an **unresolvable** origin to
+`/etc/apk/repositories` / `/etc/opkg/customfeeds.conf` on first boot and breaks
+every later `apk update` / `opkg update`. A live hardware bug, not cosmetics.
+
+**ORDERING TRAP recorded for the operator:** merging #1 as written means main's
+README never becomes the archive pointer (the pointer text is in the PR body),
+and the repo would then be archived with a README still telling operators to add
+a dead feed. Intended order: merge the fix and put the pointer text into main's
+README → then archive.
+
+
