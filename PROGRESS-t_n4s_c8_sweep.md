@@ -79,4 +79,28 @@ Fork already carries an `archive/*` tag convention (20+ tags) plus:
 
 Status → every PR head survives as a fork BRANCH today, so the "preserve
 branch" requirement is satisfied by the branches themselves. Two tag gaps
-(#34, feed #1) plus the stale `archive/wz14-debrand` tag are recorded below.
+(#34, feed #1) plus the stale `archive/wz14-debrand` tag were found and FIXED
+(additive only) — see F5.
+
+## F5 — Branch preservation HARDENED (done, verified on remote)
+
+Annotated tags cut and pushed. The PRE-EXISTING `archive/wz14-debrand`
+(`2d770966`) was deliberately NOT re-pointed — it is an ancestor of the PR head
+and `UPSTREAM-PINS.md` forbids moving a tag; a new name was cut instead.
+
+    felixfelix-bot/net4sats-wizard-go
+      archive/ci-github-actions-workflow        -> 8793808950c0  (= PR #34 head)
+      archive/ci-github-actions-workflow-clean  -> 9b272d6c0071  (= PR #35 head)
+      archive/wz14-debrand-final                -> b64555a5efff  (= PR #32 head, FULL tip)
+      (untouched: archive/wz14-debrand          -> 2d770966      (ancestor, stale))
+    felixfelix-bot/net4sats-feed
+      archive/feed-archive-pointer              -> ad59d3a76a32  (= feed PR #1 head)
+
+Status → VERIFIED by `git ls-remote <fork> 'refs/tags/<t>^{}'` peeled readback
+(annotated-tag object SHAs differ from commit SHAs by design; the `^{}` peeled
+values above are the readback, not a local read).
+
+Net effect: after the closes in F6, EVERY branch/commit from every PR in this
+sweep is reachable from a durable, already-pushed tag on a fork where this
+account holds admin. Nothing depends on GitHub retaining `refs/pull/*`.
+
