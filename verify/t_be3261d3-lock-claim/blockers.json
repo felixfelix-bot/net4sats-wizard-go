@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "card": "t_be3261d3-lock-claim",
+    "card_title": "Claim GL-MT6000 lock for owner t_be3261d3",
+    "board": "net4sats-mvp-v2",
+    "owner_task_id_requested": "t_be3261d3",
+    "produced_by": "worker-admin (fleet offload)",
+    "host": "x280",
+    "observed_utc": "2026-10-24T01:30:04Z",
+    "mode": "bookkeeping-only: zero device contact, zero lock writes",
+    "verdict": "BLOCKED_CLAIM_NOT_MADE",
+    "stop_rule_applied": "Task text: 'If the claim fails or freeness was not confirmed upstream, STOP and report the blocker — do not proceed to any flashing or device manipulation.'",
+    "read_only_wrt": [
+      "/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock",
+      "kanban board DB (SELECT only)",
+      "GL-MT6000 device (never contacted)"
+    ]
+  },
+  "deliverable": {
+    "exact_lock_handle": null,
+    "exact_lock_handle_note": "NOT ISSUED — no claim operation completed. Handle the claim would have used per convention: gl-mt6000-192.168.1.1.lock at /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock (mode 600), still owned by net4sats-mvp-v2:t_2d0c6fa8.",
+    "claim_timestamp": null,
+    "expected_release_time": null,
+    "expected_release_time_note": "NOT INVENTED. The live holder's release_condition gates release on run task t_557bb77d child 3; recon records expected_release as event-driven for this store.",
+    "persisted_where": [
+      "verify/t_be3261d3-lock-claim/lock-state-capture.txt (raw captures, committed+pushed)",
+      "verify/t_be3261d3-lock-claim/blockers.json (this file, committed+pushed)",
+      "PROGRESS.md (worktree root)",
+      "REPORT.md (worktree root, full report)"
+    ]
+  },
+  "required_fields_would_be": {
+    "owner_task": "t_be3261d3",
+    "device_id": "GL-MT6000",
+    "device_board_string": "glinet,gl-mt6000",
+    "serial": "UNRECORDED — documented absence; recon says the model string stands in for the serial. No substitution made.",
+    "claim_ts": "not written",
+    "expected_release": "not written",
+    "release_condition": "released only after run task t_557bb77d child 3 (Playwright + video run that consumes the device) reports completion, or on explicit abort",
+    "conflicts_checked": "see conflicts_checked below",
+    "prior_holder": "net4sats-mvp-v2:t_2d0c6fa8 (preserved in place — the file was NOT rewritten)"
+  },
+  "blockers": [
+    {
+      "id": "B1",
+      "severity": "BLOCKER",
+      "title": "Freeness was never confirmed upstream — the gate card never ran",
+      "evidence": {
+        "gate_card": "t_c895de5b",
+        "card_title": "Confirm GL-MT6000 free and extract lock convention + device id",
+        "status": "triage",
+        "result": null,
+        "comment_count": 0,
+        "gate_card_own_stop_rule": "If freeness CANNOT be positively confirmed ... STOP. Report the blocker ... and do not proceed.",
+        "sibling_inspector": "t_6d8235d5 status=triage, result NULL",
+        "prior_claim_card": "t_d0c3e172 status=blocked, block_kind=completion, result NULL (since 2026-10-12)"
+      },
+      "why_it_blocks": "The claim depends on a positive freeness verdict. None exists, so the claim cannot be made per convention."
+    },
+    {
+      "id": "B2",
+      "severity": "BLOCKER",
+      "title": "Live lock store on this node is HELD by a different owner (no released= line)",
+      "evidence": {
+        "path": "/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock",
+        "mode": "600",
+        "size_bytes": 721,
+        "mtime": "2026-10-14 07:38",
+        "sha256": "ed8a4573e88605c6fa4c72dcb9c85da706dc9efe18ef6371ed7a65fd90f46582",
+        "owner_task_in_file": "net4sats-mvp-v2:t_2d0c6fa8",
+        "holder_in_file": "t_2d0c6fa8",
+        "claim_ts_in_file": "2026-10-14T05:38:34Z",
+        "recorded_pid": 2174746,
+        "recorded_pid_alive": false,
+        "holder_card_status": "t_2d0c6fa8 = archived",
+        "release_test": "grep -c '^released=' -> 0 (rc=1) => STILL HELD",
+        "convention_prohibition": "recon-quote.txt:228 'Do not rename the file, force-clear, or steal a live claim.'",
+        "convention_load_bearing_rule": "recon-quote.txt:173 'the only fields that matter for mutual exclusion are owner_task= plus the absence of a released= line.'",
+        "takeover_rule_search": "grep -in 'takeover|take over|preempt|stale|orphan|force' over the recovered convention -> only the prohibition above + an unrelated advisory-kit note; NO staleness-timeout or takeover rule exists for this store."
+      },
+      "why_it_blocks": "Overwriting owner_task with t_be3261d3 would be the 'steal a live claim' the convention forbids, and would erase the only record of the competing holder. Staleness in substance is not release in form."
+    },
+    {
+      "id": "B3",
+      "severity": "BLOCKER",
+      "title": "No writable, verifiable claim target reachable from this node",
+      "evidence": {
+        "prior_claim_store": "/home/c03rad0r/physical-router-test-automation/hardware.lock",
+        "on_this_host": "ENOENT (ls rc=2)",
+        "peer_reachability_1": "ssh c03rad0r@192.168.2.32 -> 'No route to host' (rc=255)",
+        "peer_reachability_2": "ssh dq05 -> HostName dq05.fips -> name resolution failure",
+        "prior_durable_copy": "/home/c08r4d0r/.hermes/plans/2026-08-31-tollgate-batch/gl-mt6000-lock-claim-record.md -> absent",
+        "attachment_copy_present": "/home/c08r4d0r/.hermes/kanban/boards/net4sats-mvp-v2/attachments/t_d0c3e172/lock-claim-record.md (3223 B, present but historical)"
+      },
+      "why_it_blocks": "The store the prior claim used cannot be read or written from here, and the store that is here is held. No medium exists for a non-destructive claim."
+    }
+  ],
+  "conflicts_checked": {
+    "local_lock_store": "/home/c08r4d0r/.hermes/peripheral_locks/ — 6 files; only gl-mt6000-192.168.1.1.lock carries a live owner; balloon-rx/balloon-tx/tg-bench are 0 B, e80-rx-x280 + router-mt3000 are unrelated peripherals.",
+    "release_test_run": "grep -c '^released=' -> 0 (rc=1)",
+    "device_holding_processes": "none (ps sweep for ssh/scp/playwright targeting a router returned only two hermes worker sessions, neither device-facing)",
+    "fleet_ledger_scan": "~/.hermes/bot/peers/events-cobrador.jsonl grepped for mt6000/peripheral_lock/hardware.lock -> only historical t_cc28693c / t_23b8b386 / t_b4243b43 / t_86a624d3 task announcements, no live competing claim. ~/.hermes/state/fleet-private/events-dq05.jsonl is ABSENT on this host (the recon convention names it; it does not exist here).",
+    "cross_node_limitation": "dq05/cobrador stores could not be read first-hand from x280; the recon note already documents two unsynchronised live lock files for this one device on two nodes."
+  },
+  "device_untouched_attestation": "No ssh/scp/ping/curl/nc/adb/fastboot/sysupgrade or any router-facing command was executed against GL-MT6000 or any other device in this run. No flash, reboot, login, or power-cycle. All commands were local reads (ls, cat, sha256sum, grep, ps, sqlite3 SELECT, read-only git).",
+  "unblock_actions": [
+    "1. Execute the freeness gate t_c895de5b (and/or read-only inspector t_6d8235d5) to a real verdict; promote out of triage.",
+    "2. Resolve the stale t_2d0c6fa8 hold on /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock via documented release (append 'released=<UTC> outcome=aborted' + lane note) or explicit operator decision. A worker must not do this unilaterally.",
+    "3. Decide the store deliberately: x280 peripheral_locks (held, readable) vs peer c03rad0r prta kit (unreachable from here).",
+    "4. Re-dispatch this card once 1-3 are settled."
+  ]
+}

@@ -1,0 +1,64 @@
+CAPTURE 1 — live lock store on this node (x280), read-only
+captured_utc=2026-10-24T01:30:04Z  host=x280  user=c08r4d0r
+$ ls -la /home/c08r4d0r/.hermes/peripheral_locks/
+total 28
+drwxrwxr-x  2 c08r4d0r c08r4d0r  4096 Oct 20 17:56 .
+drwxr-xr-x 38 c08r4d0r c08r4d0r 12288 Oct 24 03:19 ..
+-rw-rw-r--  1 c08r4d0r c08r4d0r     0 Oct 14 14:12 balloon-rx.lock
+-rw-rw-r--  1 c08r4d0r c08r4d0r     0 Oct 14 14:12 balloon-tx.lock
+-rw-rw-r--  1 c08r4d0r c08r4d0r   237 Oct 14 00:32 e80-rx-x280.lock
+-rw-------  1 c08r4d0r c08r4d0r   721 Oct 14 07:38 gl-mt6000-192.168.1.1.lock
+-rw-r--r--  1 c08r4d0r c08r4d0r   154 Oct 20 17:56 router-mt3000.lock
+-rw-rw-r--  1 c08r4d0r c08r4d0r     0 Oct 15 05:06 tg-bench.lock
+
+$ cat /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+# GL-MT6000 hardware lock (fleet peripheral-lock store)
+# acquired by fleet offload task t_2d0c6fa8; NOT released (release is the E2E task's job)
+lock_id=gl-mt6000-192.168.1.1.lock
+lock_file=/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+device=GL-MT6000
+device_addr=192.168.1.1
+holder=t_2d0c6fa8
+owner_task=net4sats-mvp-v2:t_2d0c6fa8
+claim_ts=2026-10-14T05:38:34Z
+acquire_timestamp=2026-10-14T05:38:34Z
+acquired_epoch=1791956314
+session=c08r4d0r@x280
+pid=2174746
+phase=FD4 preflight — acquire and hold hardware lock for FD4 deploy + E2E video run (task t_2d0c6fa8)
+release_condition=released ONLY after the E2E/run task (t_557bb77d child 3, Playwright + video) reports completion or explicit abort
+
+$ sha256sum <lock>
+ed8a4573e88605c6fa4c72dcb9c85da706dc9efe18ef6371ed7a65fd90f46582  /home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock
+
+$ grep -c "^released=" <lock>   # 0/rc=1 => STILL HELD (documented release test)
+0
+rc=1
+
+CAPTURE 2 — recorded holder pid liveness
+$ ps -p 2174746 -o pid,etimes,cmd
+    PID ELAPSED CMD
+rc=1 (no data row above => pid not running)
+
+CAPTURE 3 — freeness gate card (the upstream confirmation the claim depends on)
+$ sqlite3 $DB "select id,status,result from tasks where id=\"t_c895de5b\";"
+t_c895de5b|triage|<NULL>
+$ sqlite3 $DB "select count(*) from task_comments where task_id=\"t_c895de5b\";"
+0
+
+CAPTURE 4 — prior claim card state
+$ sqlite3 $DB ... t_d0c3e172
+t_d0c3e172|blocked|completion|<NULL>
+
+CAPTURE 5 — the store the prior claim actually used (peer-node prta kit) — absent here
+$ ls -la /home/c08r4d0r/src/physical-router-test-automation/hardware.lock
+ls: cannot access '/home/c08r4d0r/src/physical-router-test-automation/hardware.lock': No such file or directory
+rc=2
+
+CAPTURE 6 — peer node store NOT reachable from x280 (honest limitation)
+$ ssh -o BatchMode=yes -o ConnectTimeout=6 c03rad0r@192.168.2.32 hostname
+ssh: connect to host 192.168.2.32 port 22: No route to host
+rc=255
+$ ssh dq05 -> HostName dq05.fips
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+hostname dq05.fips

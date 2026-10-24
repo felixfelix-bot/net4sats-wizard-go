@@ -1,183 +1,56 @@
-# PROGRESS — t_74b12192 (Check fd4/wz18 serialization)
+# PROGRESS — t_be3261d3: Claim GL-MT6000 lock for owner t_be3261d3
 
-## Finding
-VERDICT: **FREE** — fd4 and wz18 hold no hardware/feed work in flight.
+Finding -> status -> files touched. Worktree root: /home/c08r4d0r/repos/net4sats-mvp-v2
+Mode: bookkeeping only. Zero device contact, zero lock writes.
 
-- fd4/wz18 are workstream labels, NOT worker node ids. The fleet roster
-  (`~/.hermes/bot/nodes.json`) has no node named fd4 or wz18; the only
-  occurrences of those tokens as bare words in the whole of `~/.hermes`
-  are inside `~/.hermes/bot/fleet_queue_state.json` task bodies, where
-  they denote *competing hardware workstreams* ("so this run does not
-  collide with the other hardware workstreams fd4 and fe2b",
-  "Never preempt fd4, fe2b, or any other holder", "the FD4 branch").
-  So the serialization question is: is any hardware/feed work in flight
-  under either label right now?
-- Board sweep across ALL 189 board DBs: 14 rows carry a live
-  claim_lock/worker_pid/in-flight status — **0 of them** are
-  hardware/feed work (all are stale reviews/inspections from
-  Sep 2026 + blocked e80 bench rows).
-- The net4sats-mvp-v2 board has **0** rows with claim_lock/worker_pid.
-  Its 4 live kanban locks are dispatch-process locks, not device claims.
-- Live worker processes on this host (x280) at check time held
-  NON-hardware tasks (see REPORT.md for the full task text).
-- No local hardware/feed work in flight: 0 processes touching
-  adb/fastboot/esptool/flash/opkg/apk/playwright; no holder (fuser) on
-  /dev/ttyUSB0-3 or /dev/ttyACM0; no live device lock (both
-  `~/.local/state/tg-bench/*.lock` are stale and unheld).
+## STATUS: BLOCKED — claim NOT made. Stopped at step 1 (claim) per the task's own stop rule.
 
-## Status
-DONE — read-only investigation complete, nothing was modified or
-claimed. No hold required; FE2b may proceed (subject to the separate
-FE2a precondition gate, which is a different gate).
+1. Finding: the documented lock convention is a lock FILE, not a channel/column/script, at
+   `/home/c08r4d0r/.hermes/peripheral_locks/gl-mt6000-192.168.1.1.lock` (mode 600); claim is a
+   read-modify-write with 7 fields; release is a line-anchored `^released=` line or file deletion.
+   Recovered verbatim from `verify/t_6b512dad-lock-convention/recon-quote.txt` (Sources A/B/C/F).
+   Status: VERIFIED (re-read the recon capture directly, did not trust a summary).
+   Files touched: none.
 
-## Files touched
-- PROGRESS.md (this file) — root of worktree
-- REPORT.md — full evidence report
-- No repo source files touched. No device touched. No kanban state mutated.
+2. Finding: the freeness precondition was NEVER satisfied upstream. The gate card `t_c895de5b`
+   is `status=triage`, `result` NULL, 0 comments; sibling inspector `t_6d8235d5` likewise `triage`
+   with no result. The prior claim attempt `t_d0c3e172` sits `blocked` (block_kind=completion,
+   result NULL) since 2026-10-12. There is no positive freeness verdict to consume.
+   Status: VERIFIED (`sqlite3` SELECT on the board DB, reproduced in the capture file).
+   Files touched: none.
 
----
+3. Finding: the live store on this node is HELD by a different owner — `owner_task=
+   net4sats-mvp-v2:t_2d0c6fa8`, `holder=t_2d0c6fa8`, and `grep -c '^released='` returns 0 (rc=1),
+   which the convention defines as STILL HELD. Recorded pid 2174746 is dead and that owner's card
+   is `archived`, so the hold is substantively stale — but staleness is not release, and the
+   convention explicitly forbids "rename the file, force-clear, or steal a live claim". No
+   documented takeover/staleness rule exists for this store. I did NOT overwrite it.
+   Status: VERIFIED (file read + sha256 + documented release test + `ps`).
+   Files touched: none.
 
-# WZ1.5 part A — exhaustive artifact-URL-token inventory (t_wz15-part-a)
+4. Finding: no writable claim target exists from this node. The store the prior claim used is the
+   peer-node prta kit at `/home/c03rad0r/physical-router-test-automation/hardware.lock` — absent on
+   x280 (ENOENT), peer host unreachable (`192.168.2.32` no route to host; `dq05` -> `dq05.fips`
+   unresolvable), and its recorded durable claim-record copy is absent in the plan dir here.
+   Status: VERIFIED.
+   Files touched: none.
 
-## Finding
-Repo-wide case-insensitive sweep for the four tokens yields **163 text lines in 45 files**
-plus 1 binary notice (`./net4sats-wizard`, 2 strings). Tracked-only (`git grep`) is 134
-lines; the 29-line delta is entirely `.git/info/exclude`'d `PROGRESS-t_*`/`REPORT-t_*` task
-logs in this shared worktree root. Per token: orangesync 17, blossom2 3, felixfelix-bot 89,
-releases.tollgate.me 59 (lines; 5 lines carry two tokens).
+5. Finding: no lock state was persisted because no claim was made. What IS persisted is the
+   evidence trail the sibling announcement (`t_0841f821`) and verification tasks can read back:
+   raw captures + a plain-language blocker set with the exact unblocking actions.
+   Status: DONE.
+   Files touched: `verify/t_be3261d3-lock-claim/lock-state-capture.txt`, `PROGRESS.md`,
+   `REPORT.md` (full report, written before the final reply).
 
-Classification: **(a) 15** URL-to-replace, **(b) 0** unused constant, **(c) 4** doc link to
-move, **(d) 144** leave alone. Class (b) is empty — the only dead constant in this area
-(`tollgateOSURL`) was already deleted and survives only as a regression-guard comment.
+## Explicitly NOT done
+- No lock file created, appended to, modified, or deleted.
+- No `released=` line appended (that would be a false release of someone else's claim).
+- No lock handle, claim timestamp, or expected release time invented — all three are reported as
+  NOT ISSUED / NONE, because a fabricated handle is worse than an honest null.
+- No ssh/scp/ping/curl/nc to GL-MT6000 or any device; nothing flashed, rebooted, or power-cycled.
 
-## Status
-DONE. Deliverable written and verified row-by-row against a fresh live grep: 163/163 rows,
-0 missing, 0 extra, 0 duplicates, and all 163 `exact line` cells match the source file bytes
-after reversing the table's `|` -> `&#124;` escape.
-
-## Files touched
-- `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-url-inventory.part-a.md` — the deliverable
-- `~/.hermes/plans/2026-08-31-tollgate-batch/wz15-tools/gen_report.py` — generator (kept out of
-  the repo so the doc has no self-hits; classified rows are explicit, unclassified rows abort)
-- `PROGRESS.md` (this file) + `REPORT.md` — appended, not overwritten (shared with other cards)
-- No repo source file touched; no test/build state changed; nothing merged with part B.
-
-## WZ1.5 part A — FACT-CHECK CORRECTION (added by part-B lane)
-
-Part A's section above says class (b) is empty and that `configwizURL`-class dead
-constants do not exist ("the only dead constant in this area (`tollgateOSURL`) was
-already deleted"). That is **wrong for `configwizURL`**: it is declared at
-`deploy.go:50`, has **zero** production references, and its only two mentions are
-test-side (`pins_test.go:31`, `:77`). See the part-B section below. Part A's own
-row count (163/163) is unaffected; only its class-(b)=0 claim is.
-
-# WZ1.5 part B — `tollgateOSURL` / `configwizURL` dead-code adjudication (t_wz15-part-b)
-
-## Finding
-Both constants are DEAD, in two different senses.
-
-- **`tollgateOSURL` — already deleted; only a tripwire remains.** 0 identifier
-  occurrences in any `.go` file. 2 token lines survive: `pins_test.go:45-46`
-  (prose) and `pins_test.go:49` (string element of `forbiddenDeployIdentifiers`).
-  Added `fa306d2:deploy.go:15`, deleted `d25c018`; declaration-only its whole
-  life (`uses=1` in every intermediate commit). Its URL is 404 today (measured).
-  Verdict: **DEAD — no action; keep both guard lines; never reuse the name and
-  never reuse the 404 `releases.tollgate.me/os/…` URL.**
-- **`configwizURL` — declared, never used in production, never passed to
-  `httpGetFile` in any commit** (`git log --all -S'httpGetFile(configwizURL'` is
-  empty). Its real consumer was removed at `adfaffb` (2026-07-16, when the admin
-  panel/portal became embedded); `pins_test.go` only picked the name up later, at
-  `d25c018`. 3 token lines: `deploy.go:50` (decl), `pins_test.go:31` (registry
-  string), `pins_test.go:77` (live-check map — the line that makes it *look*
-  load-bearing, since `TestPinnedURLsAreLive` really does HTTP-GET it and passes).
-  Verdict: **DEAD — delete, do not repin.** 4 edit sites in ONE commit:
-  `deploy.go:48-50`, `pins_test.go:31`, `pins_test.go:77`, plus
-  `docs/router-setup.md:193` (stale `v1.0.1`/fork row -> real `v1.0.10-alpha`
-  provenance as a docs see-also).
-- No replacement constant is needed for either. The artifact `configwizURL` named
-  is shipped as tracked files (21 of them byte-identical to the release tarball,
-  sha256 `87e5b9c8…`), embedded via `embed.go:11-15` — the only thing worth
-  keeping is the version+digest provenance, which is a docs fact.
-
-## Status
-DONE — read-only adjudication + a deletion experiment on a throwaway copy
-(`/tmp/wz15-del-exp`); the repo working tree was not modified. Experiment proof:
-`go build ./...`, `go vet ./...`, `gofmt -l` clean, `golangci-lint run` exit 0,
-`go test ./...` green (64.5s vs 63.2s baseline at unmodified HEAD).
-
-## Files touched
-- `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-url-inventory.part-b.md` — the deliverable
-- `PROGRESS.md` (this file) + `REPORT.md` — appended, not overwritten (shared with other cards)
-- No repo source file touched; no test/build state changed; not merged with part A.
-
----
-
-# t_855cbaac — Phase-2 feed publication status
-
-**Finding:** Phase-2 feed **NOT PUBLISHED** — no fetchable feed index at any host the project
-names. Every opkg/apk index path 404s except a stale, **unsigned** `v0.5.0-alpha3` alpha index on
-`releases.tollgate.me` (`last-modified: Wed, 01 Jul 2026 19:52:40 GMT`; `Packages.sig` and
-`keys/tollgate-testing.pem` both 404). What exists is a per-asset **release lane**,
-`FreedomTechFeed/packages` `v0.6.0` (2026-10-21, 26 assets, signed manifest verified this run) —
-artifacts, not a feed. Candidate base for the downstream decision:
-`https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0/` (asset-only; cannot express
-a `src/gz` line; sits on the 0.6.0 line while the wizard pins `v0.7.0-alpha10` /
-`v0.6.1-post-merge` from the fork).
-
-Two brief corrections, both measured: `schedule.md` has **0** hits for `feed`/`phase.?2`
-(337 lines — the term is defined in `feed-freedomtech/docs/per-arch-release-assets.md:4`), and
-`deploy.go` at HEAD has **zero** `blossom2`/`orangesync` references (all three constants are
-`felixfelix-bot`; blossom survives only in history, `11f63e7:deploy.go:42`).
-
-**Status:** DONE — read-only probe, no repo source changed, no build/test applicable.
-**Files touched:** deliverable `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-phase2-feed-status.md`
-(outside any git repo); `REPORT-t_855cbaac.md` + `PROGRESS-t_855cbaac.md` (new, tracked); this
-append to `PROGRESS.md`. **`REPORT.md` deliberately untouched** — sibling card `t_wz15-part-b` had
-uncommitted edits there during this run.
-
----
-
-# t_1df48589 — wz1.5 channel decision note + Q5 status (second pass)
-
-**Finding:** the decision note exists and is correct in substance, but **was never committed**, and
-it carried **one real defect** — both now fixed.
-
-1. **Never landed.** `~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-channel-decision.md` (414
-   lines) is on disk, but the plans directory is **not a git repo** (`git rev-parse --show-toplevel`
-   → fatal), and this card's own report files were also absent from history
-   (`git log --all -- PROGRESS-t_1df48589.md REPORT-t_1df48589.md` → **0 commits**) because
-   `/PROGRESS-t_*.md` + `/REPORT-t_*.md` are gitignored in this worktree
-   (`/home/c08r4d0r/wz16-verify/.git/info/exclude:4-5`). Fixed by committing a byte-identical
-   mirror at `docs/wz1.5-channel-decision.md` plus verbatim captures at
-   `docs/evidence/2026-10-24-wz15-channel-decision-reverify.md`.
-2. **Defect fixed.** The note's instantiated artifact-filename template
-   (`tollgate-wrt_v<X.Y.Z>_<arch>.ipk`) is a **404** on the one version that exists on the chosen
-   host: the real `.ipk` carries a build-flavour suffix
-   (`…-upx-ultra-brute.ipk`) and **no plain `.ipk` exists at all**, while the **apk** exists in
-   *both* plain (7,153,725 B) and suffixed (5,307,464 B) form. So the filename is per-artifact and
-   must be read from that version's index `Filename:` field, never composed. New note §2.3a carries
-   the evidence; §3 rule 1b enforces it; §1 and §6.1 say so explicitly.
-
-**Decision (unchanged):** interim channel `releases.tollgate.me`, base pattern
-`https://releases.tollgate.me/alpha/v<X.Y.Z>[-<pre>]/<arch>/<artifact-file>`; **Q5 = OPEN**
-(interim vs final channel undecided) — the Phase-2 feed is NOT PUBLISHED, which is the
-NOT-PUBLISHED branch of the decision rule. The two example versioned URLs with observed HTTP +
-digest evidence come from `FreedomTechFeed/packages` `v0.6.0` and `v0.6.0-rc6`; the chosen channel
-has exactly one version, so the "two versions" criterion is met only on the release lane — stated
-plainly in the note rather than fabricated.
-
-**Status:** DONE — decision note corrected and delivered, Q5 recorded OPEN. No Go source touched
-(`deploy.go`, `pins_test.go` unmodified; the four-point landing gate stays closed), so nothing was
-built or tested. Blocked on the producing side publishing a signed index + per-arch artifact for a
-current release, and on the operator answer to Q5.
-
-**Files touched:** the deliverable note (patched); `docs/wz1.5-channel-decision.md` (new, tracked
-mirror); `docs/evidence/2026-10-24-wz15-channel-decision-reverify.md` (new, tracked);
-`REPORT-t_1df48589.md` + `PROGRESS-t_1df48589.md` (updated); this append. **`REPORT.md`
-deliberately untouched** — sibling card `t_wz15-part-b` has uncommitted edits there (32
-insertions / 22 deletions, not mine).
-
-**Verification:** 12-URL status matrix, 27-URL tag×filename sweep (exactly one version has
-artifacts), index `Filename:`/`Size:`/`SHA256sum:` extraction with `content-length` cross-check,
-one full download (5,307,464 B) matching the index digest, `latest` → 404/302, release inventories
-for both repos, and the explorer bundle re-fetch (474,543 B) for the channel vocabulary.
+## Unblock path for the manager (detail in REPORT.md)
+1. Run `t_c895de5b` / `t_6d8235d5` to a real freeness verdict.
+2. Resolve the stale `t_2d0c6fa8` hold by documented release or explicit operator decision.
+3. Decide the store (x280 peripheral_locks vs peer c03rad0r prta kit) — the two are unsynchronised.
+4. Re-dispatch this card.
