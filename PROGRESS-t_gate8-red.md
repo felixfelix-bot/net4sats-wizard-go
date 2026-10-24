@@ -40,21 +40,50 @@ Finding: see artifact header. Pin recorded in the RED-RUN artifact as the exact
 HEAD sha of net4sats-wizard-go at run time, plus the kit branch/sha.
 Status: DONE.
 
-## Step 3 — Spec authored (RED)
+## Step 3 — Spec authored (RED), in the kit not this repo
 
-Finding: authored the generalized spec + a data-driven step model (wizard-flow.mjs)
-so the step list/order/optionality is DATA, not scattered literals. Five
-independently runnable cases (a-e of the brief) + the two Advanced cases are
-title-filterable.
-Status: DONE — see files touched below.
-
-## Step 4 — Red run captured
-
-Finding: see the artifact + REPORT.md.
+Finding: the Playwright suite lives in the kit, so the spec lives there
+(`tests/browser/`). Authored a data-driven step model (`wizard-flow.mjs`) so the
+step list/order/optionality is DATA, plus 5 independently runnable cases (brief
+a-e). Two Advanced cases are title-filterable:
+`--grep "advanced SKIP path"` / `--grep "advanced VISITED path"`.
 Status: DONE.
+Files touched: kit `tests/browser/wizard-flow.mjs`,
+`generic-wizard-7step.spec.mjs`, `generic-wizard-7step.config.mjs`.
+
+## Step 4 — Red run captured against the pinned build
+
+Finding: full run = 5 failed / 5 total, exit 1. Expected reason: the pinned build
+implements NO step model — served document has 0 `data-testid` attributes, 2
+`<h2>` (needs 7), 0 forward-or-skip controls, 0 step containers. Pin verified by
+content: served bytes hash == `HEAD:index.html` ==
+72d79dd2c4246ed18affded543a6ce64846ce7f2104333db5737216178a416c9.
+Status: DONE.
+Files touched: `evidence/wz1.8-red-generic-7step/` (6 files).
 
 ---
 
+## Commits + push (verified live)
+
+- `8fd477d` — spec artifact + this progress file.
+- `9d849d1` — raw output, DOM audit, failure screenshot.
+- Both pushed; `git ls-remote origin worker-heavy/t_gate8-19b1b1c6` == local SHA.
+- Anonymous fetch of the artifact at `8fd477d` -> HTTP 200, 17603 bytes,
+  sha256 `ad72354e…f89528` == on-disk. Artifact is publicly readable.
+- Kit spec committed as `0600890` and pushed to `fork:feat/generic-7step-red`;
+  spec + flow model anonymously readable (HTTP 200 each).
+
 ## Files touched
-- (this file)
-- REPORT.md (full report)
+- `PROGRESS-t_gate8-red.md` (this file)
+- `REPORT-t_gate8-red.md` (full report)
+- `evidence/wz1.8-red-generic-7step/` (RED-RUN artifact, raw output, DOM audit,
+  failure screenshot, reproduce script)
+- kit `tests/browser/{wizard-flow.mjs, generic-wizard-7step.spec.mjs,
+  generic-wizard-7step.config.mjs}`
+
+## Explicitly NOT done
+- No GL-MT6000 hardware run, no flash, no video capture (separate WZ1.8 task).
+- The spec was NOT made to pass. Green is the follow-on task.
+- `PROGRESS.md` / `REPORT.md` at the worktree root were NOT touched: root
+  `PROGRESS.md` is tracked and shared, already carrying three other cards'
+  sections. Task notes went to the task-scoped files above.
