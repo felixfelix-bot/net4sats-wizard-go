@@ -1,0 +1,13 @@
+=== served DOM: step-container / testid / control audit (pinned build) ===
+-- data-testid attribute count --
+0
+-- h2 (expected 7 step headings, found:) --
+2
+-- view containers present --
+id="scan-view"
+id="select-view"
+id="deploy-view"
+id="success-view"
+id="error-view"
+-- forward/skip controls --
+0

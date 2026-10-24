@@ -1,0 +1,131 @@
+
+Running 5 tests using 1 worker
+
+  ✘  1 [generic-wizard-7step] › generic-wizard-7step.spec.mjs:237:2 › generic 7-step wizard flow › step order: all 7 steps appear in the declared order (5.9s)
+  ✘  2 [generic-wizard-7step] › generic-wizard-7step.spec.mjs:272:2 › generic 7-step wizard flow › advanced SKIP path: skipping Advanced still reaches Deploy (891ms)
+  ✘  3 [generic-wizard-7step] › generic-wizard-7step.spec.mjs:303:2 › generic 7-step wizard flow › advanced VISITED path: visiting Advanced applies and reports its values (905ms)
+  ✘  4 [generic-wizard-7step] › generic-wizard-7step.spec.mjs:331:2 › generic 7-step wizard flow › gating: cannot advance past a step while its requirements are unmet (947ms)
+  ✘  5 [generic-wizard-7step] › generic-wizard-7step.spec.mjs:370:2 › generic 7-step wizard flow › live: terminal Live step reached with post-deploy evidence (906ms)
+
+
+  1) [generic-wizard-7step] › generic-wizard-7step.spec.mjs:237:2 › generic 7-step wizard flow › step order: all 7 steps appear in the declared order 
+
+    Error: step "Discover" is missing: expected a container with [data-testid="step-discover"]
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeAttached[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="step-discover"]')
+    Expected: attached
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - step "Discover" is missing: expected a container with [data-testid="step-discover"] with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="step-discover"]')[22m
+
+
+      252 | 				stepLocator(page, step),
+      253 | 				`step "${step.title}" is missing: expected a container with ${stepSelector(step)}`,
+    > 254 | 			).toBeAttached();
+          | 			  ^
+      255 | 		}
+      256 |
+      257 | 		// DOM order must match declared order — compare the sequence of testids
+        at /home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:254:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/generic-wizard-7step-gener-e510c-ppear-in-the-declared-order-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/generic-wizard-7step-gener-e510c-ppear-in-the-declared-order-generic-wizard-7step/error-context.md
+
+  2) [generic-wizard-7step] › generic-wizard-7step.spec.mjs:272:2 › generic 7-step wizard flow › advanced SKIP path: skipping Advanced still reaches Deploy 
+
+    Error: expected exactly one declared step container visible, found 0 (none) — the wizard declares 7 steps: discover -> connect -> uplink -> payouts -> advanced -> deploy -> live
+
+      151 | 	}
+      152 | 	if (visible.length !== 1) {
+    > 153 | 		throw new Error(
+          | 		      ^
+      154 | 			`expected exactly one declared step container visible, found ${visible.length} ` +
+      155 | 				`(${visible.join(', ') || 'none'}) — the wizard declares ${STEP_COUNT} steps: ` +
+      156 | 				STEP_ORDER.join(' -> '),
+        at currentStepId (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:153:9)
+        at walkTo (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:210:8)
+        at /home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:275:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/generic-wizard-7step-gener-4e965-vanced-still-reaches-Deploy-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/generic-wizard-7step-gener-4e965-vanced-still-reaches-Deploy-generic-wizard-7step/error-context.md
+
+  3) [generic-wizard-7step] › generic-wizard-7step.spec.mjs:303:2 › generic 7-step wizard flow › advanced VISITED path: visiting Advanced applies and reports its values 
+
+    Error: expected exactly one declared step container visible, found 0 (none) — the wizard declares 7 steps: discover -> connect -> uplink -> payouts -> advanced -> deploy -> live
+
+      151 | 	}
+      152 | 	if (visible.length !== 1) {
+    > 153 | 		throw new Error(
+          | 		      ^
+      154 | 			`expected exactly one declared step container visible, found ${visible.length} ` +
+      155 | 				`(${visible.join(', ') || 'none'}) — the wizard declares ${STEP_COUNT} steps: ` +
+      156 | 				STEP_ORDER.join(' -> '),
+        at currentStepId (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:153:9)
+        at walkTo (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:210:8)
+        at /home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:306:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/generic-wizard-7step-gener-d47d9-lies-and-reports-its-values-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/generic-wizard-7step-gener-d47d9-lies-and-reports-its-values-generic-wizard-7step/error-context.md
+
+  4) [generic-wizard-7step] › generic-wizard-7step.spec.mjs:331:2 › generic 7-step wizard flow › gating: cannot advance past a step while its requirements are unmet 
+
+    Error: expected exactly one declared step container visible, found 0 (none) — the wizard declares 7 steps: discover -> connect -> uplink -> payouts -> advanced -> deploy -> live
+
+      151 | 	}
+      152 | 	if (visible.length !== 1) {
+    > 153 | 		throw new Error(
+          | 		      ^
+      154 | 			`expected exactly one declared step container visible, found ${visible.length} ` +
+      155 | 				`(${visible.join(', ') || 'none'}) — the wizard declares ${STEP_COUNT} steps: ` +
+      156 | 				STEP_ORDER.join(' -> '),
+        at currentStepId (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:153:9)
+        at walkTo (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:210:8)
+        at /home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:334:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/generic-wizard-7step-gener-44424--its-requirements-are-unmet-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/generic-wizard-7step-gener-44424--its-requirements-are-unmet-generic-wizard-7step/error-context.md
+
+  5) [generic-wizard-7step] › generic-wizard-7step.spec.mjs:370:2 › generic 7-step wizard flow › live: terminal Live step reached with post-deploy evidence 
+
+    Error: expected exactly one declared step container visible, found 0 (none) — the wizard declares 7 steps: discover -> connect -> uplink -> payouts -> advanced -> deploy -> live
+
+      151 | 	}
+      152 | 	if (visible.length !== 1) {
+    > 153 | 		throw new Error(
+          | 		      ^
+      154 | 			`expected exactly one declared step container visible, found ${visible.length} ` +
+      155 | 				`(${visible.join(', ') || 'none'}) — the wizard declares ${STEP_COUNT} steps: ` +
+      156 | 				STEP_ORDER.join(' -> '),
+        at currentStepId (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:153:9)
+        at walkTo (/home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:210:8)
+        at /home/c08r4d0r/repos/physical-router-test-automation/tests/browser/generic-wizard-7step.spec.mjs:371:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/generic-wizard-7step-gener-37f31-d-with-post-deploy-evidence-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/generic-wizard-7step-gener-37f31-d-with-post-deploy-evidence-generic-wizard-7step/error-context.md
+
+  5 failed
+    [generic-wizard-7step] › generic-wizard-7step.spec.mjs:237:2 › generic 7-step wizard flow › step order: all 7 steps appear in the declared order 
+    [generic-wizard-7step] › generic-wizard-7step.spec.mjs:272:2 › generic 7-step wizard flow › advanced SKIP path: skipping Advanced still reaches Deploy 
+    [generic-wizard-7step] › generic-wizard-7step.spec.mjs:303:2 › generic 7-step wizard flow › advanced VISITED path: visiting Advanced applies and reports its values 
+    [generic-wizard-7step] › generic-wizard-7step.spec.mjs:331:2 › generic 7-step wizard flow › gating: cannot advance past a step while its requirements are unmet 
+    [generic-wizard-7step] › generic-wizard-7step.spec.mjs:370:2 › generic 7-step wizard flow › live: terminal Live step reached with post-deploy evidence 
