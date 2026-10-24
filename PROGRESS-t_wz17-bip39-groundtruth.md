@@ -1,0 +1,21 @@
+# PROGRESS — WZ1.7 BIP39 12-vs-24 ground-truth table + AGENTS.md candidate statements
+
+Card: net4sats-mvp-v2 WZ1.7 (fleet offload). Repo: /home/c08r4d0r/repos/net4sats-mvp-v2
+Mode: READ-ONLY. No code/doc/config/AGENTS.md edit. No source commit.
+
+| # | Finding | Status | Files touched |
+|---|---------|--------|---------------|
+| 1 | Inputs located: parents are `REPORT-t_d60caf8a.md`, `REPORT-t_e75c5cd6.md`, `EVIDENCE-NOTE-t_93620520.md` (+ audit `attachments/t_e7c505b4/AUDIT-evidence-note-t_e7c505b4.md`). Card `t_fd85fd04` (the original producer) is archived with empty `result`. `schedule.md` contains **0** occurrences of `WZ1.7` — the item does not exist in that file; the strand lives on board `net4sats-mvp-v2` only. | DONE | — |
+| 2 | CORE claim resolved: mnemonic is **12 words / 128-bit** = TRUE — `tollgate-module-basic-go/src/identity/identity.go:137` `entropy, err := bip39.NewEntropy(128)`, pinned to `tyler-smith/go-bip39 v1.1.0` (`src/identity/go.mod:8`, root `src/go.mod:115`). | VERIFIED (re-read at backend HEAD eb12d7f8 and origin/main 95835413) | — |
+| 3 | `AGENTS.md:43` "BIP39 mnemonic (24 words)" = FALSE, and the same line's `PrivateKeyToMnemonic` = FALSE (0 hits in backend `*.go`, and 0 commits on origin/main ever introduced it). `AGENTS.md:29` repeats the non-existent symbol. AGENTS.md blob `f2ff1775…` unchanged since its only commit `475a9ef` (2026-07-06). | VERIFIED | — |
+| 4 | **Parent conflict resolved (real correction):** both `REPORT-t_d60caf8a.md` and `REPORT-t_e75c5cd6.md` present `7a87fb4d` (2026-07-08, "switch from 24-word … to 12-word NIP-06") as the backend's switch. `git merge-base --is-ancestor 7a87fb4d origin/main` → **NO**; that commit is only on `origin/feat/identity-v2-carried`. On `origin/main`, `src/identity/identity.go` has exactly 2 commits and was introduced already-12-word by `d491a4c4` (2026-08-17). The 24-word code is real but lives only at `7a87fb4d^` on the carried branch. | VERIFIED — table row + candidate statement 10 corrected accordingly | — |
+| 5 | Minor parent conflict: `identity_test.go` 12-word assertion is at `:57` (one parent said `:56` — that line is `words := strings.Fields(mnemonic)`). Backend main.go reveal-seed numbers at working HEAD are `:2175/:2179/:2186/:2189/:2195`; parents cited origin/main numbering (`:1876/:1882`) and an older HEAD (`:1862-1891`). | VERIFIED | — |
+| 6 | Second generator (`cdk-ffi` via `cdk-go v0.17.3`) measured first-hand at 6/6 runs = 12 words, via `ctypes` into the shipped `libcdk_ffi.so`. Parent's `/tmp/cdkffi173` source path is gone; only the 0.18.1 crate exists locally, so the pinned **source literal** stays residual-uncertain (behaviour is pinned). | VERIFIED (behaviour) / residual (source line) | /tmp probes only |
+| 7 | Vendored wordlist / hardcoded length: **none in this repo** (`not found in repo`) — wizard `go.sum` 0 hits, 0 wordlist files tracked, 0 `bip39` matches in all 7 bundles, 0 in the built binary. Literal values recorded where they do live: library English list = 2048 words (CRC32 `c1dbd296`, `go-bip39@v1.1.0/wordlists/english.go:13-23`); backend's only hardcoded length constant is `6` (derived password words, `identity.go:161/172`); dead 24-word path `NewEntropy(256)` at `go-nostr@v0.51.12/nip06/nip06.go:11` with 0 callers. | VERIFIED | — |
+| 8 | Executed probes: Go probe on pinned v1.1.0 (`GOPROXY=off`) → 128↔12, 256↔24, 24-word phrase **accepted** by `IsMnemonicValid`; backend identity tests `TestMnemonic_RoundTrip`/`TestGenerateMnemonic_TwelveWords`/`TestMnemonicToPrivateKey_RejectsInvalid` all PASS (`GOWORK=off`, go1.22.12). | VERIFIED | /tmp/bip39probe2 |
+| 9 | Deliverable written: table (exact columns Claim / Verdict / Evidence / Verbatim snippet) + 10 candidate statements + residual-uncertainty line. | DONE | `REPORT-t_wz17-bip39-groundtruth.md`, this file |
+| 10 | AGENTS.md **not** edited; no source touched; worktree clean apart from this card's two report files and pre-existing untracked files of other cards. | VERIFIED | — |
+
+Commit note: root `PROGRESS.md`/`REPORT.md` belong to other cards and were **not** touched;
+task-scoped `PROGRESS-t_*.md`/`REPORT-t_*.md` are git-excluded in this shared worktree, so the
+paths were force-added explicitly and the pathspec repeated on commit.
