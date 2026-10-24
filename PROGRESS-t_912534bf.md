@@ -41,7 +41,10 @@ Mode: read-only over all subject artefacts. No device command, no network probe.
 - live re-check of the 5 external quotes (`evidence.log:30/32/33/104-105/115-116`, spec `:18/49/63/243/297/299/311`, `traces-network-dump.txt:13` → `(NONE)`, `dispatch4:111`, `e2e/README.md:86-88`) → all matched
 - `grep -o` re-count of the HAR dump: 4 `resource-snapshot`, 5 `"status":200`, 4 `Host: localhost:8099`, 4 `serverIPAddress 127.0.0.1`, 4 `_serverPort 8099`, sizes 19976×2 / 1021 / 1143
 - `git ls-files --error-unmatch verify/fe2b-device-baseline-pass5-2026-10-16/evidence.log` → success
-- no test-suite green claimed.
+- `shellcheck -S warning` on both scripts → exit 0, no findings
+- canonical recipe (from `hermes verify --detect-only --json`): `go build ./...` exit 0; `go vet ./...` exit 0; `go test -v ./...` → **65 PASS / 1 FAIL**
+- the single FAIL is `TestNoInternalProcessLeaksOnShippedSurfaces` (pre-existing debrand guard, 3 foreign `docs/*.md`); proven not-mine 4 ways incl. deterministic replay at base `e8e6274` in `/tmp/base-e8e6274` (same test fails there) — see REPORT §8.1
+- no test-suite green claimed. `hermes verify` (full pass incl. `start`/readiness on port 8099) was NOT run: the recipe's `start` boots the wizard and binds 8099, and that was out of scope for a read-only evidence audit.
 
 ## open items handed forward
 

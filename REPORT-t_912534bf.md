@@ -399,3 +399,47 @@ trace dump, `dispatch4:111`, `README.md:86-88`) cannot resolve from the frozen c
 re-checked by direct `sed -n` against the live files this pass; all five matched byte-for-byte,
 including the CRLF endings in `evidence.log` (`cat -A` → `OPEN^M$`) and the `(NONE)` at
 `traces-network-dump.txt:13`.
+
+### 8.1 Canonical project recipe — run this pass, and the one pre-existing failure
+
+`hermes verify --detect-only --json` reports the repo's recipe as a Go project:
+`build: ["go build ./..."]`, `test: ["go test ./..."]`, `start: "go run ."`, port 8099,
+`evidence: ["Detected go.mod"]`. `/usr/local/go/bin` is not on this shell's PATH; the toolchain
+(go1.22.12) was exported for the run.
+
+```
+$ /usr/local/go/bin/go build ./...      # BUILD_EXIT=0   (silent)
+$ /usr/local/go/bin/go vet ./...        # VET_EXIT=0     (silent)
+$ /usr/local/go/bin/go test -v ./...
+--- PASS: 65 tests
+--- FAIL: 1 test
+    --- FAIL: TestNoInternalProcessLeaksOnShippedSurfaces (0.11s)
+```
+
+`TestNoInternalProcessLeaksOnShippedSurfaces` is the WZ1.9 debrand guard. It is the **only**
+failure. Its `shippedSurfaces` set is `index.html`, `README.md`, `CHANGELOG.md`, `docs/*.md`,
+`portal/|admin/|rpcd/**`, and `*.go` (`debrand_internal_test.go:52-102`). Three files trip it:
+
+```
+     56 hits  docs/readiness-gl-mt6000-wz1.8-t_05167730-2026-10-24.md     tracked, added by 22fbea4
+     27 hits  docs/WZ1.8-gate8-gate9-review-verdict-t_cc76c746-2026-10-24.md  untracked, foreign card t_cc76c746
+     22 hits  docs/LOCK-ANNOUNCE-gl-mt6000-t_be3261d3-2026-10-24.md       tracked, added by ab33306
+```
+
+**This failure is not mine, and I did not touch it.** Four independent checks: (i) no line of the
+failure output cites any file I wrote — re-measured, `NONE OF MY FILES CITED`; (ii) my four commits
+touch ten paths (`git diff --name-only e8e6274..HEAD`) and none is in the test's scan set — the
+guard file, `docs/`, and `index.html` are untouched (`git diff --stat` empty); (iii) the two tracked
+offenders were added by commits that are **ancestors of my base** `e8e6274`
+(`git merge-base --is-ancestor` → true for both); (iv) deterministic replay at the base commit in a
+disposable worktree: `git worktree add --detach /tmp/base-e8e6274 e8e6274` → the same test FAILS
+there with **78** `internal detail leaked` lines (mine, with the third file present, prints more
+because the untracked `docs/WZ1.8-gate8-gate9-review-verdict-…md` is in scope on this working tree;
+that file was authored by card `t_cc76c746`, not by this card). The worktree was then removed and
+`git worktree prune` run.
+
+The guard's own header states task-history artefacts are deliberately out of scope for it
+(`debrand_internal_test.go:43-46`), which is why this card's `REPORT-t_*`/`verify/` output cannot and
+does not participate. This report is therefore delivered with a **known pre-existing red** in the
+repo's own suite, reported rather than hidden, and not repaired here — repairing it means editing
+three `docs/*.md` files owned by three other cards, which is scope this card was not given.
