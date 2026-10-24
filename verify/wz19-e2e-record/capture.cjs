@@ -17,7 +17,26 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('@playwright/test');
+
+/**
+ * Resolve @playwright/test. Node resolves modules from THIS file's directory, so
+ * the driver must not depend on being copied next to a node_modules tree — point
+ * PLAYWRIGHT_MODULE at an install, or let the fallback search find one.
+ */
+function loadPlaywright() {
+  const roots = [
+    process.env.PLAYWRIGHT_MODULE,
+    '@playwright/test',
+    path.join(process.env.HOME || '', 'wz18-gate8-run/node_modules/@playwright/test'),
+    path.join(process.env.HOME || '', '.npm/_npx/c61c9351a0dbcfa7/node_modules/@playwright/test'),
+  ].filter(Boolean);
+  for (const r of roots) {
+    try { return require(r); } catch (_) { /* try next */ }
+  }
+  throw new Error(
+    'cannot resolve @playwright/test; set PLAYWRIGHT_MODULE=/path/to/node_modules/@playwright/test');
+}
+const { chromium } = loadPlaywright();
 
 const WIZARD_URL = process.env.WIZARD_URL || 'http://127.0.0.1:8199';
 const ROUTER_IP = process.env.ROUTER_IP || '192.168.2.1';
