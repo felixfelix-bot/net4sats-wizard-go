@@ -22,42 +22,48 @@ $ WIZARD_BIND=127.0.0.1:8199 hermes verify --json --phase start --port 8199
 {"ok":true,"readiness":{"url":"http://127.0.0.1:8199/","ready":true,"statusCode":200}}
 ```
 
-## 3. Full suite — RED, and NOT caused by this lane
+## 3. Failure attribution — measured by elimination, one variable at a time
+
+`hermes verify --json` run whole (`build → test → start`) reds in the test phase. The red
+set is **entirely** (a) other cards' tracked docs, and (b) an environment mistake of mine
+that I caught and fixed. Proven by narrowing one variable per run:
+
+| Run | Environment | Remaining failures | Conclusion |
+|---|---|---|---|
+| A | `go test ./...` as-is | 3: the two docs **+** `TestMainFunctionStructure` + `TestListenAddress` asserting 8099 | — |
+| B | `env -u WIZARD_BIND go test -count=1 ./...` | **only** `docs/readiness-…t_05167730….md` (22 lines) | the 8099 assertions were **my** env leak, now gone |
+| C | B, then that one doc moved aside (throwaway `git archive` copy) | **`ok net4sats-wizard`** | the residual red is 100% that foreign doc |
+
+`WIZARD_BIND` is consumed by `listenAddress()` (`main.go:53`) and the suite asserts the
+8099 default (`handlers_test.go:154`, `security_hardening_test.go:394`), so exporting it
+for the *boot* phase silently breaks the *test* phase. Those two phases need different
+environments — hence `verify.sh` below.
 
 ```
-$ go test -count=1 ./... | grep -oE 'docs/[A-Za-z0-9._-]+\.md' | sort | uniq -c
-  22 docs/readiness-gl-mt6000-wz1.8-t_05167730-2026-10-24.md   (then, after quarantine:)
-  22 docs/LOCK-ANNOUNCE-gl-mt6000-t_be3261d3-2026-10-24.md
+$ PORT=8299 bash verify/wz19-e2e-record/verify.sh
+== build ==                                     # go build ./...  -> exit 0
+== test (clean env — no WIZARD_BIND) ==         # only foreign-doc leaks remain
+== boot + readiness on :8299 ==
+{"ok":true,"readiness":{"url":"http://127.0.0.1:8299/","ready":true,"statusCode":200}}
 ```
 
 Both offenders are **tracked docs committed by other cards** (`22fbea4` t_05167730;
-`ab33306` t_0841f821 / worker-admin). Both leak internal card ids and board paths. The
-guard `TestNoInternalProcessLeaksOnShippedSurfaces` enumerates `docs/` with
-`os.ReadDir` (`debrand_internal_test.go:79`), so any doc in `docs/` is scanned as a
-shipped surface regardless of author.
+`ab33306` t_0841f821 / worker-admin), leaking internal card ids, board paths, and a
+personal fleet hostname. The guard `TestNoInternalProcessLeaksOnShippedSurfaces`
+enumerates `docs/` with `os.ReadDir` (`debrand_internal_test.go:79`), so any doc in
+`docs/` is scanned as a shipped surface regardless of author.
 
 Proof this lane is not implicated:
 
 - `git diff --stat 5a9b6ae^ HEAD -- docs/` → **empty**. This lane touched no file in `docs/`.
-- The guard's scanned roots are `docs/`, `portal/`, `admin/`, `rpcd/`
-  (`debrand_internal_test.go:56,79`). This lane's evidence lives in
-  `verify/wz19-e2e-record/`, which the guard **never reads**.
-- Removing only those two foreign docs, in a throwaway `git archive HEAD` copy:
+- Guard roots are `docs/`, `portal/`, `admin/`, `rpcd/` (`debrand_internal_test.go:56,79`).
+  This lane's evidence lives in `verify/wz19-e2e-record/`, which the guard **never reads**.
+- Run C above: `ok net4sats-wizard` once the foreign docs are dismissed.
 
-```
-$ mv docs/readiness-….md <out of dir>; mv docs/LOCK-ANNOUNCE-….md docs/evidence/
-$ go test -count=1 ./...
-ok  net4sats-wizard  56.545s
-```
-
-**Conclusion: the committed tree passes once two other cards' docs are dismissed. The
-red is theirs; fixing it is their scope, not this lane's.** (Same finding as
-`t_gate8-19b1b1c6`, which hit it for a third doc — the untracked
-`docs/WZ1.8-gate8-gate9-review-verdict-t_cc76c746-2026-10-24.md`.)
-
-Pitfall for the next lane: exporting `WIZARD_BIND` in the shell **breaks
-`TestListenAddress` and `TestSecurityHardening`** (they assert the 8099 default). Always
-run the suite with `env -u WIZARD_BIND`.
+**The red is theirs; fixing it is their scope.** (Same finding as `t_gate8-19b1b1c6`, which
+hit it for a third doc — the untracked
+`docs/WZ1.8-gate8-gate9-review-verdict-t_cc76c746-2026-10-24.md`. Note `docs/` currently
+holds **two** offending docs, so both must go before the suite greens.)
 
 ## 4. Driver edit — verified by replay, not by assertion
 

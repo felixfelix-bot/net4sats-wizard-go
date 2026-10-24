@@ -35,16 +35,19 @@ attachments, no such script committed anywhere), and the repo named in the brief
 (`tollgate-wizard-go`) **does not exist** — the real target is
 `net4sats/net4sats-wizard-go` PR **#32**, head `wz14-debrand` @ `b64555a`.
 
-**Blocked by two other cards' docs (see `VERIFICATION.md`):** the full suite is RED on
+**Blocked by two other cards' docs (see `VERIFICATION.md`):** the suite is RED on
 `TestNoInternalProcessLeaksOnShippedSurfaces` because two **tracked** docs committed by
 other cards leak internal card ids — `docs/readiness-gl-mt6000-wz1.8-t_05167730-2026-10-24.md`
 (`22fbea4`) and `docs/LOCK-ANNOUNCE-gl-mt6000-t_be3261d3-2026-10-24.md` (`ab33306`,
-worker-admin). Proof this lane is clean: `git diff 5a9b6ae^ HEAD -- docs/` is empty, and
-the guard's roots are `docs/ portal/ admin/ rpcd/` while this lane's evidence lives in
-`verify/wz19-e2e-record/` — never scanned. With those two foreign docs dismissed in a
-throwaway `git archive` copy: `go test -count=1 ./...` → **ok, 56.545 s**. Build passes,
-boot passes (`ok:true`, HTTP 200 — needs `WIZARD_BIND` because the manifest's 8099 is held
-by a sibling card).
+worker-admin). Attribution was done by elimination: with the two `WIZARD_BIND` assertions
+no longer falsely tripping (my own env leak, now fixed), dismissing only those two docs in
+a throwaway `git archive` copy gives `ok net4sats-wizard 56.545s`. This lane touched no file
+in `docs/` (`git diff 5a9b6ae^ HEAD -- docs/` is empty) and its evidence dir
+`verify/wz19-e2e-record/` is not among the guard's roots (`docs/ portal/ admin/ rpcd/`).
+Build passes; boot passes (`ok:true`, HTTP 200). Reproduce with
+`PORT=8299 bash verify/wz19-e2e-record/verify.sh`, which runs the test phase in a clean
+env — `hermes verify --json` alone cannot, since `WIZARD_BIND` (needed to boot off the
+sibling-held 8099) makes `TestListenAddress` fail.
 
 ---
 
