@@ -1,0 +1,107 @@
+[
+  {
+    "path": "assets/icon/black/net4sats-icon-black.png",
+    "bytes": 161410,
+    "sha256": "51430ad43cbb1b038b474456a83a2482f26f1c10c7b3a5cb9b25c2013ae940c9"
+  },
+  {
+    "path": "assets/icon/black/net4sats-icon-black.svg",
+    "bytes": 1501,
+    "sha256": "bdafd3a79468e11079b77c2de9fa56d903749a9418e7810566ca93dc0ee05720"
+  },
+  {
+    "path": "assets/icon/colour/net4sats-icon-colour.png",
+    "bytes": 157471,
+    "sha256": "4f99acd95a7456ddf6a0cecd0afa286bce843347f782bf42eda96daa02158bea"
+  },
+  {
+    "path": "assets/icon/colour/net4sats-icon-colour.svg",
+    "bytes": 1545,
+    "sha256": "29fc24497063f22cead59afa14442a2729295245951ddfe899fbe96d341b8db5"
+  },
+  {
+    "path": "assets/icon/white/net4sats-icon-white.png",
+    "bytes": 153400,
+    "sha256": "0c17c78ffd0e3ff8a264e4543bfa0bf6ec17b91639b7b4d7c3357860c9d4e0e4"
+  },
+  {
+    "path": "assets/icon/white/net4sats-icon-white.svg",
+    "bytes": 1498,
+    "sha256": "34efe7077db8c92a19d5592658adf616faf4234bbb8d5c3648f35123d1009dd2"
+  },
+  {
+    "path": "assets/logo/black/net4sats-logo-black.png",
+    "bytes": 82840,
+    "sha256": "27744612a2f99d0bbccab00c5ab0aecc245582a0f85ef8d570e2bc86a24540d3"
+  },
+  {
+    "path": "assets/logo/black/net4sats-logo-black.svg",
+    "bytes": 4451,
+    "sha256": "447a10a505970a9b34bed76e0a1ad15b12f87f72ab7d9ec05a5dfb2a3eedfb93"
+  },
+  {
+    "path": "assets/logo/colour/net4sats-logo-colour.png",
+    "bytes": 82200,
+    "sha256": "b213b9318b72061577216737e763f66a219eed7fcf53c4f61b119b746764b02d"
+  },
+  {
+    "path": "assets/logo/colour/net4sats-logo-colour.svg",
+    "bytes": 4493,
+    "sha256": "c069d71d6791a93bbc7058a3fdbc64e45557aa2781689a52a9b8b9943714c44a"
+  },
+  {
+    "path": "assets/logo/white/net4sats-logo-white.png",
+    "bytes": 77574,
+    "sha256": "3de6a64a219ba2a6bd7bbe9e6f44902fe0df6d58be6340a2b6be18436d39c3ce"
+  },
+  {
+    "path": "assets/logo/white/net4sats-logo-white.svg",
+    "bytes": 4448,
+    "sha256": "342f50e9f701443cf0c5b6b000740dff5b710a147fd499aa2cd28a012226557a"
+  },
+  {
+    "path": "assets/og-logo.png",
+    "bytes": 39753,
+    "sha256": "0056a6723cbf55f03689f121281716a9854f1e8e1490514282cdafb16c34254a"
+  },
+  {
+    "path": "assets/splash-Cmh1iVkv.css",
+    "bytes": 13874,
+    "sha256": "9459cf1628115fa3fa9c7a8c87e47618bba3879ff3a7520e11c7b6624b945051"
+  },
+  {
+    "path": "assets/splash-DTJpR5cI.js",
+    "bytes": 205903,
+    "sha256": "57311f55b541692bdd57b862cbf34e35d00a602fb44fd30ead3ecf9afef6b7e5"
+  },
+  {
+    "path": "assets/splash-DTJpR5cI.js.map",
+    "bytes": 945487,
+    "sha256": "f7ac04140e11dbad720f6b732506a410012e25d1c90279a94cea5b5e85b23dd8"
+  },
+  {
+    "path": "index.html",
+    "bytes": 778,
+    "sha256": "6f27243a6bf879b1bd116aa7964f9123b0109a064c5de6168bdaccf832f98506"
+  },
+  {
+    "path": "manifest.json",
+    "bytes": 575,
+    "sha256": "d96d1e874cdba921d8b6e3dcb020adef7f31440e9af00367f9406ea94cc2a432"
+  },
+  {
+    "path": "splash.html",
+    "bytes": 778,
+    "sha256": "6f27243a6bf879b1bd116aa7964f9123b0109a064c5de6168bdaccf832f98506"
+  },
+  {
+    "path": "sw.js",
+    "bytes": 1621,
+    "sha256": "f1abbba8b3771e35defacedc056e3d0d71fff19de4cbb6531fbbad2266efdf32"
+  },
+  {
+    "path": "venue-template.html",
+    "bytes": 242,
+    "sha256": "69b4044d93025c641bdd86f5e01b2f19bdfe425b0999b5d360f35d41603e486c"
+  }
+]
