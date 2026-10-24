@@ -1,56 +1,65 @@
 # PROGRESS — Release v0.7.0-alpha21 on fork + curl-verify asset
 
-## Finding (BLOCKER: tag name is stale, not destination-consistent)
+**Card:** `t_2f29676c` (resolved live from the board DB; escalation card `t_f9d1db3d`)
+**Status: BLOCKED before Step 1. NO MUTATION PERFORMED.** Full report: `REPORT-t_release-alpha21.md` @ commit `7625acf`.
+
+## Finding (BLOCKER 1: the brief's tag is stale, not unpublished)
 
 `v0.7.0-alpha21` **already exists on the fork** — tag, GitHub Release, and a
-correct `net4sats-wizard` asset. It is NOT an unpublished version:
+correct `net4sats-wizard` asset. It is NOT an uncut version:
 
 - Tag: `6c7f78035560437df7ba5d4cfa3d1e9ec3b59ef1` "feat: pre-flight WiFi password
   validation for STA setup" (2026-09-07 14:57 +0530)
-- Remote tag `refs/tags/v0.7.0-alpha21` = `6c7f780` (peeled → commit, version-named,
-  NOT a raw-SHA tag — the task's stated fear does not apply to this tag)
-- Release: createdAt 2026-09-07T09:27:00Z, name `v0.7.0-alpha21`, published
-  (isDraft=false)
-- Asset: name `net4sats-wizard`, size 14748994, state uploaded,
-  downloadCount=5, `createdAt` 09:29:29Z / `updatedAt` 09:29:33Z
+- Tag type: **`commit`** — correctly version-named. The brief's stated fear ("a past
+  finisher mistakenly tagged the raw SHA") **does not apply**: both the local and
+  remote `refs/tags/v0.7.0-alpha21` peel to a commit, not a raw object.
+- Release: createdAt 2026-09-07T09:27:00Z, `isDraft=false`, published
+- Asset: name `net4sats-wizard`, size 14748994, `state:uploaded`, `downloadCount:5`
 
-`v0.7.0-alpha21` is **NOT an ancestor of HEAD** — it is 83 commits out of tree, and
-so is alpha24. HEAD (`22fbea4`) sits on the docs/worker branch `worker-heavy/t_gate8-19b1b1c6`.
+alpha22 / alpha23 / alpha24 are later **linear descendants**, and alpha24 is
+GitHub `Latest`. So the brief's tag was **3 releases stale when written**.
 
-## The conflict
+Card created **2026-10-06T10:00:54Z** — a month *after* alpha21 shipped, five days
+after alpha24. Upstream cards `t_93d60eb5` (bump to alpha21) and `t_4c470aa0`
+(release alpha21) are **both still `blocked`**; alpha21 was cut out-of-band while
+they sat blocked. Stale-brief / double-publish, not a never-cut release.
 
-Task says "Publish the **tested** wizard as a release ... v0.7.0-alpha21".
-But alpha22, alpha23 and alpha24 are **already published after alpha21**
-(alpha22 2026-09-07T11:58Z, alpha23 12:59Z, alpha24 2026-10-01T11:35Z), and
-alpha24 is currently GitHub `Latest`. The task's notion of "the tested release
-version" is **2 weeks and 3 releases stale**.
+Not done unilaterally: re-pointing alpha21 is a **destructive history rewrite** —
+it would overwrite a release already downloaded 5x and leave alpha22/23/24
+dangling. (Unlike the safe n→n+1 merge case, this moves n *onto* newer content.)
 
-Consequences:
-- Publishing alpha21's content as "the tested release" is not possible — that
-  exact artifact was published 2026-09-07.
-- Re-tagging alpha21 is **destructive**: the 83 commits since, including
-  alpha22/23/24 (security fixes) would no longer be reachable from the head of
-  that line. Prior content is only recoverable from the reflog.
-- No HEAD artifact may be published under a tag that already carries other
-  content.
-- alpha24's asset is a **smaller** binary (16,946,325) than alpha21's
-  (14,748,994). Neither is an ancestor of HEAD, so the "tested" lineage is
-  ambiguous from the repo alone.
+## Finding (BLOCKER 2: no HEAD artifact can be called "tested")
 
-## Status: BLOCKED on operator decision (Step 1)
+`go test ./...` at HEAD **FAILS** (exit 1): `TestNoInternalProcessLeaksOnShippedSurfaces`,
+105 "internal detail leaked" violations (internal card ids, fleet hostnames
+`c08r4d0r`/`c03rad0r`/`CobradorWave`, board path `hermes/kanban`) all from one tracked
+file — `docs/readiness-gl-mt6000-wz1.8-t_05167730-2026-10-24.md` — added by HEAD
+itself (`22fbea4`) and **absent from `v0.7.0-alpha24`**. Publishing HEAD would ship
+105 leaks. Go is not on `PATH`; it is at `/usr/local/go/bin/go` (go1.22.12).
 
-Cannot start Step 1 without knowing which version identity is correct.
+## Verified THIS run
 
-## Steps verified THIS far (no mutation performed)
+- **Step 3-equivalent, read-only, of the EXISTING asset — VERIFIED LIVE:**
+  HTTP 200, magic `7f 45 4c 46` (\x7fELF), `ELF 64-bit LSB executable x86-64`,
+  **14748994 bytes**, sha256
+  `a5dc66c5ee894c1137a100a39875d74a0cceec5fc1ff86368cf04be3b99262fb`.
+  Fetched and confirmed — not an assumed URL (9-byte "Not Found" lesson respected).
+- **Step 4:** `:8099` FREE, `:8109` FREE, no stray `net4sats-wizard` process.
 
-- Step 3-equivalent verification of the EXISTING alpha21 asset (read-only):
-  - HTTP 200, `bytes=14748994`, magic `7f 45 4c 46` (\x7fELF),
-    `ELF 64-bit LSB executable, x86-64`, sha256
-    `a5dc66c5ee894c1137a100a39875d74a0cceec5fc1ff86368cf04be3b99262fb`
-- Step 4 (pre-flight): `:8099` and `:8109` FREE; no stray `net4sats-wizard`
-  process (only this Hermes session matched pgrep).
+## Board actions
+
+- Comment posted to `t_2f29676c` (→ "Comment added", exit 0; card now has 4 comments).
+- Escalation card `t_f9d1db3d` created (`blocked`, assignee `manager`, priority 1).
+- Status left `triage` — **NOT set to review**. `review` would assert a publishable
+  artifact exists; it does not. The CLI also cannot transition a `triage` card from a
+  session (`claim`/`block`/`unblock`/`promote` all refused), so it needs operator or
+  manager intervention.
 
 ## Files touched
 
 - `PROGRESS-t_release-alpha21.md` (new, this file)
 - `REPORT-t_release-alpha21.md` (new)
+- `/tmp/alpha21probe`, `/tmp/gotest-head.txt` (scratch, outside repo)
+
+**No tag, branch, release, or asset was created or modified. No push beyond the
+docs commit. Nothing destructive was executed.**

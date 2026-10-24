@@ -1,7 +1,8 @@
 # REPORT — Release v0.7.0-alpha21 on fork + curl-verify asset
 
-**Card:** offload task "Release v0.7.0-alpha21 on fork and curl-verify asset"
+**Card:** `t_2f29676c` — "Release v0.7.0-alpha21 on fork and curl-verify asset"
 **Run:** 2026-10-24, host `x280` (`c08r4d0r`)
+**Escalation card opened:** `t_f9d1db3d` (blocked, assignee `manager`)
 **Workspace:** `/home/c08r4d0r/repos/net4sats-mvp-v2`
 **Branch:** `worker-heavy/t_gate8-19b1b1c6` (HEAD `22fbea4`)
 **Fork (only writable target):** `felixfelix-bot/net4sats-wizard-go` (`origin`, HTTPS, gh auth OK as `felixfelix-bot`)
@@ -103,6 +104,50 @@ ship 105 internal-detail leaks and a red suite. I will not label that "tested".
 Anyone re-running this must export that path first.)
 
 ---
+
+## Provenance — the brief is a STALE ARTIFACT, confirmed from the board DB
+
+Resolved the real card rather than trusting the pasted title (memory rule: never
+invent a card id). Board: `~/.hermes/kanban/boards/net4sats-mvp-v2/kanban.db`.
+
+| Card | Title | Status | Created |
+|---|---|---|---|
+| `t_2f29676c` | Release v0.7.0-alpha21 on fork and curl-verify asset | `triage` | **2026-10-06T10:00:54Z** |
+| `t_93d60eb5` | Vendor portal into wizard + **bump version to v0.7.0-alpha21** | **`blocked`** | 2026-10-06T10:00:54Z |
+| `t_4c470aa0` | V2K-3/4: wizard re-vendor hardened portal + **release alpha21** | **`blocked`** | 2026-09-02T00:46:10Z |
+
+**Decisive timeline.** This card was created **2026-10-06**, by which point
+v0.7.0-alpha21 had already been published for a month (2026-09-07T09:27Z) and
+alpha24 for five days (2026-10-01T11:35Z). The brief therefore instructed a
+*publish* of a version that was already live and already superseded — its premise
+was false on the day it was written, not falsified later.
+
+Both upstream cards that were supposed to *produce* the alpha21 version
+(`t_93d60eb5` vendor+bump, `t_4c470aa0` release) are **still `blocked`**. So
+alpha21 did not come from them; it was cut out-of-band on 2026-09-07 while they
+sat blocked. This is a **stale-brief / double-publish** scenario, not "a release
+that was never cut". Neither card was this run's to unblock.
+
+The card's own `Latest summary:` reads `reclaim backoff until 1791801943 (dead
+worker pid, strike 1)` — it has been claimed and reclaimed repeatedly with a dead
+worker and exhausted retries (max-retries 2). It sits in `triage`, which the CLI
+cannot transition from a session: `claim` → "cannot claim: status=triage",
+`block` → "cannot block", `unblock` → "not blocked/scheduled?",
+`promote` → "promote only applies to 'todo' or 'blocked'". Handle accordingly —
+it needs operator or manager intervention to move.
+
+## Board actions taken by this run
+
+- Comment posted to `t_2f29676c` with the full BLOCKED verdict (`hermes kanban
+  --board net4sats-mvp-v2 comment t_2f29676c` → "Comment added", exit 0). The
+  card now has 4 comments.
+- Escalation card **`t_f9d1db3d`** created, `status=blocked`, `assignee=manager`,
+  `priority=1`, containing the decision options. Created via
+  `hermes kanban create --initial-status blocked`, because `block` on the
+  `triage` card was refused.
+- Status of `t_2f29676c` left at `triage` — **not** set to `review`. Setting
+  `review` would assert a publishable artifact exists; it does not, and the CLI
+  would not have accepted the transition anyway.
 
 ## Steps NOT performed
 
