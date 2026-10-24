@@ -31,3 +31,31 @@ https://nofee.testnut.cashu.space             000
 ## ssh credential probe
 Warning: Permanently added '192.168.78.1' (ED25519) to the list of known hosts.
 Permission denied, please try again.
+## build-identity discriminator — deployed vs worktree balance bundle
+deployed :2051/balance.html bundle hashes:
+assets/balance-5KSP87Gz.css
+assets/balance-CJspyFkd.js
+assets/index-CSbRLgwZ.css
+assets/index-YkGiQMp2.js
+worktree admin/balance.html bundle hashes:
+## rendered-size formatter proof (deployed balance-CJspyFkd.js)
+metric bytes -> GB/MB/KB/B (>=1048576 => x/1048576 MB); poll interval 5000ms; fetch `${N()}/balance`
+      1 /balance
+      2 1048576
+      2 1073741824
+      2 1e3
+## :8090 admin instance is a broken surface (307 -> :8443 vhost that 404s)
+/                                          code=307 redir=https://192.168.78.1:8443/
+/balance.html                              code=307 redir=https://192.168.78.1:8443/balance.html
+/assets/balance-BNg56sOO.js                code=307 redir=https://192.168.78.1:8443/assets/balance-BNg56sOO.js
+/manifest.json                             code=307 redir=https://192.168.78.1:8443/manifest.json
+https://:8443/manifest.json                code=404
+## (amended 2026-10-24T05:54:53Z) build-identity discriminator
+deployed :2051/balance.html bundle hashes:
+assets/balance-5KSP87Gz.css
+assets/balance-CJspyFkd.js
+assets/index-CSbRLgwZ.css
+assets/index-YkGiQMp2.js
+worktree admin/balance.html bundle hashes:
+assets/balance-BNg56sOO.js
+assets/balance-D7WaP2L-.css
