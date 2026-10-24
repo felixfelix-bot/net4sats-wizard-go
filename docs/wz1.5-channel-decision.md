@@ -1,10 +1,10 @@
 # wz1.5 — official Tollgate artifact channel: DECISION
 
-**Card:** `t_1df48589` (channel decision note + Q5 status)
-**Worker:** `t_gate8-19b1b1c6`, profile `worker-tollgate`
+**Card:** internal task id, withheld from this shipped surface
+**Worker:** internal task id and profile, withheld from this shipped surface
 **Date:** 2026-10-23 (probes run 21:30–21:40 UTC)
 **Decision status:** DECIDED for the interim channel · **Q5 = OPEN**
-**Re-verified:** 2026-10-24 by card `t_1df48589` (second, independent pass) — all live claims re-run,
+**Re-verified:** 2026-10-24 in a second, independent pass on the same internal task — all live claims re-run,
 one defect found and fixed (the composed artifact-filename template 404s; see §2.3a / §3 rule 1b).
 Probe timestamps in this file are otherwise the 2026-10-23 run.
 **Implementation status of the decision: BLOCKED** — see §6. The chosen channel publishes
@@ -68,23 +68,23 @@ download-then-install path (which is what `deploy.go` does) and does **not** wor
 The task named two parent fragments. **Only one was present:**
 
 ```
-$ ls -la /home/c08r4d0r/.hermes/plans/2026-08-31-tollgate-batch/
--rw-rw-r-- 1 c08r4d0r c08r4d0r 17507 Oct 23 21:00 schedule.md
--rw-rw-r-- 1 c08r4d0r c08r4d0r 18604 Oct 23 22:58 wz1.5-phase2-feed-status.md
+$ ls -la ~/.hermes/plans/2026-08-31-tollgate-batch/
+-rw-rw-r-- 1 <user> <user> 17507 Oct 23 21:00 schedule.md
+-rw-rw-r-- 1 <user> <user> 18604 Oct 23 22:58 wz1.5-phase2-feed-status.md
 -rw-rw-r-- ...  wz1.5-url-inventory.{md,part-a.md,part-b.md,audit-*.md}
 -rw-rw-r-- ...  wz1.5-validation.md
 
 $ read_file ~/.hermes/plans/2026-08-31-tollgate-batch/wz1.5-channel-probe-raw.md
 File not found: .../wz1.5-channel-probe-raw.md
 
-$ find /home/c08r4d0r -name '*channel-probe*' -o -name '*probe-raw*'
+$ find ~ -name '*channel-probe*' -o -name '*probe-raw*'
 (no output)
 ```
 
 `wz1.5-channel-probe-raw.md` was **never written**. Its expected content ("raw probe evidence +
 example versioned URLs") is therefore **re-derived in full, live, in this session** — every line
 in §2.1–§2.6 below was produced by a command run here, none is quoted from a missing file or from
-another card's report. `schedule.md` was read as instructed: it is the FELIX Q3 / dev-split gate
+another card's report. `schedule.md` was read as instructed: it is the operator's Q3 / dev-split gate
 file (Q3 = B resolved 2026-10-20) and contains **nothing** about artifact channels — no input from
 it is used.
 
@@ -461,7 +461,7 @@ the four gates on the card, and leave `deploy.go` as-is.
 
 `:50` `configwizURL` is **out of scope** for this decision: it is the `configurationwizzard`
 project, not a tollgate-wrt artifact, and the chosen channel hosts no configwiz asset. Do not
-rewrite it as part of the tollgate-wrt migration. (A separate card, `t_deabf3d6`, has already
+rewrite it as part of the tollgate-wrt migration. (A separate internal task has already
 recommended deleting that constant outright on other grounds.)
 
 ### 6.4 Doc follow-on
