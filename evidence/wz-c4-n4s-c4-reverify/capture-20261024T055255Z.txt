@@ -1,0 +1,33 @@
+# C4 bench capture — 2026-10-24T05:52:55Z — host x280 — target 192.168.78.1
+## port sweep (TCP)
+192.168.78.1:22 OPEN
+192.168.78.1:80 OPEN
+192.168.78.1:2050 OPEN
+192.168.78.1:2051 OPEN
+192.168.78.1:2121 OPEN
+192.168.78.1:8090 OPEN
+192.168.78.1:8443 OPEN
+## GET :2121/  (kind:10021 advertisement)
+{"kind":10021,"id":"dee35f3ab55658184882ba4c5ff09967af390729906632d3475517ac72cba42c","pubkey":"11ee2f24ff7a1fc2cbd4c9ddf29786d24315b4cc2d7a3c22552e6b8f5485c2f4","created_at":0,"tags":[["metric","bytes"],["step_size","22020096"],["tips","1","2"],["price_per_step","cashu","1","sat","https://mint.coinos.io","1"],["price_per_step","cashu","1","sat","https://mint.minibits.cash/Bitcoin","1"],["price_per_step","cashu","1","sat","https://mint.macadamia.cash","1"],["price_per_step","cashu","1","sat","https://mint.westernbtc.com","1"],["price_per_step","cashu","1","sat","https://kashu.me","1"],["price_per_step","cashu","1","sat","https://mint.cubabitcoin.org","1"]],"content":"","sig":"486f318ba7b40884c240a40fa0a5998c1e95977f910b212208131e6e912fe8a1c1f3e3eed624d7f90dc2519a76981dcd15aafe68cefcb428a1466311de3e3a5f"}
+## GET :2121/balance
+{"status":1,"session_active":false,"usage":0,"allotment":0,"remaining":0,"mac":"9c:69:d3:c7:06:89"}
+
+## GET :2121/usage
+-1/-1
+## balance-page surface probes
+http://192.168.78.1:8090/                            code=307 size=0 redir=https://192.168.78.1:8443/
+http://192.168.78.1:8090/balance.html                code=307 size=0 redir=https://192.168.78.1:8443/balance.html
+http://192.168.78.1:2051/balance.html                code=200 size=935 redir=
+http://192.168.78.1:2050/splash.html                 code=307 size=261 redir=http://192.168.77.1:2050/splash.html?redir=http%3a%2f%2f192.168.78.1%3a2050%2fsplash.html
+https://192.168.78.1:8443/balance.html               code=404 size=79
+## mint reachability (from this host)
+https://mint.coinos.io                        200
+https://mint.minibits.cash/Bitcoin            200
+https://mint.macadamia.cash                   200
+https://mint.westernbtc.com                   200
+https://kashu.me                              200
+https://mint.cubabitcoin.org                  200
+https://nofee.testnut.cashu.space             000
+## ssh credential probe
+Warning: Permanently added '192.168.78.1' (ED25519) to the list of known hosts.
+Permission denied, please try again.
