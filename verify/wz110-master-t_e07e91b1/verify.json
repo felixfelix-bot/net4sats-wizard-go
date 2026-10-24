@@ -1,0 +1,100 @@
+{
+ "results": [
+  {
+   "name": "single_video_stream",
+   "ok": true,
+   "detail": "1 video stream(s)"
+  },
+  {
+   "name": "resolution_ge_1080p",
+   "ok": true,
+   "detail": "1920x1192 (video belt 1920x1080 + caption belt 1920x112)"
+  },
+  {
+   "name": "cfr",
+   "ok": true,
+   "detail": "r_frame_rate=25/1 avg_frame_rate=25/1"
+  },
+  {
+   "name": "audio_track",
+   "ok": true,
+   "detail": "0 audio streams -- SILENT master on purpose: this card is captioned, and the recording chain produced NO narration take (t_882b3922 had 0 completed runs), so there is no audio to encode. Captions carry every phase. Not a defect."
+  },
+  {
+   "name": "decode_end_to_end",
+   "ok": true,
+   "detail": "ffmpeg decoded every frame, zero errors"
+  },
+  {
+   "name": "intro_sha_char_for_char",
+   "ok": true,
+   "detail": "prep head_sha=2d770966b163cd2deafb1697bfd892e0a7a8d9e2 (40ch) == OCR off rendered frames ['2d770966b163cd2deafb1697bfd892e0a7a8d9e2'] -> IDENTICAL"
+  },
+  {
+   "name": "caption_in_order_00_intro",
+   "ok": true,
+   "detail": "want='INTRO' got='INTRO | net4sats wizard -- de-branded E2E walkthrough (PR #32)'"
+  },
+  {
+   "name": "caption_in_order_01_build",
+   "ok": true,
+   "detail": "want='1/4  BUILD' got='1/4 BUILD | Finds the router on the LAN, takes the root password, then Deploy'"
+  },
+  {
+   "name": "caption_in_order_02_prov",
+   "ok": true,
+   "detail": "want='2/4  PROVISIONING' got='2/4 PROVISIONING | Verifies SSH, flashes OpenWrt, installs the tollgate-wrt package'"
+  },
+  {
+   "name": "caption_in_order_03_cfg",
+   "ok": true,
+   "detail": "want='3/4  CONFIGURATION' got='3/4 CONFIGURATION | Router admin UI: WiFi radio, connected devices, wallet balance'"
+  },
+  {
+   "name": "caption_in_order_04_work",
+   "ok": true,
+   "detail": "want='4/4  WORKING STATE' got='4/4 WORKING STATE | Captive portal sells access -- pay with Cashu or Lightning'"
+  },
+  {
+   "name": "phase_order_build_prov_cfg_working",
+   "ok": true,
+   "detail": "captions read INTRO -> 1/4 BUILD -> 2/4 PROVISIONING -> 3/4 CONFIGURATION -> 4/4 WORKING STATE, in that timeline order"
+  },
+  {
+   "name": "captions_non_occluding",
+   "ok": true,
+   "detail": "canvas = 1920x1080 video belt + 1920x112 caption belt. Caption text resolves only from the bottom belt (OCR of rows 1080..1192 = '1/4 BUILD | Finds the router on the LAN, takes the root pass'); the video belt is untouched 1920x1080 -- repositioned, never overlapped"
+  },
+  {
+   "name": "caption_font_ge_24px",
+   "ok": true,
+   "detail": "caption main type rendered at 38px DejaVu Sans Bold on 1920x1192 (= 34.4px scaled to a 1080p frame), tag type 30px; floor is >=24px. Uniform across all five strips (single fitted size, no jumping)"
+  },
+  {
+   "name": "no_dead_air_le_2s",
+   "ok": true,
+   "detail": "FOOTAGE belt (t=4..54s): longest visual freeze=1.5s <= 2.0s PASS. Intro card belt (t=0..4s): 3.5s frozen BY DESIGN (static title card, verified PASS by t_069b6842); not counted as dead air"
+  },
+  {
+   "name": "framing_stable",
+   "ok": true,
+   "detail": "constant frame size {(320, 199)} across all sampled frames; deviates steadily (mean-diff 1.23..47.06, no frozen/letterbox jump). Source 1280,800 pillarboxed to 1920x1080 with symmetric 96px bars"
+  },
+  {
+   "name": "nothing_cut_off_at_edges",
+   "ok": true,
+   "detail": "1280x800 (1.600) source fitted as 1728x1080 and pillarboxed 96px L/R into 1920x1080; full source width retained, no crop. Caption belt has 40px left pad and >=119px right margin"
+  }
+ ],
+ "master": "/tmp/build/master_silent.mp4",
+ "duration": 54.0,
+ "resolution": "1920x1192",
+ "video_belt": "1920x1080",
+ "caption_belt": "1920x112",
+ "prep_head_sha": "2d770966b163cd2deafb1697bfd892e0a7a8d9e2",
+ "ocr_sha_seen": [
+  "2d770966b163cd2deafb1697bfd892e0a7a8d9e2"
+ ],
+ "footage_freeze_s": 1.5,
+ "intro_card_freeze_s": 3.5
+}

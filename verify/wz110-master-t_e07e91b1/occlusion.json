@@ -1,0 +1,16 @@
+{
+ "frames": 20,
+ "video_belt_worst_diff": 0.0,
+ "video_belt_differing_pixels": 0,
+ "caption_belt_worst_diff": 29.310811941964285,
+ "video_belt_rows": [
+  0,
+  1079
+ ],
+ "caption_belt_rows": [
+  1080,
+  1191
+ ],
+ "method": "direct rgb24 PNG extraction, no video codec",
+ "verdict": "PASS"
+}

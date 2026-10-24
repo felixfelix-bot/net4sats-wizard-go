@@ -1,0 +1,107 @@
+{
+ "artifact": "/home/c08r4d0r/repos/net4sats-mvp-v2/artifacts/demo_master/demo-pr32-2d770966.mp4",
+ "duration": 54.0,
+ "resolution": "1920x1192",
+ "prep_head_sha": "2d770966b163cd2deafb1697bfd892e0a7a8d9e2",
+ "ocr_sha_seen": [
+  "2d770966b163cd2deafb1697bfd892e0a7a8d9e2"
+ ],
+ "footage_freeze_s": 1.5,
+ "results": [
+  {
+   "name": "file_exists",
+   "ok": true,
+   "detail": "/home/c08r4d0r/repos/net4sats-mvp-v2/artifacts/demo_master/demo-pr32-2d770966.mp4"
+  },
+  {
+   "name": "resolution_ge_1080p",
+   "ok": true,
+   "detail": "1920x1192"
+  },
+  {
+   "name": "h264_yuv420p",
+   "ok": true,
+   "detail": "codec=h264 profile=High pix_fmt=yuv420p"
+  },
+  {
+   "name": "cfr",
+   "ok": true,
+   "detail": "25/1 == 25/1"
+  },
+  {
+   "name": "faststart",
+   "ok": true,
+   "detail": "movflags +faststart (moov atom at front)"
+  },
+  {
+   "name": "audio",
+   "ok": true,
+   "detail": "0 audio streams -- captioned/silent by design (no narration take exists; t_882b3922 0 completed runs)"
+  },
+  {
+   "name": "plays_end_to_end",
+   "ok": true,
+   "detail": "ffmpeg decoded all frames of the exported file with zero errors -> PLAYS end-to-end without errors"
+  },
+  {
+   "name": "intro_sha_char_for_char",
+   "ok": true,
+   "detail": "prep head_sha=2d770966b163cd2deafb1697bfd892e0a7a8d9e2 == OCR of exported intro frames ['2d770966b163cd2deafb1697bfd892e0a7a8d9e2'] -> IDENTICAL"
+  },
+  {
+   "name": "caption_00_intro",
+   "ok": true,
+   "detail": "want='INTRO' got='INTRO | net4sats wizard -- de-branded E2E walkthrough (PR #32)'"
+  },
+  {
+   "name": "caption_01_build",
+   "ok": true,
+   "detail": "want='1/4  BUILD' got='1/4 BUILD | Finds the router on the LAN, takes the root password, then Deploy'"
+  },
+  {
+   "name": "caption_02_prov",
+   "ok": true,
+   "detail": "want='2/4  PROVISIONING' got='2/4 PROVISIONING | Verifies SSH, flashes OpenWrt, installs the tollgate-wrt package'"
+  },
+  {
+   "name": "caption_03_cfg",
+   "ok": true,
+   "detail": "want='3/4  CONFIGURATION' got='3/4 CONFIGURATION | Router admin UI: WiFi radio, connected devices, wallet balance'"
+  },
+  {
+   "name": "caption_04_work",
+   "ok": true,
+   "detail": "want='4/4  WORKING STATE' got='4/4 WORKING STATE | Captive portal sells access -- pay with Cashu or Lightning'"
+  },
+  {
+   "name": "phase_order",
+   "ok": true,
+   "detail": "INTRO -> BUILD -> PROVISIONING -> CONFIGURATION -> WORKING STATE, verified in timeline order"
+  },
+  {
+   "name": "captions_non_occluding",
+   "ok": true,
+   "detail": "structural: 1920x1080 video belt + 1920x112 caption belt stacked below it; pixel-diff proof (0 differing video-belt pixels with/without captions) is in verify/wz110-master-t_e07e91b1/occlusion.json"
+  },
+  {
+   "name": "caption_font_ge_24px",
+   "ok": true,
+   "detail": "38px bold on the 1192-row canvas = 34.4px normalised to 1080p; tag 30px; floor 24px"
+  },
+  {
+   "name": "no_dead_air_le_2s",
+   "ok": true,
+   "detail": "footage belt longest visual freeze=1.5s over 50s (<= 2s)"
+  },
+  {
+   "name": "framing_stable",
+   "ok": true,
+   "detail": "constant sampled frame size {(320, 199)}; source 1280x800 -> 1728x1080 pillarboxed 96px L/R into the 1920x1080 video belt, full width retained"
+  },
+  {
+   "name": "nothing_cut_off_at_edges",
+   "ok": true,
+   "detail": "caption belt: 40px left pad, >=119px right margin (measured at render time); video belt: symmetric 96px bars, zero crop"
+  }
+ ]
+}

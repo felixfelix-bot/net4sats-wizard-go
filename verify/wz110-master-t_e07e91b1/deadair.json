@@ -1,0 +1,112 @@
+[
+ {
+  "src": "inst",
+  "start": 0.0,
+  "end": 12.0,
+  "dur": 12.0,
+  "frames": 24,
+  "max_diff": 7.833,
+  "mean_diff": 0.506,
+  "longest_frozen_run_s": 3.0,
+  "verdict": "FAIL-deadair"
+ },
+ {
+  "src": "inst",
+  "start": 8.0,
+  "end": 14.0,
+  "dur": 6.0,
+  "frames": 12,
+  "max_diff": 7.833,
+  "mean_diff": 1.4275,
+  "longest_frozen_run_s": 0.5,
+  "verdict": "PASS"
+ },
+ {
+  "src": "inst",
+  "start": 18.0,
+  "end": 36.0,
+  "dur": 18.0,
+  "frames": 36,
+  "max_diff": 7.463,
+  "mean_diff": 0.6733,
+  "longest_frozen_run_s": 1.5,
+  "verdict": "PASS"
+ },
+ {
+  "src": "inst",
+  "start": 24.0,
+  "end": 36.0,
+  "dur": 12.0,
+  "frames": 24,
+  "max_diff": 7.463,
+  "mean_diff": 0.7523,
+  "longest_frozen_run_s": 1.5,
+  "verdict": "PASS"
+ },
+ {
+  "src": "inst",
+  "start": 126.0,
+  "end": 134.0,
+  "dur": 8.0,
+  "frames": 16,
+  "max_diff": 0.407,
+  "mean_diff": 0.0598,
+  "longest_frozen_run_s": 1.5,
+  "verdict": "PASS"
+ },
+ {
+  "src": "admin",
+  "start": 16.0,
+  "end": 22.0,
+  "dur": 6.0,
+  "frames": 12,
+  "max_diff": 1.379,
+  "mean_diff": 0.3991,
+  "longest_frozen_run_s": 0.0,
+  "verdict": "PASS"
+ },
+ {
+  "src": "admin",
+  "start": 36.0,
+  "end": 40.0,
+  "dur": 4.0,
+  "frames": 8,
+  "max_diff": 0.581,
+  "mean_diff": 0.3088,
+  "longest_frozen_run_s": 0.0,
+  "verdict": "PASS"
+ },
+ {
+  "src": "admin",
+  "start": 44.0,
+  "end": 50.0,
+  "dur": 6.0,
+  "frames": 12,
+  "max_diff": 3.401,
+  "mean_diff": 0.732,
+  "longest_frozen_run_s": 0.0,
+  "verdict": "PASS"
+ },
+ {
+  "src": "admin",
+  "start": 52.0,
+  "end": 58.0,
+  "dur": 6.0,
+  "frames": 12,
+  "max_diff": 4.777,
+  "mean_diff": 0.648,
+  "longest_frozen_run_s": 0.0,
+  "verdict": "PASS"
+ },
+ {
+  "src": "portal",
+  "start": 20.0,
+  "end": 28.0,
+  "dur": 8.0,
+  "frames": 16,
+  "max_diff": 1.654,
+  "mean_diff": 0.6686,
+  "longest_frozen_run_s": 0.0,
+  "verdict": "PASS"
+ }
+]

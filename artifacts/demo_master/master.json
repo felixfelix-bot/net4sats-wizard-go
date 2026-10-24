@@ -1,0 +1,17 @@
+{
+ "name": "demo-pr32-2d770966.mp4",
+ "path": "/home/c08r4d0r/repos/net4sats-mvp-v2/artifacts/demo_master/demo-pr32-2d770966.mp4",
+ "size": 5284235,
+ "sha256": "d14bf9c6753dcb3dce5de86a5e3cfb4f9dcd8848b38f7a2828eb8a6dbf856b3d",
+ "pr_number": 32,
+ "head_sha": "2d770966b163cd2deafb1697bfd892e0a7a8d9e2",
+ "short_sha": "2d770966",
+ "codec": "h264",
+ "profile": "High",
+ "resolution": "1920x1192",
+ "fps": "25/1",
+ "duration": 54.0,
+ "audio_streams": 0,
+ "final_crf": 16,
+ "final_preset": "slower"
+}
