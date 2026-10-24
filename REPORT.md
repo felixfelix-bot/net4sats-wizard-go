@@ -547,3 +547,89 @@ the `#devsplit` **value** in §4.)
   `info/exclude` (`/home/c08r4d0r/wz16-verify/.git/info/exclude:4`) carries
   `/PROGRESS-t_*.md` and is applied to this shared linked worktree. Hence this
   record is written into the tracked, non-ignored `PROGRESS.md` / `REPORT.md`.
+
+---
+# REPORT — t_05167730: GL-MT6000 / WZ1.8 readiness note
+
+**Date:** 2026-10-24 · **Worker:** fleet offload (worker-tollgate) · **Host:** x280 (CobradorWave, `c08r4d0r`)
+**Repo:** `net4sats-mvp-v2` (worktree `/home/c08r4d0r/repos/net4sats-mvp-v2`), branch `worker-heavy/t_gate8-19b1b1c6`
+**Board card:** `t_05167730` (net4sats-mvp-v2)
+
+## 1. Verdict
+
+**VERDICT: BLOCKED.** 10 blockers, all inherited or measured — none softened, none
+worked around, none omitted. The note's top-level `VERDICT: BLOCKED` line is consistent
+with its BLOCKERS section, as the card's ACCEPTANCE rule requires (any open blocker =>
+BLOCKED).
+
+## 2. Deliverable paths
+
+| Copy | Path | sha256 |
+| --- | --- | --- |
+| Plan-dir (required by card STEPS 1) | `/home/c08r4d0r/.hermes/plans/2026-08-31-tollgate-batch/readiness-gl-mt6000-wz1.8.md` | `1dd9ad0f…cd2472d` |
+| Tracked repo copy (durable, pushed) | `docs/readiness-gl-mt6000-wz1.8-t_05167730-2026-10-24.md` | `1dd9ad0f…cd2472d` |
+
+Byte-identical (`sha256sum` on both, compared). Structural check: `VERDICT:` on line 3;
+`grep -c '^BLOCKER: '` → 10.
+
+## 3. Acceptance criteria, item by item
+
+| Card requirement | Result |
+| --- | --- |
+| Note exists at a stated path | **PASS** — both paths stated at top of the note; plan-dir copy is the card's required location |
+| Upstream build hash | **PASS with BLOCKER** — running build `r28739-d9340319c6` recorded; *required* build marked `MISSING` / BLOCKER B-REQ |
+| Device IP | **PASS** — `192.168.1.1/24` br-lan, `192.168.2.1/24` br-private, `10.2.1.122/16` uplink |
+| Runner host | **PASS with caveat** — `CobradorWave`, carried from t_63ec0ed2, plus the measured finding that its `c03rad0r` paths do not exist on this host |
+| Playwright/browser/node versions | **PASS with BLOCKER** — carried (node 22.22.1 / npm 9.2.0 / pnpm 10.8.0 / PW 1.60.0 / Chrome 151) and local (node 18.19.1, no npm/npx, no browser, no PW bundle); ffmpeg-1011 + chromium-1223 blockers restated |
+| Video output dir + free disk | **PASS with MISSING** — runner dir recorded (7.4G); this host's dir MISSING, this host's free disk 149G measured |
+| Booked hardware window + fd4/fe2b serialization | **MISSING / BLOCKER B-LEASE** — no window exists; fd4 holds the lock, fe2b has no booked slot |
+| Raw smoke command + output verbatim | **PASS** — pasted verbatim from `REPORT-t_a8b5fcae.md` §4, plus a fresh reachability re-probe |
+| Top-level VERDICT line | **PASS** — `VERDICT: BLOCKED` |
+| BLOCKERS as `BLOCKER: <exact missing item>` + raising task | **PASS** — 10 entries, each naming its task |
+| No-application-code statement | **PASS** — note §5 names every file touched (docs only) and asserts zero code edits |
+| Flash/re-image ownership statement | **PASS** — note §5: OUTSTANDING, owned by the tollgate flow owner; sysupgrade image required |
+| VERDICT matches blocker list | **PASS** — open blockers ⇒ BLOCKED |
+
+## 4. What I actually did
+
+1. Read the four PREREQ cards' bodies and comments from the board DB, plus the committed
+   upstream reports (`REPORT-t_a8b5fcae.md`, `REPORT-fe2b-feed-mt6000.md`,
+   `verify/t_be3261d3-lock-claim/*`, `verify/fd4_blockers.json`, `PROGRESS-t_wz18-env-pin.md`).
+2. **Re-measured the load-bearing claims instead of carrying them**, because two artifacts
+   were produced on a different host/user (`c03rad0r`) and one reachability claim was a day
+   old. Specifically: host interface/route table, TCP probes to 5 device ports from both the
+   default and the `192.168.1.0/24` source address, `ip neigh` for 192.168.1.1, the lock file
+   (content + sha256 + `released=` count), node/npm/npx, all 6 Chrome paths,
+   `~/.cache/ms-playwright`, the kit's `node_modules`, `ffmpeg`/`xvfb-run`/`$DISPLAY`,
+   `df -h /`, and `git ls-tree`/`git show` of `origin/feat/router-vm-lab`.
+3. Wrote the note, copied it into `docs/`, verified both copies by hash, appended this report
+   and a task-scoped PROGRESS section, committed and pushed.
+
+**Tooling notes that surprised me and are worth passing on:** `ping` is not installed on
+this box (rc=127), so device liveness was probed over TCP sockets rather than ICMP. The host
+now carries `192.168.1.50/24`, which *looks* like it should reach the device's `192.168.1.1`
+but does not — the ARP entry fails and the `archy-lab-br` bridge that owns `192.168.1.2/24`
+is `linkdown`.
+
+## 5. Honest non-claims
+
+- **No device was contacted by this card.** Zero ssh/scp/serial/curl/ping/nc/opkg/sysupgrade/
+  power-cycle commands against the GL-MT6000 or any other device. All device facts are
+  carried from cited committed reports; the fresh probes were host-side socket attempts that
+  failed to connect.
+- **The pasted smoke evidence is not this card's measurement.** It is verbatim from
+  `REPORT-t_a8b5fcae.md` §4 (commit `303c76e`, 2026-10-23). What this card adds is a
+  reachability *re-test*, which confirms the blocker rather than clearing it.
+- **No application code was modified.** Files touched: the two note copies, `PROGRESS.md`
+  (append), `REPORT.md` (append). No Go/JS/TS/HTML/CSS/config/test file, no rebuild.
+- **Carried runner figures are 13 days old** (2026-10-11) and could not be re-verified on this
+  host because they name `c03rad0r` paths that do not exist here. Flagged in the note as such.
+- **Flash/re-image is outstanding and belongs to the tollgate flow owner.** Not performed here,
+  not recommended to any worker on the strength of this note.
+
+## 6. Handoff
+
+The note's §6 lists the seven steps that would flip the verdict to READY, in dependency order.
+The two that unblock the most are: (a) re-scope `t_b009e963` so a *required* build exists to
+compare against, and (b) give the runner an IP path to the device — the latter now blocks at
+least `t_a8b5fcae` and `t_75852fce`, so it is worth fixing once.
