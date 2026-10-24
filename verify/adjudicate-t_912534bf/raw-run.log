@@ -1,0 +1,59 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:98:1 › Step 1: Discover — auto-detect routers on the network (41.3s)
+  ✓  2 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:111:1 › Step 2: Connect — select router and enter password (37.2s)
+  ✓  3 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:124:1 › Step 3: Uplink — choose upstream mode (33.8s)
+  ✓  4 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:142:1 › Step 4: Payouts — enter Lightning address (33.2s)
+  ✘  5 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:151:1 › Step 5: Advanced (optional) — open advanced settings, defaults intact (37.2s)
+  -  6 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:183:1 › Step 6: Deploy — run the deployment to completion
+  -  7 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:237:1 › Step 7: Live — verify TollGate API and portal on the router
+
+
+  1) [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:151:1 › Step 5: Advanced (optional) — open advanced settings, defaults intact 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveAttribute[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('details.advanced')
+    Expected: [32m"open"[39m
+    Received: [31m""[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveAttribute" with timeout 5000ms[22m
+    [2m  - waiting for locator('details.advanced')[22m
+    [2m    9 × locator resolved to <details open="" class="advanced">…</details>[22m
+    [2m      - unexpected value ""[22m
+
+
+      159 |
+      160 | 	await page.click('details.advanced > summary');
+    > 161 | 	await expect(page.locator('details.advanced')).toHaveAttribute('open', 'open');
+          | 	                                               ^
+      162 |
+      163 | 	// Verify wizard defaults render (WZ1.4 de-brand: dev split defaults
+      164 | 	// to 0 upstream; a downstream distribution that wants a cut passes
+        at /home/c03rad0r/.tmp/gate9-e2e-t_5d6e1bae/generic-wizard-7step.spec.mjs:161:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--9a5f9-ed-settings-defaults-intact-desktop-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--9a5f9-ed-settings-defaults-intact-desktop-generic-wizard-7step/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/generic-wizard-7step-Step--9a5f9-ed-settings-defaults-intact-desktop-generic-wizard-7step/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--9a5f9-ed-settings-defaults-intact-desktop-generic-wizard-7step/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/generic-wizard-7step-Step--9a5f9-ed-settings-defaults-intact-desktop-generic-wizard-7step/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:151:1 › Step 5: Advanced (optional) — open advanced settings, defaults intact 
+  2 did not run
+  4 passed (3.2m)

@@ -1,0 +1,85 @@
+EVIDENCE_DIR: /home/c08r4d0r/worktrees/t_11d0873e/wt/verify/fd4-t_be2366ea-device-traffic
+SPEC_DIR:     /home/c08r4d0r/worktrees/t_11d0873e/wt/e2e
+
+== A. family identity ==
+   59  4585 raw-run.log
+   48  4049 raw-runA.log
+   58  4356 raw-runA2.log
+    7   381 raw-runC.log
+   49  4766 raw-runD.log
+  221 18137 total
+062c8b1a4a2e97cd9366c8646f6cf64b91090b1ff4b5f1c75f151122c4cdf209  raw-run.log
+
+== B. per-term counts (order: raw-run, A, A2, C, D) ==
+192.168.1.1            0 0 0 0 0 
+2121                   0 0 0 0 0 
+2050                   0 0 0 0 0 
+ftp                    0 0 0 0 0 
+sftp                   0 0 0 0 0 
+endo                   0 0 0 0 0 
+onboarding             0 0 0 0 0 
+Host:                  0 0 0 0 0 
+GET-space              0 0 0 0 0 
+POST-space             0 0 0 0 0 
+HTTP/1-dot             0 0 0 0 0 
+connected              0 0 0 0 0 
+220-space              0 0 0 0 0 
+SSH-2-dot0             0 0 0 0 0 
+curl                   0 0 0 0 0 
+localhost              0 0 0 0 0 
+127.0.0.1              0 0 0 0 0 
+8099                   0 0 0 0 0 
+mt6000                 0 0 0 0 0 
+device                 0 0 0 0 2 
+
+== C. primary log: negative control (grep surface is live) ==
+2:Running 7 tests using 1 worker
+line count: 59
+ESC bytes  : 7
+
+== D. primary log: device-facing steps and totals (verbatim) ==
+9:  -  6 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:183:1 › Step 6: Deploy — run the deployment to completion
+10:  -  7 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:237:1 › Step 7: Live — verify TollGate API and portal on the router
+58:  2 did not run
+59:  4 passed (3.2m)
+
+== E. trace dump: snapshot inventory ==
+resource-snapshot lines: 4
+"url":"http://localhost:8099/"	"status":200	"serverIPAddress":"127.0.0.1"	"_serverPort":8099
+"url":"http://localhost:8099/api/scan"	"status":200	"serverIPAddress":"127.0.0.1"	"_serverPort":8099
+"url":"http://localhost:8099/"	"status":200	"serverIPAddress":"127.0.0.1"	"_serverPort":8099
+"url":"http://localhost:8099/api/scan"	"status":200	"serverIPAddress":"127.0.0.1"	"_serverPort":8099
+
+== F. trace dump: device endpoint in .network files (verbatim) ==
+########## grep: any 2121 / 2050 / 192.168.1.1 in the .network files ##########
+(NONE)
+
+== G. trace dump: discovery body IPs ==
+"ip":"192.168.2.1"
+"ip":"192.168.2.13"
+"ip":"192.168.2.14"
+"ip":"192.168.2.20"
+"ip":"192.168.2.21"
+"ip":"192.168.2.25"
+"ip":"192.168.2.33"
+"ip":"192.168.2.34"
+"ip":"192.168.2.43"
+
+== H. spec literals (repo source, NOT a log) ==
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:17: *   WIZARD_URL       default http://localhost:8099
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:18: *   ROUTER_IP        default 192.168.1.1          (MUST appear in scan results —
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:36: *   TOLLGATE_PORT    default 2121
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:37: *   PORTAL_PORT      default 2050
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:48:const WIZARD_URL = process.env.WIZARD_URL || 'http://localhost:8099';
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:49:const ROUTER_IP = process.env.ROUTER_IP || '192.168.1.1';
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:63:const TOLLGATE_PORT = process.env.TOLLGATE_PORT || '2121';
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.spec.mjs:64:const PORTAL_PORT = process.env.PORTAL_PORT || '2050';
+/home/c08r4d0r/worktrees/t_11d0873e/wt/e2e/generic-wizard-7step.config.mjs:25:		baseURL: 'http://localhost:8099',
+
+== I. synthetic-fixture locations of the literal 192.168.1.1:2121 in this evidence dir ==
+verify-scripts-adhoc.sh:93:    fh.write('\n  GET http://192.168.1.1:2121/ HTTP/1.1\n  Host: 192.168.1.1:2121\n')
+verify-scripts-adhoc.sh:97:    'raw-run.log:61:  GET http://192.168.1.1:2121/ HTTP/1.1' in p_terms)
+.repass-verify.sh:34:printf 'GET http://192.168.1.1:2121/ HTTP/1.1\nHost: 192.168.1.1:2121\nHTTP/1.1 200 OK\n220 ftp ready\nSSH-2.0-OpenSSH\nconnecting to endo 
+repass2026-10-16-vacuity.sh:7:printf 'Host: 192.168.1.1:2121\nSSH-2.0-OpenSSH_8.8\n220 Welcome sftp ftp ready\nPOST /api HTTP/1.1\nconnected to 192.168.1.1\ndev
+
+== J. END ==

@@ -1,0 +1,49 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:137:1 › Step 1: Discover — auto-detect routers on the network (1.0m)
+  ✘  2 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:150:1 › Step 2: Connect — select router and enter password (52.3s)
+  -  3 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:163:1 › Step 3: Uplink — choose upstream mode
+  -  4 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:181:1 › Step 4: Payouts — enter Lightning address
+  -  5 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:190:1 › Step 5: Advanced (skip path) — left at defaults, deploy stays ready
+  -  6 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:222:1 › Step 5b: Advanced (fill-in path) — set dev split + margin, badges follow
+  -  7 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:243:1 › Step 6: Deploy — run the deployment to completion
+  -  8 [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:297:1 › Step 7: Live — verify TollGate API and portal on the router
+
+
+  1) [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:150:1 › Step 2: Connect — select router and enter password 
+
+    Error: Refusing to select a deploy target: ROUTER_IP=192.168.8.1 is not in the discovery results [192.168.2.1 — unknown unknown | 192.168.2.13 — unknown unknown | 192.168.2.43 — unknown unknown | 192.168.2.21 — unknown unknown | 192.168.2.34 — unknown unknown | 192.168.2.33 — unknown unknown | 192.168.2.14 — unknown unknown | 192.168.2.25 — unknown unknown]. Deploying to the first discovered router would hit an unrelated device. Set ALLOW_FIRST_ROUTER=1 to override, or fix ROUTER_IP / the device.
+
+      93 | 		await select.selectOption({ index: 0 });
+      94 | 	} else {
+    > 95 | 		throw new Error(
+         | 		      ^
+      96 | 			`Refusing to select a deploy target: ROUTER_IP=${ROUTER_IP} is not in the ` +
+      97 | 				`discovery results [${options.join(' | ')}]. Deploying to the first ` +
+      98 | 				`discovered router would hit an unrelated device. Set ` +
+        at selectRouter (/home/c03rad0r/.tmp/gate9-e2e-t_5d6e1bae/generic-wizard-7step.spec.mjs:95:9)
+        at /home/c03rad0r/.tmp/gate9-e2e-t_5d6e1bae/generic-wizard-7step.spec.mjs:155:2
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--b4ed1-t-router-and-enter-password-desktop-generic-wizard-7step/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--b4ed1-t-router-and-enter-password-desktop-generic-wizard-7step/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/generic-wizard-7step-Step--b4ed1-t-router-and-enter-password-desktop-generic-wizard-7step/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/generic-wizard-7step-Step--b4ed1-t-router-and-enter-password-desktop-generic-wizard-7step/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/generic-wizard-7step-Step--b4ed1-t-router-and-enter-password-desktop-generic-wizard-7step/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop-generic-wizard-7step] › generic-wizard-7step.spec.mjs:150:1 › Step 2: Connect — select router and enter password 
+  6 did not run
+  1 passed (2.6m)
