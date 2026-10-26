@@ -247,3 +247,34 @@ Repo-level change in this card is only `scripts/fe2b_feed_check.sh` (+ two evide
 two task-scoped docs). The other files touched this session are host scratch outside the repo:
 `~/.local/state/tg-bench/probe_ports.py`, `~/.local/state/tg-bench/serial_run.py`,
 `/tmp/det_check.sh`, `/tmp/final_verify.sh`, `/tmp/t_helper.py`, `/tmp/t_rsh.sh`.
+
+## 14. Re-verification, 2026-10-26 (x280) — baseline unchanged, target hardware absent
+
+The card was claimed by a later run that had already reported DONE without transitioning it, so
+every load-bearing claim above was re-checked first-hand rather than accepted.
+
+| claim | re-check | verdict |
+|---|---|---|
+| script on the pushed branch | `git diff --stat origin/worker-heavy/t_877ad4ef -- <my paths>` empty; `git status` clean for those paths | HOLDS |
+| sh syntax / lint | `sh -n` OK; `shellcheck -S warning` rc=0 | HOLDS |
+| exit-code 2 contract (no transport = INCONCLUSIVE, not RED) | `FE2B_TRANSPORT=bogus` -> EXIT=2; default run -> EXIT=2 | HOLDS |
+| A6 RED is current, not stale | feed index 404 on 3 consecutive probes today, plus 6 other index shapes 404 | HOLDS (RED) |
+| no GL-MT6000 on the bench | ttyUSB0=comfast,cf-wr632ax; ttyUSB1=dlink,covr-x1860-a1; ttyUSB3=glinet,gl-mt3000; ttyACM0=Archipelago | CONFIRMED ABSENT |
+| 192.168.1.1 is NOT the router | answers ping/22 but MAC 76:fb:de:35:63:c3 (locally administered) on archy-lab-br; ssh dies on REMOTE HOST IDENTIFICATION CHANGED | NEW TRAP, documented |
+| the provenance defect is real and wider than MT3000 | MT3000 and DLINK both: `tollgate-wrt-0.6.0_rc6-r1 {/feed/net/tollgate-wrt}`, `o:/feed/net/tollgate-wrt`, and `/feed/net/tollgate-wrt` ABSENT | HOLDS, 2 devices |
+
+Raw: `verify/fe2b-baseline/reverify-2026-10-26.txt` (census + feed probes) and
+`verify/fe2b-baseline/inconclusive-run-2026-10-26.txt` (today run, EXIT=2).
+
+Today run is INCONCLUSIVE (EXIT=2) by design, not a new RED set: the only ssh reachable at
+192.168.1.1 is the lab bridge gateway and no MT6000 console exists, so A0 refuses rather than
+reading the wrong box. The authoritative RED baseline remains the 2026-10-23 capture
+(5 PASS / 3 FAIL, exit 1), which is unmodified on the branch.
+
+### 14.1 Documented limitation (not patched — patching would invalidate the baseline)
+
+A1/A2 read `opkg list-installed` and `/var/opkg-lists/`, so on an apk-only 25.12 box they report
+a FALSE RED (no opkg binary at all). That is correct for the FE2b target, which is OpenWrt
+24.10.2/opkg (`which opkg apk` -> `/bin/opkg`), but the gate is firmware-specific. If FE2b moves
+to 25.12/apk, A1/A2 need an added `apk info -e` / `o:` branch as a new commit with the baseline
+re-taken — not an in-place edit that would silently move the goalposts.

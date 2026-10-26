@@ -84,3 +84,29 @@ Finding -> Status -> Files touched. Written 2026-10-23.
     were fiction again; the real worktree is repos/net4sats-mvp-v2.
     Status: CONFIRMED against the board DB before working.
     Files touched: none.
+
+12. Finding: A later run claimed this card (run 1533) after the 2026-10-23 DONE report but
+    never transitioned it, so the card read `running` with no handoff. Nothing load-bearing
+    was taken on trust: script-vs-branch diff empty, `sh -n` OK, `shellcheck -S warning`
+    rc=0, exit-2 contract re-fired, and A6 re-probed live (404 x3).
+    Status: RE-VERIFIED, baseline unchanged.
+    Files touched: verify/fe2b-baseline/reverify-2026-10-26.txt,
+    verify/fe2b-baseline/inconclusive-run-2026-10-26.txt, REPORT-t_877ad4ef.md §14.
+
+13. Finding: The GL-MT6000 is still absent from the bench. Census by each console's own
+    board_name: ttyUSB0=comfast,cf-wr632ax, ttyUSB1=dlink,covr-x1860-a1,
+    ttyUSB3=glinet,gl-mt3000, ttyACM0=Archipelago (not a router), ttyUSB2 silent.
+    Watch out: 192.168.1.1 still answers ping and TCP/22 but is the lab bridge gateway
+    (MAC 76:fb:de:35:63:c3, locally administered; ssh fails on REMOTE HOST IDENTIFICATION
+    CHANGED). A0 refuses rather than reading the wrong device.
+    Status: CONFIRMED ABSENT -> today's run is EXIT=2 INCONCLUSIVE, not a new RED set.
+    Files touched: as above.
+
+14. Finding: The provenance defect is not MT3000-specific. Both live tollgate devices
+    (MT3000 aarch64, DLINK mipsel_24kc) report `{/feed/net/tollgate-wrt}` in apk with
+    `o:/feed/net/tollgate-wrt`, and that directory is ABSENT on both. Both are apk-only
+    (no opkg binary), so the script's opkg-based A1/A2 would FALSE-RED there.
+    Status: RECORDED as a limitation, deliberately NOT patched — editing the assertions
+    now would invalidate the baseline the RED set depends on. Correct for the FE2b target,
+    which is 24.10.2/opkg.
+    Files touched: none (documentation only).

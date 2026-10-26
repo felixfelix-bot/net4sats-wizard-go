@@ -1,0 +1,15 @@
+=== fe2b_feed_check.sh — FE2b acceptance gate (TDD baseline; RED is the expected start) ===
+router    : 192.168.1.1
+feed_line : src/gz tollgate https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages
+feed_url  : https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages
+transport : auto (requested)
+host      : x280  date: 2026-10-26T14:40:31Z
+
+--- A0: a transport to the device works ---
+      using transport: ssh
+FAIL  A0 transport=ssh did not answer (no board_name read back)
+
+=== RESULT: 0 passed, 1 failed (ABORTED) ===
+FE2b INCONCLUSIVE — no transport to 192.168.1.1 (ssh) or /dev/ttyUSB0 (serial).
+This is NOT a RED baseline: nothing was measured. Fix access and re-run.
+EXIT=2

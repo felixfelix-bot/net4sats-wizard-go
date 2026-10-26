@@ -1,0 +1,65 @@
+=== fe2b_feed_check.sh — re-verification and bench census, 2026-10-26 (x280) ===
+Purpose: confirm the 2026-10-23 RED baseline still stands, and record why it cannot be
+re-measured today. No device configuration was written; every device read is read-only.
+
+--- 1. Script integrity (host-side) ---
+$ sh -n scripts/fe2b_feed_check.sh          -> syntax OK
+$ shellcheck -S warning scripts/fe2b_feed_check.sh -> rc=0 (no findings)
+$ git diff --stat origin/worker-heavy/t_877ad4ef -- scripts/fe2b_feed_check.sh \
+      verify/fe2b-baseline PROGRESS-t_877ad4ef.md REPORT-t_877ad4ef.md
+                                           -> (empty: disk == pushed branch)
+$ git status --short -- <same paths>       -> (empty: nothing uncommitted)
+
+--- 2. Exit-code contract re-check ---
+$ FE2B_TRANSPORT=bogus sh scripts/fe2b_feed_check.sh   -> EXIT=2
+$ sh scripts/fe2b_feed_check.sh                        -> EXIT=2
+The 2 contract is deliberate and load-bearing: "no transport" (harness blind) must never be
+reported as RED (gate failed). Only 0/1 carry a verdict.
+
+--- 3. A6 — feed index, re-measured today (NOT stale) ---
+https://github.com/FreedomTechFeed/packages/releases/download/v0.6.0-rc6/aarch64_cortex-a53/packages
+  run1: 404   run2: 404   run3: 404
+Other index shapes at the same release root:
+  404  aarch64_cortex-a53/packages/Packages.gz
+  404  aarch64_cortex-a53/packages.adb
+  404  Packages.gz
+  404  packages.adb
+At releases.tollgate.me:
+  404  alpha/v0.6.0/aarch64_cortex-a53/packages.adb
+  404  alpha/v0.6.0/aarch64_cortex-a53/Packages.gz
+=> A6 remains legitimately RED: nothing publishes a runtime package index.
+
+--- 4. Bench census — no GL-MT6000 present today ---
+USB serial consoles, each identified by its own board_name (never by port name):
+  /dev/ttyUSB0  comfast,cf-wr632ax    OpenWrt 25.12.5
+  /dev/ttyUSB1  dlink,covr-x1860-a1   OpenWrt 25.12.5
+  /dev/ttyUSB3  glinet,gl-mt3000      OpenWrt 25.12.5
+  /dev/ttyACM0  Archipelago CDC device (not a router)
+  /dev/ttyUSB2  silent
+Trap for the next lane: 192.168.1.1 still ANSWERS ping and TCP/22, but it is no longer the
+router. This host's archery-lab-br holds 192.168.1.2/24, and the neighbour entry shows
+192.168.1.1 lladdr 76:fb:de:35:63:c3 (locally-administered MAC), i.e. the lab bridge
+gateway, not a GL.iNet OUI. SSH to it fails on REMOTE HOST IDENTIFICATION HAS CHANGED.
+The script's A0 refuses rather than reading the wrong box, which is why today's run is
+INCONCLUSIVE (EXIT=2) and not a new RED set.
+
+--- 5. Live re-measure of the provenance defect (both tollgate devices on the bench) ---
+apk installed-db (/lib/apk/db/installed), both boxes:
+  /dev/ttyUSB3  glinet,gl-mt3000   tollgate-wrt-0.6.0_rc6-r1 aarch64_cortex-a53 {/feed/net/tollgate-wrt} [installed]
+  /dev/ttyUSB1  dlink,covr-x1860-a1 tollgate-wrt-0.6.0_rc6-r1 mipsel_24kc      {/feed/net/tollgate-wrt} [installed]
+  /lib/apk/db/installed stanza:  o:/feed/net/tollgate-wrt
+  $ ls -ld /feed/net/tollgate-wrt  -> ABSENT
+Package manager on both: NO-OPKG; apk-tools 3.0.5. /etc/apk/repositories.d/customfeeds.list
+is the untouched stock template (no tollgate feed line).
+=> Confirms the earlier contract correction and widens it: the defect is not MT3000-specific;
+   two independent devices carry a local-path origin whose source directory does not exist.
+
+--- 6. Known limitation of this script on 25.12/apk devices (documented, not patched) ---
+A1/A2 probe `opkg list-installed` and `/var/opkg-lists/`. On an apk-only box there is no opkg
+binary, so A1 reports "absent from opkg list-installed" even though the package IS installed —
+a FALSE RED. That is correct for the FE2b target (GL-MT6000 = OpenWrt 24.10.2 / opkg,
+corroborated independently in REPORT-fe2b-feed-mt6000.md §2: `which opkg apk` -> /bin/opkg,
+opkg version 38eccbb1...), but it means the gate is device-version-specific. It was NOT
+patched here: altering the assertions after the baseline was captured would invalidate the
+baseline the RED set depends on. If FE2b ever moves to 25.12/apk, A1/A2 need an apk branch
+(`apk info -e`, `apk list -I`, `o:` field) added as a new commit, with the baseline re-taken.
